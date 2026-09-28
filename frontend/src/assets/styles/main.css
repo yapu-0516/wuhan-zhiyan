@@ -1,0 +1,57 @@
+/* 城市之眼全局基础样式 —— 深色数字孪生指挥中心风格 */
+:root {
+  --ce-bg: #070b18;
+  --ce-bg-soft: #0d1426;
+  --ce-panel: rgba(16, 26, 48, 0.72);
+  --ce-panel-border: rgba(64, 120, 180, 0.28);
+  --ce-text: #d6e4ff;
+  --ce-text-dim: #8aa3c4;
+  --ce-accent: #4fc3f7;
+  --ce-accent-2: #4dd0e1;
+  --ce-danger: #ff6b6b;
+  --ce-warning: #f0c050;
+  --ce-success: #4dd984;
+  --header-h: 60px;
+  --sidebar-w: 212px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--ce-bg);
+  color: var(--ce-text);
+  font-family: system-ui, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 滚动条统一深色风格 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(80, 130, 180, 0.35);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 让 Element Plus 面板在深色场景下半透明 */
+.el-card,
+.el-table,
+.el-menu {
+  background-color: transparent !important;
+}
