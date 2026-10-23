@@ -1,0 +1,34 @@
+# ---- 通用 ----
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.env
+.env.*
+!.env.example
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# ---- 运行时数据（数据库 / 上传 / 算法输出）----
+backend/var/
+*.db
+*.sqlite3
+
+# ---- OSM 原始抓取缓存（加工结果在 data/geo）----
+data/raw/
+
+# ---- 前端 ----
+node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo

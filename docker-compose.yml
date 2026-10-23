@@ -1,0 +1,17 @@
+services:
+  cityeye:
+    build: .
+    image: cityeye:latest
+    container_name: cityeye
+    ports:
+      - "8000:8000"
+    environment:
+      CITYEYE_DEMO_MODE: "true"        # 开放演示控制接口（一键演示 / 重置）
+      CITYEYE_SIMULATOR: "true"        # 城市感知数据流模拟器
+      CITYEYE_SIM_INTERVAL: "45"       # 巡检间隔（秒）
+    volumes:
+      - cityeye-data:/app/backend/var
+    restart: unless-stopped
+
+volumes:
+  cityeye-data:
