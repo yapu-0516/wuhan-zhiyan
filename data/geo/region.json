@@ -1,0 +1,42 @@
+{
+  "name": "汉口沿江示范区",
+  "city": "武汉",
+  "center": [
+    114.2905,
+    30.5895
+  ],
+  "bbox": [
+    114.27,
+    30.57,
+    114.312,
+    30.612
+  ],
+  "grid": {
+    "origin": [
+      114.27,
+      30.57
+    ],
+    "cell_deg": 0.0045,
+    "rows": 10,
+    "cols": 10
+  },
+  "district_prefix": {
+    "江汉区": "JH",
+    "江岸区": "JA",
+    "硚口区": "QK",
+    "汉阳区": "HY",
+    "武昌区": "WC"
+  },
+  "districts": [
+    "武昌区",
+    "江岸区",
+    "江汉区",
+    "硚口区"
+  ],
+  "source": "© OpenStreetMap contributors (ODbL)",
+  "stats": {
+    "buildings": 822,
+    "roads": 105,
+    "pois": 84
+  }
+}

@@ -1,0 +1,590 @@
+[
+ {
+  "id": "P001",
+  "name": "武汉亚洲心脏病医院",
+  "kind": "hospital",
+  "longitude": 114.277045,
+  "latitude": 30.585463
+ },
+ {
+  "id": "P002",
+  "name": "武汉儿童医院",
+  "kind": "hospital",
+  "longitude": 114.282737,
+  "latitude": 30.605921
+ },
+ {
+  "id": "P003",
+  "name": "武汉协和医院",
+  "kind": "hospital",
+  "longitude": 114.269258,
+  "latitude": 30.586649
+ },
+ {
+  "id": "P004",
+  "name": "武汉博大医院",
+  "kind": "hospital",
+  "longitude": 114.284194,
+  "latitude": 30.581932
+ },
+ {
+  "id": "P005",
+  "name": "武汉市中医医院汉口院区",
+  "kind": "hospital",
+  "longitude": 114.29233,
+  "latitude": 30.590866
+ },
+ {
+  "id": "P006",
+  "name": "武汉市中心医院",
+  "kind": "hospital",
+  "longitude": 114.289566,
+  "latitude": 30.58363
+ },
+ {
+  "id": "P007",
+  "name": "武汉市第八医院",
+  "kind": "hospital",
+  "longitude": 114.300057,
+  "latitude": 30.606059
+ },
+ {
+  "id": "P008",
+  "name": "武汉市第六医院",
+  "kind": "hospital",
+  "longitude": 114.285023,
+  "latitude": 30.602636
+ },
+ {
+  "id": "P009",
+  "name": "武汉市职业病防治院",
+  "kind": "hospital",
+  "longitude": 114.274821,
+  "latitude": 30.592357
+ },
+ {
+  "id": "P010",
+  "name": "江岸区先锋医院",
+  "kind": "hospital",
+  "longitude": 114.284222,
+  "latitude": 30.588703
+ },
+ {
+  "id": "P011",
+  "name": "湖北省中西医结合医院中山分部",
+  "kind": "hospital",
+  "longitude": 114.291731,
+  "latitude": 30.591663
+ },
+ {
+  "id": "P012",
+  "name": "省中西医结合医院江北院区",
+  "kind": "hospital",
+  "longitude": 114.272914,
+  "latitude": 30.592131
+ },
+ {
+  "id": "P013",
+  "name": "车站社区卫生服务中心",
+  "kind": "hospital",
+  "longitude": 114.290529,
+  "latitude": 30.593278
+ },
+ {
+  "id": "P014",
+  "name": "长江航运总医院",
+  "kind": "hospital",
+  "longitude": 114.281885,
+  "latitude": 30.609042
+ },
+ {
+  "id": "P015",
+  "name": "上海街派出所",
+  "kind": "police",
+  "longitude": 114.292519,
+  "latitude": 30.589168
+ },
+ {
+  "id": "P016",
+  "name": "劳动街派出所",
+  "kind": "police",
+  "longitude": 114.289607,
+  "latitude": 30.608576
+ },
+ {
+  "id": "P017",
+  "name": "台北街派出所",
+  "kind": "police",
+  "longitude": 114.27247,
+  "latitude": 30.600451
+ },
+ {
+  "id": "P018",
+  "name": "四唯派出所",
+  "kind": "police",
+  "longitude": 114.30037,
+  "latitude": 30.60351
+ },
+ {
+  "id": "P019",
+  "name": "武汉市公安局水上公安分局",
+  "kind": "police",
+  "longitude": 114.283337,
+  "latitude": 30.570769
+ },
+ {
+  "id": "P020",
+  "name": "武汉市公安局江岸分局",
+  "kind": "police",
+  "longitude": 114.293621,
+  "latitude": 30.592669
+ },
+ {
+  "id": "P021",
+  "name": "武汉市公安局轨道交通管理分局轻轨派出所",
+  "kind": "police",
+  "longitude": 114.292276,
+  "latitude": 30.597072
+ },
+ {
+  "id": "P022",
+  "name": "花楼街派出所",
+  "kind": "police",
+  "longitude": 114.285607,
+  "latitude": 30.578056
+ },
+ {
+  "id": "P023",
+  "name": "武汉七一华源中学",
+  "kind": "school",
+  "longitude": 114.301694,
+  "latitude": 30.607897
+ },
+ {
+  "id": "P024",
+  "name": "武汉二中实验中学校区",
+  "kind": "school",
+  "longitude": 114.293727,
+  "latitude": 30.599528
+ },
+ {
+  "id": "P025",
+  "name": "武汉二中广雅中学",
+  "kind": "school",
+  "longitude": 114.305961,
+  "latitude": 30.607377
+ },
+ {
+  "id": "P026",
+  "name": "武汉二中广雅中学（解放校区）",
+  "kind": "school",
+  "longitude": 114.295915,
+  "latitude": 30.606268
+ },
+ {
+  "id": "P027",
+  "name": "武汉六中上智中学（黄石路）",
+  "kind": "school",
+  "longitude": 114.282929,
+  "latitude": 30.591014
+ },
+ {
+  "id": "P028",
+  "name": "武汉六中致诚中学",
+  "kind": "school",
+  "longitude": 114.282219,
+  "latitude": 30.597043
+ },
+ {
+  "id": "P029",
+  "name": "武汉市人民中学",
+  "kind": "school",
+  "longitude": 114.284667,
+  "latitude": 30.57195
+ },
+ {
+  "id": "P030",
+  "name": "武汉市实验学校",
+  "kind": "school",
+  "longitude": 114.297387,
+  "latitude": 30.597088
+ },
+ {
+  "id": "P031",
+  "name": "武汉市实验小学",
+  "kind": "school",
+  "longitude": 114.290253,
+  "latitude": 30.597242
+ },
+ {
+  "id": "P032",
+  "name": "武汉市旅游学校",
+  "kind": "school",
+  "longitude": 114.27655,
+  "latitude": 30.577508
+ },
+ {
+  "id": "P033",
+  "name": "武汉市江岸区模范路小学",
+  "kind": "school",
+  "longitude": 114.286548,
+  "latitude": 30.599752
+ },
+ {
+  "id": "P034",
+  "name": "武汉市江汉区红领巾精武学校",
+  "kind": "school",
+  "longitude": 114.274274,
+  "latitude": 30.588636
+ },
+ {
+  "id": "P035",
+  "name": "武汉市第16中学",
+  "kind": "school",
+  "longitude": 114.294942,
+  "latitude": 30.596375
+ },
+ {
+  "id": "P036",
+  "name": "武汉市第21中学",
+  "kind": "school",
+  "longitude": 114.288571,
+  "latitude": 30.584453
+ },
+ {
+  "id": "P037",
+  "name": "武汉市第28中学",
+  "kind": "school",
+  "longitude": 114.275444,
+  "latitude": 30.589914
+ },
+ {
+  "id": "P038",
+  "name": "武汉市第41中学",
+  "kind": "school",
+  "longitude": 114.299515,
+  "latitude": 30.605584
+ },
+ {
+  "id": "P039",
+  "name": "武汉市第51中学",
+  "kind": "school",
+  "longitude": 114.281389,
+  "latitude": 30.576598
+ },
+ {
+  "id": "P040",
+  "name": "武汉市第52中学",
+  "kind": "school",
+  "longitude": 114.278998,
+  "latitude": 30.57263
+ },
+ {
+  "id": "P041",
+  "name": "武汉市第75中学",
+  "kind": "school",
+  "longitude": 114.272252,
+  "latitude": 30.58141
+ },
+ {
+  "id": "P042",
+  "name": "武汉市第一商业学校",
+  "kind": "school",
+  "longitude": 114.270693,
+  "latitude": 30.593285
+ },
+ {
+  "id": "P043",
+  "name": "武汉市第二中学",
+  "kind": "school",
+  "longitude": 114.302193,
+  "latitude": 30.608848
+ },
+ {
+  "id": "P044",
+  "name": "武汉市第二十一（警予）中学",
+  "kind": "school",
+  "longitude": 114.286049,
+  "latitude": 30.590098
+ },
+ {
+  "id": "P045",
+  "name": "武汉市第二十中学（合作路校区）",
+  "kind": "school",
+  "longitude": 114.291247,
+  "latitude": 30.589466
+ },
+ {
+  "id": "P046",
+  "name": "武汉市第二十中学（岳飞街校区）",
+  "kind": "school",
+  "longitude": 114.293886,
+  "latitude": 30.592159
+ },
+ {
+  "id": "P047",
+  "name": "武汉市第五中学",
+  "kind": "school",
+  "longitude": 114.274232,
+  "latitude": 30.577369
+ },
+ {
+  "id": "P048",
+  "name": "武汉市第六中学",
+  "kind": "school",
+  "longitude": 114.286379,
+  "latitude": 30.605358
+ },
+ {
+  "id": "P049",
+  "name": "武汉市第六初级中学",
+  "kind": "school",
+  "longitude": 114.28613,
+  "latitude": 30.601672
+ },
+ {
+  "id": "P050",
+  "name": "武汉市第十九初级中学",
+  "kind": "school",
+  "longitude": 114.280673,
+  "latitude": 30.583304
+ },
+ {
+  "id": "P051",
+  "name": "武汉市第十六中学（翔宇分校）",
+  "kind": "school",
+  "longitude": 114.288927,
+  "latitude": 30.600984
+ },
+ {
+  "id": "P052",
+  "name": "武汉市育才小学",
+  "kind": "school",
+  "longitude": 114.279344,
+  "latitude": 30.611173
+ },
+ {
+  "id": "P053",
+  "name": "武汉市育才第二小学（立德分校）",
+  "kind": "school",
+  "longitude": 114.274034,
+  "latitude": 30.597692
+ },
+ {
+  "id": "P054",
+  "name": "武汉市警予中学",
+  "kind": "school",
+  "longitude": 114.285816,
+  "latitude": 30.590208
+ },
+ {
+  "id": "P055",
+  "name": "武汉市财经学校",
+  "kind": "school",
+  "longitude": 114.274874,
+  "latitude": 30.57278
+ },
+ {
+  "id": "P056",
+  "name": "汉口回民小学",
+  "kind": "school",
+  "longitude": 114.282543,
+  "latitude": 30.574482
+ },
+ {
+  "id": "P057",
+  "name": "江岸区一元路小学",
+  "kind": "school",
+  "longitude": 114.298546,
+  "latitude": 30.594645
+ },
+ {
+  "id": "P058",
+  "name": "江岸区吕锡三小学",
+  "kind": "school",
+  "longitude": 114.28446,
+  "latitude": 30.592102
+ },
+ {
+  "id": "P059",
+  "name": "江岸区四唯路小学",
+  "kind": "school",
+  "longitude": 114.300552,
+  "latitude": 30.602112
+ },
+ {
+  "id": "P060",
+  "name": "江岸区沈阳路小学",
+  "kind": "school",
+  "longitude": 114.298739,
+  "latitude": 30.606327
+ },
+ {
+  "id": "P061",
+  "name": "江岸区鄱阳街小学",
+  "kind": "school",
+  "longitude": 114.293497,
+  "latitude": 30.587978
+ },
+ {
+  "id": "P062",
+  "name": "江岸区鄱阳街小学（黄陂路分校）",
+  "kind": "school",
+  "longitude": 114.293537,
+  "latitude": 30.590943
+ },
+ {
+  "id": "P063",
+  "name": "江岸区铭新街小学",
+  "kind": "school",
+  "longitude": 114.283293,
+  "latitude": 30.586473
+ },
+ {
+  "id": "P064",
+  "name": "江岸区长春街小学",
+  "kind": "school",
+  "longitude": 114.304801,
+  "latitude": 30.608931
+ },
+ {
+  "id": "P065",
+  "name": "江汉区前进二路小学",
+  "kind": "school",
+  "longitude": 114.279591,
+  "latitude": 30.578944
+ },
+ {
+  "id": "P066",
+  "name": "江汉区单洞新村小学",
+  "kind": "school",
+  "longitude": 114.2744,
+  "latitude": 30.585721
+ },
+ {
+  "id": "P067",
+  "name": "江汉区友谊路中学",
+  "kind": "school",
+  "longitude": 114.273247,
+  "latitude": 30.580378
+ },
+ {
+  "id": "P068",
+  "name": "江汉区大兴路小学",
+  "kind": "school",
+  "longitude": 114.284067,
+  "latitude": 30.571027
+ },
+ {
+  "id": "P069",
+  "name": "江汉区大夹街小学",
+  "kind": "school",
+  "longitude": 114.277323,
+  "latitude": 30.570261
+ },
+ {
+  "id": "P070",
+  "name": "江汉区天一街小学",
+  "kind": "school",
+  "longitude": 114.274194,
+  "latitude": 30.576269
+ },
+ {
+  "id": "P071",
+  "name": "江汉区展览馆小学",
+  "kind": "school",
+  "longitude": 114.270591,
+  "latitude": 30.583018
+ },
+ {
+  "id": "P072",
+  "name": "江汉区惠康里小学",
+  "kind": "school",
+  "longitude": 114.274452,
+  "latitude": 30.582721
+ },
+ {
+  "id": "P073",
+  "name": "江汉区桃源坊小学",
+  "kind": "school",
+  "longitude": 114.280342,
+  "latitude": 30.580879
+ },
+ {
+  "id": "P074",
+  "name": "江汉区武汉关小学",
+  "kind": "school",
+  "longitude": 114.284206,
+  "latitude": 30.578167
+ },
+ {
+  "id": "P075",
+  "name": "江汉区清芬路小学",
+  "kind": "school",
+  "longitude": 114.281802,
+  "latitude": 30.575924
+ },
+ {
+  "id": "P076",
+  "name": "江汉区福建街小学",
+  "kind": "school",
+  "longitude": 114.278853,
+  "latitude": 30.57347
+ },
+ {
+  "id": "P077",
+  "name": "硚口区人和街小学",
+  "kind": "school",
+  "longitude": 114.27633,
+  "latitude": 30.571199
+ },
+ {
+  "id": "P078",
+  "name": "硚口区六角亭小学",
+  "kind": "school",
+  "longitude": 114.270321,
+  "latitude": 30.577956
+ },
+ {
+  "id": "P079",
+  "name": "硚口区新安街小学",
+  "kind": "school",
+  "longitude": 114.274297,
+  "latitude": 30.570867
+ },
+ {
+  "id": "P080",
+  "name": "育才中学",
+  "kind": "school",
+  "longitude": 114.293956,
+  "latitude": 30.605961
+ },
+ {
+  "id": "P081",
+  "name": "长春街小学（永清校区）",
+  "kind": "school",
+  "longitude": 114.305102,
+  "latitude": 30.608891
+ },
+ {
+  "id": "P082",
+  "name": "青少年宫小学",
+  "kind": "school",
+  "longitude": 114.275634,
+  "latitude": 30.592812
+ },
+ {
+  "id": "P083",
+  "name": "黄陂街小学分校",
+  "kind": "school",
+  "longitude": 114.285129,
+  "latitude": 30.573327
+ },
+ {
+  "id": "P084",
+  "name": "黄陂路小学",
+  "kind": "school",
+  "longitude": 114.288516,
+  "latitude": 30.584385
+ }
+]
