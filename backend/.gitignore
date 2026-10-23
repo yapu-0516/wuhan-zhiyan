@@ -1,0 +1,5 @@
+# 运行期数据：SQLite 数据库、上传文件、算法结果与证据图
+var/
+__pycache__/
+*.pyc
+.pytest_cache/
