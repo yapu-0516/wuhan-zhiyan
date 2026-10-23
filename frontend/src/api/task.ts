@@ -1,44 +1,59 @@
-// 任务接口层 —— 阶段11
-// 对应后端：GET /api/tasks、POST /api/tasks
-// 第3周前端原型：AI 分析任务尚未接入真实后端，createTask 返回原型标记，
-//   调用方（AIAnalysis）据此提示"第3周原型，接口后续接入"，不伪造分析结果。
-// 第4周接 FastAPI 后改 fetch 真实创建任务。
-import { API_BASE, USE_MOCK } from '@/config/api'
+// AI 分析任务接口层 —— docs/api.md §6
+// 后端在线：任务异步执行真实算法，进度经 WebSocket task.updated 推送；
+// 离线/快照模式：createTask 返回 prototype 状态，调用方据此提示，不伪造分析结果。
+import { request, jsonBody, loadSnapshot, apiState, qs, nowString } from './http'
+import type { AnalysisTask, Sample, TaskCreate } from '@/types/api'
 
-export interface AnalysisTask {
-  id: string
-  /** 分析类型：fire / traffic / building */
-  type: string
-  status: 'prototype' | 'pending' | 'running' | 'done'
-  createdAt: string
+export type { AnalysisTask, Sample }
+
+function prototypeTask(type: string, fileCount: number): AnalysisTask {
+  return { id: `T${Date.now()}`, type, status: 'prototype', createdAt: nowString(), file_count: fileCount }
 }
 
 /** 获取任务列表 GET /api/tasks */
-export async function getTasks(): Promise<AnalysisTask[]> {
-  if (USE_MOCK) {
-    return []
-  }
-  const res = await fetch(`${API_BASE}/tasks`)
-  if (!res.ok) throw new Error(`获取任务列表失败: ${res.status}`)
-  return (await res.json()) as AnalysisTask[]
+export function getTasks(): Promise<AnalysisTask[]> {
+  return request('/tasks', undefined, () => loadSnapshot<AnalysisTask[]>('tasks.json').catch(() => []))
 }
 
-/** 创建分析任务 POST /api/tasks
- *  第3周返回 prototype 状态任务，调用方据此提示原型，不伪造 AI 结果。 */
-export async function createTask(type: string, fileCount: number): Promise<AnalysisTask> {
-  if (USE_MOCK) {
-    return {
-      id: `T${Date.now()}`,
-      type,
-      status: 'prototype',
-      createdAt: new Date().toISOString()
-    }
-  }
-  const res = await fetch(`${API_BASE}/tasks`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, fileCount })
+/** 获取任务详情 GET /api/tasks/{id} */
+export function getTask(id: string): Promise<AnalysisTask> {
+  return request(`/tasks/${encodeURIComponent(id)}`, undefined, async () => {
+    const t = (await loadSnapshot<AnalysisTask[]>('tasks.json')).find((x) => x.id === id)
+    if (!t) throw new Error('任务不存在')
+    return t
   })
-  if (!res.ok) throw new Error(`创建任务失败: ${res.status}`)
-  return (await res.json()) as AnalysisTask
+}
+
+/** 创建分析任务 POST /api/tasks（使用示例数据，或兼容原型调用） */
+export async function createTask(
+  type: string,
+  fileCount: number,
+  extra?: Omit<TaskCreate, 'type' | 'fileCount'>
+): Promise<AnalysisTask> {
+  if (apiState.mode !== 'live') return prototypeTask(type, fileCount)
+  return request<AnalysisTask>('/tasks', jsonBody({ type, fileCount, ...extra }), () => prototypeTask(type, fileCount))
+}
+
+/** 上传文件并创建分析任务 POST /api/tasks/upload */
+export async function uploadTask(
+  type: string,
+  files: File[],
+  opts?: { longitude?: number; latitude?: number; create_event?: boolean }
+): Promise<AnalysisTask> {
+  if (apiState.mode !== 'live') return prototypeTask(type, files.length)
+  const fd = new FormData()
+  fd.append('type', type)
+  files.forEach((f) => fd.append('files', f))
+  if (opts?.longitude !== undefined) fd.append('longitude', String(opts.longitude))
+  if (opts?.latitude !== undefined) fd.append('latitude', String(opts.latitude))
+  if (opts?.create_event !== undefined) fd.append('create_event', String(opts.create_event))
+  return request<AnalysisTask>('/tasks/upload', { method: 'POST', body: fd }, () => prototypeTask(type, files.length))
+}
+
+/** 示例数据 GET /api/samples */
+export function getSamples(type?: string): Promise<Sample[]> {
+  return request(`/samples${qs({ type })}`, undefined, async () => {
+    const all = await loadSnapshot<Sample[]>('samples.json').catch(() => [] as Sample[])
+    return type ? all.filter((s) => s.type === type) : all
+  })
 }

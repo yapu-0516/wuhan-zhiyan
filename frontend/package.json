@@ -1,7 +1,7 @@
 {
   "name": "city-eye-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "城市之眼 - 城市智能监测与辅助治理平台前端",
   "scripts": {
@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
-    "cesium": "^1.125.0",
+    "cesium": "1.125.0",
+    "echarts": "^5.6.0",
     "element-plus": "^2.9.0",
     "vite-plugin-static-copy": "^2.2.0",
     "vue": "^3.5.13",
@@ -22,5 +23,8 @@
     "typescript": "~5.6.3",
     "vite": "^5.4.11",
     "vue-tsc": "^2.1.10"
+  },
+  "overrides": {
+    "@cesium/widgets": "10.1.0"
   }
 }

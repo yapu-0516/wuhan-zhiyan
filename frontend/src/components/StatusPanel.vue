@@ -1,78 +1,153 @@
 <script setup lang="ts">
-// 底部城市状态栏：从事件状态动态统计，不写死
-// 数据源：useCityEvents（阶段3 为空，阶段6 填充 mock 后自动生效）
+// 底部城市状态栏：事件统计（含内涝）、待处置数、实时通道状态、数据模式、最近更新时间
+import { computed } from 'vue'
 import { useCityEvents } from '@/composables/useCityEvents'
-import { EVENT_TYPE_META, type EventType } from '@/types/event'
+import { useRealtime } from '@/composables/useRealtime'
+import { apiState } from '@/api/http'
+import { EVENT_TYPES, EVENT_TYPE_META } from '@/types/event'
 
-const { stats } = useCityEvents()
-const types: EventType[] = ['fire', 'traffic', 'building']
+const { stats, events, revision } = useCityEvents()
+const { connected, lastMessageAt } = useRealtime()
+
+const MODE_LABEL = { live: '实时数据', offline: '离线快照', mock: '演示数据' } as const
+
+const pad = (n: number) => String(n).padStart(2, '0')
+
+// 最近更新：WS 最近一条消息时间；离线时取最新事件时间
+const lastUpdate = computed(() => {
+  void revision.value
+  if (lastMessageAt.value) {
+    const d = new Date(lastMessageAt.value)
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  }
+  const latest = events.value.reduce((m, e) => (e.updated_at > m ? e.updated_at : m), '')
+  return latest ? latest.slice(11, 19) : '--:--:--'
+})
 </script>
 
 <template>
   <footer class="status-panel">
-    <div class="stat-total">
-      <span class="stat-label">当前监测事件</span>
-      <span class="stat-value">{{ stats.total }}</span>
+    <div class="sp-total">
+      <span class="sp-label">监测事件</span>
+      <span class="sp-value ce-num">{{ stats.total }}</span>
     </div>
-    <div class="stat-divider"></div>
-    <div class="stat-list">
-      <div v-for="t in types" :key="t" class="stat-item">
-        <span class="stat-emoji">{{ EVENT_TYPE_META[t].icon }}</span>
-        <span class="stat-name">{{ EVENT_TYPE_META[t].label }}</span>
-        <span class="stat-count" :style="{ color: EVENT_TYPE_META[t].color }">
-          {{ stats.byType[t] ?? 0 }}
-        </span>
-      </div>
+    <div class="sp-active">
+      <span class="sp-label">待处置</span>
+      <span class="sp-value sp-value--warn ce-num">{{ stats.active }}</span>
+    </div>
+    <span class="sp-divider" />
+    <div class="sp-types">
+      <span v-for="t in EVENT_TYPES" :key="t" class="sp-type">
+        <span class="sp-emoji">{{ EVENT_TYPE_META[t].icon }}</span>
+        <span class="sp-name">{{ EVENT_TYPE_META[t].label }}</span>
+        <span class="sp-count ce-num" :style="{ color: EVENT_TYPE_META[t].color }">{{ stats.byType[t] ?? 0 }}</span>
+      </span>
+    </div>
+    <span class="sp-spacer" />
+    <div class="sp-sys">
+      <span class="sp-chip" :class="connected ? 'ok' : 'off'">
+        <i class="ce-dot" :class="{ 'ce-dot--pulse': connected }" />WS {{ connected ? '已连接' : '未连接' }}
+      </span>
+      <span class="sp-chip" :class="apiState.mode === 'live' ? 'ok' : 'warn'">数据：{{ MODE_LABEL[apiState.mode] }}</span>
+      <span class="sp-chip">最近更新 <b class="ce-num">{{ lastUpdate }}</b></span>
     </div>
   </footer>
 </template>
 
 <style scoped>
 .status-panel {
-  height: 44px;
+  position: relative;
+  z-index: 10;
+  height: var(--status-h);
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 0 22px;
-  background: rgba(10, 18, 38, 0.85);
+  padding: 0 18px;
+  background: linear-gradient(180deg, #071228, #050c1d);
   border-top: 1px solid var(--ce-panel-border);
-  backdrop-filter: blur(8px);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sp-total,
+.sp-active {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.sp-label {
+  color: var(--ce-text-dim);
+}
+.sp-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ce-accent);
+  text-shadow: 0 0 10px rgba(79, 195, 247, 0.4);
+}
+.sp-value--warn {
+  color: #ffb37a;
+  text-shadow: 0 0 10px rgba(255, 159, 67, 0.4);
+}
+.sp-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--ce-panel-border);
+}
+.sp-types {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.sp-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ce-text-dim);
+}
+.sp-emoji {
   font-size: 13px;
 }
-.stat-total {
+.sp-count {
+  font-size: 14px;
+  font-weight: 700;
+}
+.sp-spacer {
+  flex: 1;
+}
+.sp-sys {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.stat-label {
-  color: var(--ce-text-dim);
-}
-.stat-value {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--ce-accent);
-}
-.stat-divider {
-  width: 1px;
-  height: 20px;
-  background: var(--ce-panel-border);
-}
-.stat-list {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-}
-.stat-item {
-  display: flex;
+.sp-chip {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--ce-divider);
+  border-radius: 11px;
+  font-size: 11.5px;
   color: var(--ce-text-dim);
 }
-.stat-emoji {
-  font-size: 15px;
+.sp-chip b {
+  color: var(--ce-text);
+  font-weight: 400;
 }
-.stat-count {
-  font-weight: 600;
-  font-size: 14px;
+.sp-chip.ok {
+  color: #2ed47a;
+  border-color: rgba(46, 212, 122, 0.3);
+}
+.sp-chip.off {
+  color: var(--ce-text-faint);
+}
+.sp-chip.warn {
+  color: var(--ce-warning);
+  border-color: rgba(240, 192, 80, 0.3);
+}
+@media (max-width: 1200px) {
+  .sp-name {
+    display: none;
+  }
 }
 </style>

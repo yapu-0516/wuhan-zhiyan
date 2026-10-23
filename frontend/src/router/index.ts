@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
-// 城市之眼路由表
-// 阶段3：5 个主页面占位，具体内容由后续阶段填充
+// 城市之眼路由表（页面按需懒加载；城市总览由 App.vue KeepAlive 缓存）
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -36,12 +35,23 @@ const routes: RouteRecordRaw[] = [
     name: 'ai-analysis',
     component: () => import('@/views/AIAnalysis.vue'),
     meta: { title: 'AI 分析' }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/dashboard'
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
+})
+
+const APP_TITLE = '城市之眼 CityEye'
+
+router.afterEach((to) => {
+  const t = typeof to.meta?.title === 'string' ? to.meta.title : ''
+  document.title = t ? `${t} · ${APP_TITLE}` : APP_TITLE
 })
 
 export default router

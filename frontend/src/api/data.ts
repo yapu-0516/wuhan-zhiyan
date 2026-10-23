@@ -1,17 +1,24 @@
-// 数据接口层 —— 阶段11
-// 对应后端：GET /api/data
-// 第3周 USE_MOCK=true 返回 mock；第4周接 FastAPI 后改 fetch。
-import { mockDataList, type DataItem } from '@/mock/data'
-import { API_BASE, USE_MOCK } from '@/config/api'
+// 数据接口层 —— docs/api.md §5
+import { request, loadSnapshot, apiState } from './http'
+import type { DataItem, DataStats } from '@/types/api'
 
 /** 获取数据资产清单 GET /api/data */
-export async function getDataList(): Promise<DataItem[]> {
-  if (USE_MOCK) {
-    return mockDataList
-  }
-  const res = await fetch(`${API_BASE}/data`)
-  if (!res.ok) throw new Error(`获取数据清单失败: ${res.status}`)
-  return (await res.json()) as DataItem[]
+export function getDataList(): Promise<DataItem[]> {
+  return request('/data', undefined, () => loadSnapshot<DataItem[]>('data.json'))
 }
 
-export type { DataItem }
+/** 数据资产统计 GET /api/data/stats */
+export function getDataStats(): Promise<DataStats> {
+  return request('/data/stats', undefined, () => loadSnapshot<DataStats>('data_stats.json'))
+}
+
+/** 上传数据 POST /api/data/upload */
+export function uploadData(files: File[], type?: string): Promise<DataItem[]> {
+  if (apiState.mode !== 'live') return Promise.reject(new Error('离线演示模式下不支持上传，请启动后端服务'))
+  const fd = new FormData()
+  files.forEach((f) => fd.append('files', f))
+  if (type) fd.append('type', type)
+  return request('/data/upload', { method: 'POST', body: fd })
+}
+
+export type { DataItem, DataStats }

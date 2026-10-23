@@ -1,28 +1,43 @@
-// 城市事件状态管理（阶段3：单例 reactive store）
-// 阶段11：改为通过 API 接口层取数（USE_MOCK=true 时走 mock）。
+// 城市事件状态管理（模块级单例 reactive store）
+// v1：经 API 层加载；订阅 WebSocket event.created / event.updated 实时增量更新。
 // 页面与组件统一从此 composable 取数据，避免到处写死。
-import { reactive, computed } from 'vue'
-import type { CityEvent, EventType } from '@/types/event'
-import { getEvents } from '@/api/event'
+import { reactive, computed, ref } from 'vue'
+import type { CityEvent, EventPatch, EventStatus, EventType } from '@/types/event'
+import { EVENT_TYPES } from '@/types/event'
+import { getEvents, patchEvent } from '@/api/event'
+import { useRealtime } from './useRealtime'
 
-// 模块级单例：整个应用共享同一份事件状态
-const state = reactive<{ events: CityEvent[] }>({
-  events: [] // 阶段3 暂为空，由 loadFromApi 填充
-})
+const state = reactive<{ events: CityEvent[]; loaded: boolean }>({ events: [], loaded: false })
+
+/** 最近一次实时新增的事件（供三维场景脉冲动画、通知使用） */
+const lastCreated = ref<CityEvent | null>(null)
+/** 每次实时变更自增，供统计面板等做节流刷新 */
+const revision = ref(0)
+let wired = false
+
+function upsert(e: CityEvent): boolean {
+  const i = state.events.findIndex((x) => x.id === e.id)
+  if (i >= 0) {
+    state.events.splice(i, 1, e)
+    return false
+  }
+  state.events.unshift(e)
+  return true
+}
 
 export function useCityEvents() {
   const events = computed(() => state.events)
 
   const stats = computed(() => {
     const total = state.events.length
-    const byType = state.events.reduce<Record<EventType, number>>(
-      (acc, e) => {
-        acc[e.event_type] = (acc[e.event_type] ?? 0) + 1
-        return acc
-      },
-      { fire: 0, traffic: 0, building: 0 }
-    )
-    return { total, byType }
+    const byType = Object.fromEntries(EVENT_TYPES.map((t) => [t, 0])) as Record<EventType, number>
+    const byStatus: Record<EventStatus, number> = { pending: 0, monitoring: 0, processing: 0, resolved: 0 }
+    for (const e of state.events) {
+      byType[e.event_type] = (byType[e.event_type] ?? 0) + 1
+      byStatus[e.status] = (byStatus[e.status] ?? 0) + 1
+    }
+    const active = total - byStatus.resolved
+    return { total, active, byType, byStatus }
   })
 
   /** 按 id 查事件 */
@@ -35,11 +50,40 @@ export function useCityEvents() {
     state.events.splice(0, state.events.length, ...list)
   }
 
-  /** 通过 API 接口层加载事件（USE_MOCK 时走 mock，接后端后走 fetch） */
+  /** 通过 API 接口层加载事件，并接入实时通道 */
   async function loadFromApi() {
-    const list = await getEvents()
-    setEvents(list)
+    try {
+      const list = await getEvents()
+      setEvents(list)
+    } catch (e) {
+      console.warn('[events] 加载失败', e)
+    }
+    state.loaded = true
+    wireRealtime()
   }
 
-  return { events, stats, getEventById, setEvents, loadFromApi }
+  /** 处置操作：调用 PATCH 并就地更新 */
+  async function updateEvent(id: string, patch: EventPatch): Promise<CityEvent> {
+    const updated = await patchEvent(id, patch)
+    upsert(updated)
+    revision.value++
+    return updated
+  }
+
+  function wireRealtime() {
+    if (wired) return
+    wired = true
+    const rt = useRealtime()
+    rt.on('event.created', (e) => {
+      if (upsert(e)) lastCreated.value = e
+      revision.value++
+    })
+    rt.on('event.updated', (e) => {
+      upsert(e)
+      revision.value++
+    })
+    rt.start()
+  }
+
+  return { events, stats, lastCreated, revision, getEventById, setEvents, loadFromApi, updateEvent, upsert }
 }
