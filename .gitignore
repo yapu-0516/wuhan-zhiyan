@@ -28,6 +28,11 @@ backend/var/
 # ---- OSM 原始抓取缓存（加工结果在 data/geo）----
 data/raw/
 
+# ---- 公开研究数据集 ----
+# 原始数据与派生大文件只保存在本地；索引和授权说明可以提交。
+data/datasets/raw/
+data/datasets/derived/
+
 # ---- 前端 ----
 node_modules/
 frontend/dist/
