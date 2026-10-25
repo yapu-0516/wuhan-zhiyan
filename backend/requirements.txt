@@ -1,4 +1,4 @@
-# 城市之眼 CityEye 后端依赖（Python ≥ 3.10）
+# 城市智眼 CityEye 后端依赖（Python ≥ 3.10）
 fastapi>=0.110
 uvicorn[standard]>=0.27
 sqlalchemy>=2.0

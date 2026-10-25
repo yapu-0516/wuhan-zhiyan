@@ -1,7 +1,7 @@
 // 城市运行总览数据：GET /api/stats/overview
 // - 事件实时变化（revision）后防抖 1.5s 刷新，另每 30s 定时刷新；
 // - WS traffic.updated 实时更新全路网 TPI；
-// - 离线模式：快照总览为底，事件计数类字段由本地事件 store 推导（使本地处置操作即时体现）；
+// - 离线模式：快照总览为底，今日/已办结按真实当天由本地事件推导，趋势沿用快照并标注截止时间；
 // - 总览接口与快照均不可用时，完全由本地事件推导。
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { getOverview } from '@/api/stats'
@@ -57,8 +57,8 @@ export function deriveOverview(events: CityEvent[], base?: Overview | null): Ove
   return {
     total,
     active: total - byStatus.resolved,
-    today: base?.today ?? today,
-    resolved_today: base?.resolved_today ?? resolvedToday,
+    today,
+    resolved_today: resolvedToday,
     resolve_rate: total ? byStatus.resolved / total : 0,
     avg_response_min: base?.avg_response_min ?? 0,
     by_type: byType,
@@ -67,6 +67,7 @@ export function deriveOverview(events: CityEvent[], base?: Overview | null): Ove
     by_district: base?.by_district?.length
       ? base.by_district
       : Array.from(districts, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+    // 离线时保留快照趋势（由 Dashboard 在面板上标注截至时间），避免 24h 图变空
     trend: base?.trend?.length ? base.trend : trend,
     city_index: { ...defaultIndex(total - byStatus.resolved, bySeverity.critical), ...(base?.city_index ?? {}) },
     updated_at: base?.updated_at ?? nowString()

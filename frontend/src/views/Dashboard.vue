@@ -3,6 +3,7 @@
 // 全屏三维数字孪生场景 + 左右 HUD 数据面板 + 顶部场景工具条 + 左下图例 + 一键演示字幕。
 // 组件名 Dashboard 与 App.vue 中 <KeepAlive include="Dashboard"> 对应：切页时不销毁 Cesium Viewer。
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import CesiumViewer from '@/components/CesiumViewer.vue'
 import HudPanel from '@/components/dashboard/HudPanel.vue'
 import SafetyPanel from '@/components/dashboard/SafetyPanel.vue'
@@ -14,12 +15,14 @@ import DistrictRank from '@/components/dashboard/DistrictRank.vue'
 import SensorPanel from '@/components/dashboard/SensorPanel.vue'
 import SceneToolbar from '@/components/dashboard/SceneToolbar.vue'
 import SceneLegend from '@/components/dashboard/SceneLegend.vue'
+import DataErrorNotice from '@/components/pages/DataErrorNotice.vue'
 import { useOverview } from '@/composables/useOverview'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { DEFAULT_BASEMAP, type BasemapKey } from '@/config/cesium'
 import { DEFAULT_LAYERS, type EventTypeFilter, type LayerKey, type LayerVisibility, type TourFocus } from '@/components/scene/types'
 import type { EventType } from '@/types/event'
-import { hhmm } from '@/utils/format'
+import { hhmm, shortTime } from '@/utils/format'
+import { apiState } from '@/api/http'
 
 defineOptions({ name: 'Dashboard' })
 
@@ -38,8 +41,15 @@ const monitored = ref<number | undefined>(undefined)
 
 const touring = computed(() => viewerRef.value?.tourState?.running ?? false)
 
-function toggleLayer(key: LayerKey) {
+async function toggleLayer(key: LayerKey) {
   layers[key] = !layers[key]
+  if (layers[key] && key === 'buildings') layers.buildingsFine = false
+  if (layers[key] && key === 'buildingsFine') {
+    ElMessage.info('正在构建精细建筑模型…')
+    const ok = await viewerRef.value?.loadFineBuildingLayer()
+    if (ok && layers.buildingsFine) layers.buildings = false
+    else if (!ok) layers.buildingsFine = false
+  }
 }
 function toggleType(t: EventType) {
   eventTypes[t] = !eventTypes[t]
@@ -69,8 +79,19 @@ function onSelection(p: { kind: 'event' | 'building' | null; id: string | null }
 }
 
 // ---------------- 数据
-const { data: overview, resume, pause, lastRefresh } = useOverview()
-const { events } = useCityEvents()
+const { data: overview, remote, resume, pause, lastRefresh } = useOverview()
+const { events, error: eventsError, loadFromApi: loadEvents } = useCityEvents()
+const eventsLoading = ref(false)
+
+async function retryEvents() {
+  eventsLoading.value = true
+  try {
+    await loadEvents()
+    monitored.value = viewerRef.value?.sceneStats().monitored
+  } finally {
+    eventsLoading.value = false
+  }
+}
 
 const criticalActive = computed(
   () => events.value.filter((e) => e.status !== 'resolved' && (e.severity === 'critical' || e.severity === 'high')).length
@@ -78,6 +99,11 @@ const criticalActive = computed(
 const updatedText = computed(() => {
   void lastRefresh.value
   return hhmm(overview.value.updated_at)
+})
+// 离线时趋势来自快照，需标注数据截止时间，避免被误读为“近 24 小时”
+const trendSub = computed(() => {
+  if (apiState.mode === 'live' || !remote.value?.trend?.length) return 'TREND'
+  return `截至 ${shortTime(remote.value.updated_at)}`
 })
 
 // ---------------- 面板折叠（窄屏自动隐藏，绝不遮挡场景中心）
@@ -157,13 +183,14 @@ onBeforeUnmount(() => {
       <HudPanel title="事件类型分布" sub="TYPES" class="p-types" :focus="focus === 'types'">
         <TypeRose :by-type="overview.by_type" />
       </HudPanel>
-      <HudPanel title="24 小时事件趋势" sub="TREND" class="p-trend" :focus="focus === 'trend'">
+      <HudPanel title="24 小时事件趋势" :sub="trendSub" class="p-trend" :focus="focus === 'trend'">
         <TrendChart :trend="overview.trend" />
       </HudPanel>
     </aside>
 
     <!-- 右列：事件与感知 -->
     <aside class="hud-col hud-col--right" :class="{ hidden: !rightOpen }">
+      <DataErrorNotice v-if="eventsError" :message="eventsError" :busy="eventsLoading" @retry="retryEvents" />
       <HudPanel title="实时事件流" sub="LIVE" class="p-feed" :focus="focus === 'feed'">
         <LiveFeed :events="events" :selected-id="selectedEventId" @locate="locateEvent" />
       </HudPanel>

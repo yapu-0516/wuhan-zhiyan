@@ -1,4 +1,4 @@
-"""城市之眼 CityEye 后端入口。
+"""城市智眼 CityEye 后端入口。
 
     cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
     # 或在仓库根目录：python -m backend

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
-// 城市之眼路由表（页面按需懒加载；城市总览由 App.vue KeepAlive 缓存）
+// 城市智眼路由表（页面按需懒加载；城市总览由 App.vue KeepAlive 缓存）
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -32,6 +32,11 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/ai-analysis',
+    redirect: (to) => ({ path: '/ai-analysis/fire', query: to.query })
+  },
+  {
+    // 火灾 / 拥堵 / 建筑异常 / 内涝 各自独立页面
+    path: '/ai-analysis/:type(fire|traffic|building|flood)',
     name: 'ai-analysis',
     component: () => import('@/views/AIAnalysis.vue'),
     meta: { title: 'AI 分析' }
@@ -47,7 +52,7 @@ const router = createRouter({
   routes
 })
 
-const APP_TITLE = '城市之眼 CityEye'
+const APP_TITLE = '城市智眼 CityEye'
 
 router.afterEach((to) => {
   const t = typeof to.meta?.title === 'string' ? to.meta.title : ''

@@ -1,4 +1,4 @@
-# cityeye_algo —— 城市之眼算法包
+# cityeye_algo —— 城市智眼算法包
 
 火灾 / 交通 / 建筑 / 内涝四类城市事件的**经典**图像与时序分析算法，仅依赖 `numpy` + `Pillow`
 （连通域、形态学、Otsu 等算子均为纯 numpy 实现，无 OpenCV / scipy / 深度学习依赖）。

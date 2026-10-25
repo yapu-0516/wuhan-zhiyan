@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/images/logo.svg" width="88" alt="城市之眼" />
+<img src="docs/images/logo.svg" width="88" alt="城市智眼" />
 
-# 城市之眼 · CityEye
+# 城市智眼 · CityEye
 
 **武汉城市智能监测与辅助治理平台** —— 感知 · 识别 · 研判 · 处置 · 复盘 全闭环的城市数字孪生指挥中心
 
@@ -25,7 +25,7 @@
 | | |
 | --- | --- |
 | 🏙️ **真实城市底座** | 汉口沿江示范区（江汉路—汉口江滩—武汉天地）**822 栋 OpenStreetMap 真实建筑**、105 条主干道（93.6 km）、84 处医院/消防/公安/学校，四个行政区真实边界，网格化编码 |
-| 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 自研着色器（高度渐变、楼层线、屋顶描边、扫描光带、城市生长动画），路网按实时 TPI 着色并流光，事件涟漪/光柱告警，GPU 不支持时自动降级 |
+| 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 自研着色器（高度渐变、楼层线、屋顶描边、扫描光带、城市生长动画）；路网按实时 TPI 着色并流光，事件涟漪/光柱告警，GPU 不支持时自动降级 |
 | 🧠 **7 个真实可运行的算法** | 火灾识别、交通指数与短临预测、航拍车辆占有率、建筑沉降趋势、前后时相变化检测、积水水位研判、积水影像分割 —— 纯 NumPy 实现，**事件只由算法实际检出产生，绝不伪造** |
 | ⚡ **实时闭环** | WebSocket 推送事件/路况/任务进度；事件状态机（待核查→监测中→处置中→已办结）后端校验；派单、办结、处置时间线多终端同步 |
 | 🎬 **一键演示** | 7 步自动导览：飞入城市 → 环绕 CBD → 实时路况 → **触发真实火情识别** → 派单处置 → 建筑沉降预警 → 复位，附字幕，Esc 可退出 |
@@ -86,7 +86,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 
 | 页面 | 核心能力 |
 | --- | --- |
-| **城市总览** | 三维城市 + 指挥大屏：城市安全指数、实时路网 TPI、今日事件/待处置/处置率/平均响应、类型分布、24 小时趋势、实时事件流、区域排行、设备在线率；图层（建筑/路况/事件/应急资源）、底图（暗色/卫星/离线）、自动追踪、一键演示 |
+| **城市总览** | 三维城市 + 指挥大屏：城市安全指数、实时路网 TPI、今日事件/待处置/处置率/平均响应、类型分布、24 小时趋势、实时事件流、区域排行、设备在线率；图层（OSM 建筑/精细建筑/路况/事件/应急资源）、底图（暗色/卫星/离线）、自动追踪、一键演示 |
 | **城市监测** | 无人机/卫星/视频/物联四类数据源在线率与实时吞吐火花图；路网 TPI 仪表与拥堵排行；建筑沉降监测清单与沉降曲线 |
 | **事件中心** | 多维筛选（类型/状态/等级/关键词）、人工上报、事件详情抽屉（证据图、算法指标、处置时间线）、按状态机派单/办结/重开、三维定位 |
 | **数据管理** | 空间数据资产清单（遥感/无人机/视频/三维模型/传感器/矢量）、类型与状态分布、拖拽上传入库 |
@@ -159,6 +159,7 @@ flowchart LR
 | `CITYEYE_RESET_ON_START` | `false` | 启动时重置演示数据 |
 | `CITYEYE_FRONTEND_DIST` | `frontend/dist` | 托管的前端构建目录 |
 | `CITYEYE_MAX_UPLOAD_MB` | `20` | 单文件上传大小上限（MB） |
+| `CITYEYE_FINE_BUILDINGS_PATH` | `data/datasets/derived/buildings/wuhan_demo_buildings.geojson` | 精细建筑派生图层 |
 | `VITE_USE_MOCK` | `false` | 前端强制使用离线快照 |
 | `VITE_BASEMAP` | `dark` | 底图：`dark` / `satellite` / `offline` |
 | `VITE_CESIUM_ION_TOKEN` | 空 | 可选，启用 Cesium Ion 在线地形/影像 |
@@ -171,6 +172,8 @@ flowchart LR
 make test
 # algorithm/tests  53 passed   —— 每个算法的正例/反例/边界
 # backend/tests    26 passed   —— REST、状态机、任务执行、WebSocket
+cd frontend && npm run lint    # ESLint（Vue + TypeScript）
+cd frontend && npm run test    # Vitest：格式化工具、请求超时/重试
 cd frontend && npm run build   # vue-tsc 严格类型检查 + 生产构建
 ```
 

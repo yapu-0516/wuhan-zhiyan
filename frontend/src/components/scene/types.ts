@@ -3,12 +3,19 @@ import type { BasemapKey } from '@/config/cesium'
 import type { Building, TrafficLevel } from '@/types/building'
 import type { CityEvent, EventType } from '@/types/event'
 
-export type LayerKey = 'buildings' | 'roads' | 'events' | 'pois' | 'effects'
+export type LayerKey =
+  | 'buildings'
+  | 'buildingsFine'
+  | 'roads'
+  | 'events'
+  | 'pois'
+  | 'effects'
 
 export type LayerVisibility = Record<LayerKey, boolean>
 
 export const DEFAULT_LAYERS: LayerVisibility = {
   buildings: true,
+  buildingsFine: false,
   roads: true,
   events: true,
   pois: true,
@@ -61,6 +68,7 @@ export interface SceneApi {
   stopOrbit(): void
   cancelFlight(): void
   setLayerVisible(layer: LayerKey, visible: boolean): void
+  loadFineBuildingLayer(): Promise<boolean>
   setBasemap(key: BasemapKey): void
   /** 高亮拥堵路段（演示用） */
   highlightCongestion(on: boolean): void

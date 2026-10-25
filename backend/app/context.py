@@ -61,6 +61,7 @@ class AppContext:
     id_lock: threading.Lock = field(default_factory=threading.Lock)
     started_at: float = field(default_factory=time.time)
     _buildings_cache: bytes | None = None
+    _fine_buildings_cache: bytes | None = None
 
     @classmethod
     def create(cls, settings: Settings) -> "AppContext":
@@ -147,6 +148,14 @@ class AppContext:
         if self._buildings_cache is None:
             self._buildings_cache = json.dumps(self.geo.buildings_geojson(), ensure_ascii=False, separators=(",", ":")).encode()
         return self._buildings_cache
+
+    def fine_buildings_json(self) -> bytes:
+        if self._fine_buildings_cache is None:
+            path = self.settings.fine_buildings_path
+            if not path.exists():
+                raise FileNotFoundError(path)
+            self._fine_buildings_cache = path.read_bytes()
+        return self._fine_buildings_cache
 
 
 def get_ctx(request: Request) -> AppContext:

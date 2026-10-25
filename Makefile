@@ -1,4 +1,4 @@
-# 城市之眼 CityEye 常用命令
+# 城市智眼 CityEye 常用命令
 PY ?= python3
 
 .PHONY: help install dev demo build test snapshot geo samples docker clean

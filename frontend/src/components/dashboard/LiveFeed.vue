@@ -60,7 +60,12 @@ watch(
         class="feed__item"
         :class="{ 'is-new': fresh.has(e.id), 'is-sel': selectedId === e.id, 'is-done': e.status === 'resolved' }"
         :style="{ '--sev': SEVERITY_META[e.severity]?.color, '--type': EVENT_TYPE_META[e.event_type]?.color }"
+        role="button"
+        tabindex="0"
+        :aria-label="`定位事件：${e.name}`"
         @click="emit('locate', e.id)"
+        @keydown.enter.prevent="emit('locate', e.id)"
+        @keydown.space.prevent="emit('locate', e.id)"
       >
         <span class="feed__icon">{{ EVENT_TYPE_META[e.event_type]?.icon }}</span>
         <div class="feed__main">

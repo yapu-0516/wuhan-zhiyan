@@ -1,4 +1,4 @@
-# 城市之眼 CityEye —— 一体化镜像：前端构建产物由 FastAPI 同源托管
+# 城市智眼 CityEye —— 一体化镜像：前端构建产物由 FastAPI 同源托管
 # 构建：docker build -t cityeye .
 # 运行：docker run -p 8000:8000 cityeye   → http://localhost:8000
 

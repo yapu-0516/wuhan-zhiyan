@@ -7,7 +7,11 @@ import { EVENT_TYPES } from '@/types/event'
 import { getEvents, patchEvent } from '@/api/event'
 import { useRealtime } from './useRealtime'
 
-const state = reactive<{ events: CityEvent[]; loaded: boolean }>({ events: [], loaded: false })
+const state = reactive<{ events: CityEvent[]; loaded: boolean; error: string }>({
+  events: [],
+  loaded: false,
+  error: ''
+})
 
 /** 最近一次实时新增的事件（供三维场景脉冲动画、通知使用） */
 const lastCreated = ref<CityEvent | null>(null)
@@ -27,6 +31,8 @@ function upsert(e: CityEvent): boolean {
 
 export function useCityEvents() {
   const events = computed(() => state.events)
+  const loaded = computed(() => state.loaded)
+  const error = computed(() => state.error)
 
   const stats = computed(() => {
     const total = state.events.length
@@ -52,14 +58,17 @@ export function useCityEvents() {
 
   /** 通过 API 接口层加载事件，并接入实时通道 */
   async function loadFromApi() {
+    state.error = ''
     try {
       const list = await getEvents()
       setEvents(list)
     } catch (e) {
+      state.error = (e as Error).message || '事件数据加载失败'
       console.warn('[events] 加载失败', e)
+    } finally {
+      state.loaded = true
+      wireRealtime()
     }
-    state.loaded = true
-    wireRealtime()
   }
 
   /** 处置操作：调用 PATCH 并就地更新 */
@@ -85,5 +94,17 @@ export function useCityEvents() {
     rt.start()
   }
 
-  return { events, stats, lastCreated, revision, getEventById, setEvents, loadFromApi, updateEvent, upsert }
+  return {
+    events,
+    loaded,
+    error,
+    stats,
+    lastCreated,
+    revision,
+    getEventById,
+    setEvents,
+    loadFromApi,
+    updateEvent,
+    upsert
+  }
 }

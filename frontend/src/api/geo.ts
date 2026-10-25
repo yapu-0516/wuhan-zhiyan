@@ -7,6 +7,11 @@ export function getBuildings(): Promise<BuildingCollection> {
   return request('/buildings', undefined, () => loadSnapshot<BuildingCollection>('buildings.geojson'))
 }
 
+/** 武汉精细建筑轮廓 GET /api/buildings/fine */
+export function getFineBuildings(): Promise<BuildingCollection> {
+  return request('/buildings/fine', undefined, () => loadSnapshot<BuildingCollection>('buildings_fine.geojson'))
+}
+
 /** 建筑详情（含沉降监测）GET /api/buildings/{id} */
 export function getBuilding(id: string): Promise<BuildingDetail> {
   return request(`/buildings/${encodeURIComponent(id)}`, undefined, async () => {

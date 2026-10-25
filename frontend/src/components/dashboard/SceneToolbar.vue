@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 场景浮动工具条：图层开关 / 底图切换 / 自动追踪 / 复位视角 / 一键演示
-import { OfficeBuilding, Guide, Location, FirstAidKit, Aim, RefreshLeft, VideoPlay, SwitchButton } from '@element-plus/icons-vue'
+import { OfficeBuilding, Guide, Location, FirstAidKit, Aim, RefreshLeft, VideoPlay, SwitchButton, Grid } from '@element-plus/icons-vue'
 import type { LayerKey, LayerVisibility } from '@/components/scene/types'
 import type { BasemapKey } from '@/config/cesium'
 
@@ -15,6 +15,7 @@ const emit = defineEmits<{
 
 const LAYERS: { key: LayerKey; label: string; icon: typeof OfficeBuilding }[] = [
   { key: 'buildings', label: '建筑', icon: OfficeBuilding },
+  { key: 'buildingsFine', label: '精细楼', icon: Grid },
   { key: 'roads', label: '路况', icon: Guide },
   { key: 'events', label: '事件', icon: Location },
   { key: 'pois', label: '应急资源', icon: FirstAidKit }

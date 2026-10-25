@@ -78,7 +78,7 @@ export function useDemoTour(getApi: () => SceneApi | null) {
     step(
       1,
       '城市全域感知',
-      `从卫星视角切入汉口沿江示范区：${stats.buildings || '—'} 栋真实建筑、${stats.roads || '—'} 条主干道、${stats.pois || '—'} 处应急资源已接入城市之眼。`,
+      `从卫星视角切入汉口沿江示范区：${stats.buildings || '—'} 栋真实建筑、${stats.roads || '—'} 条主干道、${stats.pois || '—'} 处应急资源已接入城市智眼。`,
       'kpi'
     )
     await api.flyFromSpace()
@@ -202,7 +202,7 @@ export function useDemoTour(getApi: () => SceneApi | null) {
 
     // 7 回到全局
     api.closePanels()
-    step(7, '感知 · 分析 · 决策 · 处置', '城市之眼：多源感知接入、AI 智能识别、三维态势研判、事件闭环处置。', 'safety')
+    step(7, '感知 · 分析 · 决策 · 处置', '城市智眼：多源感知接入、AI 智能识别、三维态势研判、事件闭环处置。', 'safety')
     await api.flyHome(3)
     await sleep(3500, id)
   }

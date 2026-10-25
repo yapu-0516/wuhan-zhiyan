@@ -17,6 +17,15 @@ def buildings(ctx: AppContext = Depends(get_ctx)) -> Response:
     return Response(content=ctx.buildings_json(), media_type="application/json")
 
 
+@router.get("/buildings/fine", summary="武汉精细建筑轮廓 GeoJSON（本地派生数据）")
+def fine_buildings(ctx: AppContext = Depends(get_ctx)) -> Response:
+    try:
+        payload = ctx.fine_buildings_json()
+    except FileNotFoundError as exc:
+        raise not_found("精细建筑图层不存在，请运行 data/scripts/build_wuhan_buildings.py") from exc
+    return Response(content=payload, media_type="application/json")
+
+
 @router.get("/buildings/{building_id}", response_model=BuildingDetailOut, summary="建筑详情（含沉降监测与关联事件）")
 def building_detail(building_id: str, ctx: AppContext = Depends(get_ctx)) -> dict:
     props = ctx.geo.building_props(building_id)

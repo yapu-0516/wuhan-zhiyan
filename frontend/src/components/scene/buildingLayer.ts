@@ -49,7 +49,17 @@ interface BuildingRecord {
 }
 
 function nextFrame(): Promise<void> {
-  return new Promise((r) => requestAnimationFrame(() => r()))
+  // 后台标签页可能暂停 requestAnimationFrame，用短定时器兜底避免构建永久挂起。
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      resolve()
+    }
+    requestAnimationFrame(finish)
+    window.setTimeout(finish, 50)
+  })
 }
 
 function frameNumberOf(scene: Cesium.Scene): number {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// 左侧导航：5 个主页面；事件中心显示未办结事件数徽标；可折叠为图标栏
+// 左侧导航：5 个主页面；AI 分析拆分为火灾 / 拥堵 / 建筑异常 / 内涝四个独立页面；事件中心显示未办结事件数徽标；可折叠为图标栏
 import { useRoute } from 'vue-router'
-import { Location, Monitor, Warning, Files, MagicStick, Fold, Expand } from '@element-plus/icons-vue'
+import { Location, Monitor, Warning, Files, Sunny, Van, OfficeBuilding, Umbrella, Fold, Expand } from '@element-plus/icons-vue'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { useLayout } from '@/composables/useLayout'
 
@@ -13,8 +13,15 @@ const navItems = [
   { to: '/dashboard', label: '城市总览', en: 'OVERVIEW', icon: Location },
   { to: '/monitoring', label: '城市监测', en: 'MONITOR', icon: Monitor },
   { to: '/event-center', label: '事件中心', en: 'EVENTS', icon: Warning, badge: true },
-  { to: '/data-management', label: '数据管理', en: 'DATA', icon: Files },
-  { to: '/ai-analysis', label: 'AI 分析', en: 'AI LAB', icon: MagicStick }
+  { to: '/data-management', label: '数据管理', en: 'DATA', icon: Files }
+]
+
+// AI 分析按风险类型独立成页，互不混排
+const aiItems = [
+  { to: '/ai-analysis/fire', label: '火灾识别', en: 'FIRE', icon: Sunny },
+  { to: '/ai-analysis/traffic', label: '交通拥堵', en: 'TRAFFIC', icon: Van },
+  { to: '/ai-analysis/building', label: '建筑异常', en: 'BUILDING', icon: OfficeBuilding },
+  { to: '/ai-analysis/flood', label: '内涝积水', en: 'FLOOD', icon: Umbrella }
 ]
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
@@ -37,6 +44,24 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
           <span class="nav-en">{{ item.en }}</span>
         </span>
         <span v-if="item.badge && stats.active > 0" class="nav-badge ce-num">{{ stats.active > 99 ? '99+' : stats.active }}</span>
+      </RouterLink>
+
+      <div class="nav-group-label" title="AI 分析">
+        <span>AI 分析</span><em>AI LAB</em>
+      </div>
+      <RouterLink
+        v-for="item in aiItems"
+        :key="item.to"
+        :to="item.to"
+        class="nav-item nav-item--sub"
+        :class="{ active: isActive(item.to) }"
+        :title="sidebarCollapsed ? item.label : undefined"
+      >
+        <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
+        <span class="nav-text">
+          <span class="nav-label">{{ item.label }}</span>
+          <span class="nav-en">{{ item.en }}</span>
+        </span>
       </RouterLink>
     </nav>
     <div class="sidebar-footer">
@@ -66,6 +91,37 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
   flex-direction: column;
   gap: 4px;
   padding: 14px 8px;
+  overflow-y: auto;
+}
+.nav-group-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 4px 2px;
+  padding: 6px 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #6f89aa;
+  border-top: 1px solid var(--ce-divider);
+}
+.nav-group-label em {
+  font-style: normal;
+  font-family: var(--ce-font-num);
+  font-size: 9.5px;
+  letter-spacing: 1.5px;
+  color: var(--ce-text-faint);
+}
+.nav-item--sub {
+  height: 40px;
+  padding-left: 18px;
+}
+.nav-item--sub .nav-icon {
+  font-size: 16px;
+}
+.nav-item--sub .nav-label {
+  font-size: 13px;
+  letter-spacing: 1px;
 }
 .nav-item {
   position: relative;
@@ -179,7 +235,8 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
   padding: 0;
 }
 .collapsed .nav-text,
-.collapsed .ver {
+.collapsed .ver,
+.collapsed .nav-group-label {
   display: none;
 }
 .collapsed .nav-badge {

@@ -13,6 +13,7 @@ import KpiCard from '@/components/pages/KpiCard.vue'
 import EventTable, { type SortState } from '@/components/pages/EventTable.vue'
 import EventDrawer from '@/components/pages/EventDrawer.vue'
 import EventCreateDialog from '@/components/pages/EventCreateDialog.vue'
+import DataErrorNotice from '@/components/pages/DataErrorNotice.vue'
 import type { CityEvent, EventStatus, EventType, Severity } from '@/types/event'
 import {
   EVENT_STATUS_COLOR,
@@ -25,21 +26,109 @@ import {
 const route = useRoute()
 const router = useRouter()
 const store = useCityEvents()
-const { events, stats } = store
+const { events, stats, error: loadError } = store
 
-// ---------- 筛选状态 ----------
+// ---------- 筛选状态（与 URL query 双向同步，刷新/分享/后退不丢失） ----------
 type StatusFilter = 'all' | EventStatus
-const typeFilter = ref<EventType | ''>('')
-const statusFilter = ref<StatusFilter>('all')
-const severityFilter = ref<Severity | ''>('')
-const keyword = ref('')
-const activeOnly = ref(false)
-const todayOnly = ref(false)
+const STATUS_VALUES: StatusFilter[] = ['all', 'pending', 'monitoring', 'processing', 'resolved']
+const FILTER_KEYS = ['type', 'status', 'sev', 'kw', 'active', 'today'] as const
+const SEVERITY_VALUES = Object.keys(SEVERITY_META) as Severity[]
+
+function queryText(v: unknown): string {
+  if (typeof v === 'string') return v
+  if (Array.isArray(v) && typeof v[0] === 'string') return v[0]
+  return ''
+}
+
+function initialType(): EventType | '' {
+  const t = queryText(route.query.type)
+  return EVENT_TYPES.includes(t as EventType) ? (t as EventType) : ''
+}
+
+const typeFilter = ref<EventType | ''>(initialType())
+const statusFilter = ref<StatusFilter>(
+  STATUS_VALUES.includes(queryText(route.query.status) as StatusFilter)
+    ? (queryText(route.query.status) as StatusFilter)
+    : 'all'
+)
+const severityFilter = ref<Severity | ''>(
+  SEVERITY_VALUES.includes(queryText(route.query.sev) as Severity) ? (queryText(route.query.sev) as Severity) : ''
+)
+const keyword = ref(queryText(route.query.kw))
+const activeOnly = ref(queryText(route.query.active) === '1')
+const todayOnly = ref(queryText(route.query.today) === '1')
 const sort = reactive<SortState>({ prop: 'timestamp', order: 'descending' })
 const page = ref(1)
 const pageSize = ref(20)
 const refreshing = ref(false)
 const createVisible = ref(false)
+
+/** 当前筛选 → URL query（空值不写入） */
+function filterQuery(): Record<string, string> {
+  const q: Record<string, string> = {}
+  if (typeFilter.value) q.type = typeFilter.value
+  if (statusFilter.value !== 'all') q.status = statusFilter.value
+  if (severityFilter.value) q.sev = severityFilter.value
+  if (keyword.value.trim()) q.kw = keyword.value.trim()
+  if (activeOnly.value) q.active = '1'
+  if (todayOnly.value) q.today = '1'
+  return q
+}
+
+let queryTimer: number | undefined
+let applyingQuery = false
+
+function syncQuery() {
+  if (applyingQuery) return
+  const query: Record<string, string | string[]> = { ...route.query } as Record<string, string | string[]>
+  FILTER_KEYS.forEach((k) => delete query[k])
+  Object.assign(query, filterQuery())
+  void router.replace({ query })
+}
+
+/** URL query → 筛选状态（浏览器前进/后退、外部链接） */
+function applyQuery() {
+  const nextType = initialType()
+  const status = queryText(route.query.status)
+  const nextStatus = STATUS_VALUES.includes(status as StatusFilter) ? (status as StatusFilter) : 'all'
+  const sev = queryText(route.query.sev)
+  const nextSev = SEVERITY_VALUES.includes(sev as Severity) ? (sev as Severity) : ''
+  const nextKw = queryText(route.query.kw)
+  const nextActive = queryText(route.query.active) === '1'
+  const nextToday = queryText(route.query.today) === '1'
+  if (
+    nextType === typeFilter.value &&
+    nextStatus === statusFilter.value &&
+    nextSev === severityFilter.value &&
+    nextKw === keyword.value &&
+    nextActive === activeOnly.value &&
+    nextToday === todayOnly.value
+  ) {
+    return
+  }
+  applyingQuery = true
+  typeFilter.value = nextType
+  statusFilter.value = nextStatus
+  severityFilter.value = nextSev
+  keyword.value = nextKw
+  activeOnly.value = nextActive
+  todayOnly.value = nextToday
+  applyingQuery = false
+}
+
+watch(
+  () => route.query,
+  () => applyQuery(),
+  { deep: true }
+)
+
+// 筛选变化后写入 URL（关键词输入做 300ms 防抖，避免频繁替换历史记录）
+watch([typeFilter, statusFilter, severityFilter, keyword, activeOnly, todayOnly], () => {
+  window.clearTimeout(queryTimer)
+  queryTimer = window.setTimeout(syncQuery, 300)
+})
+
+onBeforeUnmount(() => window.clearTimeout(queryTimer))
 
 const todayCount = computed(() => {
   const prefix = todayPrefix()
@@ -214,8 +303,12 @@ async function refresh() {
   refreshing.value = true
   try {
     await store.loadFromApi()
-    diffFlash(true)
-    ElMessage.success('事件列表已刷新')
+    if (loadError.value) {
+      ElMessage.error(`事件刷新失败：${loadError.value}`)
+    } else {
+      diffFlash(true)
+      ElMessage.success('事件列表已刷新')
+    }
   } finally {
     refreshing.value = false
   }
@@ -237,6 +330,9 @@ function onCreated(ev: CityEvent) {
       <el-button :icon="Refresh" :loading="refreshing" @click="refresh">刷新</el-button>
       <el-button type="primary" :icon="Plus" @click="createVisible = true">上报事件</el-button>
     </template>
+
+    <!-- 加载失败提示（与“暂无数据”区分） -->
+    <DataErrorNotice v-if="loadError" :message="loadError" :busy="refreshing" @retry="refresh" />
 
     <!-- KPI -->
     <section class="kpis">
@@ -297,9 +393,12 @@ function onCreated(ev: CityEvent) {
         :total="sorted.length"
         :sort="sort"
         :flash="flash"
+        :has-filter="hasFilter"
         @sort="onSort"
         @open="openDetail"
         @locate="locate"
+        @reset="resetFilters"
+        @create="createVisible = true"
       />
     </section>
 

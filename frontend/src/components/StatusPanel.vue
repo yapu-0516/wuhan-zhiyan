@@ -5,6 +5,7 @@ import { useCityEvents } from '@/composables/useCityEvents'
 import { useRealtime } from '@/composables/useRealtime'
 import { apiState } from '@/api/http'
 import { EVENT_TYPES, EVENT_TYPE_META } from '@/types/event'
+import { isToday, shortTime } from '@/utils/format'
 
 const { stats, events, revision } = useCityEvents()
 const { connected, lastMessageAt } = useRealtime()
@@ -21,7 +22,9 @@ const lastUpdate = computed(() => {
     return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
   }
   const latest = events.value.reduce((m, e) => (e.updated_at > m ? e.updated_at : m), '')
-  return latest ? latest.slice(11, 19) : '--:--:--'
+  if (!latest) return '--:--:--'
+  // 快照可能来自历史日期，非当天时补上 MM-dd，避免误读为今天
+  return isToday(latest) ? latest.slice(11, 19) : shortTime(latest)
 })
 </script>
 

@@ -1,4 +1,4 @@
-# 城市之眼 API 契约（v1）
+# 城市智眼 API 契约（v1）
 
 > 本文件是前后端的**唯一接口契约**。后端（FastAPI）严格按此实现，前端 `src/types/*` 与 `src/api/*` 严格按此调用。
 > 所有 REST 接口统一前缀 `/api`；时间字段统一为东八区本地时间字符串 `yyyy-MM-dd HH:mm:ss`（Asia/Shanghai）；JSON 字段使用 snake_case
@@ -50,7 +50,7 @@ pending ──► monitoring ──► processing ──► resolved
 ### `GET /api/system/info`
 ```json
 {
-  "name": "城市之眼 CityEye",
+  "name": "城市智眼 CityEye",
   "version": "1.0.0",
   "demo_mode": true,
   "simulator": { "enabled": true, "interval_sec": 45 },
@@ -148,6 +148,12 @@ pending ──► monitoring ──► processing ──► resolved
   }]
 }
 ```
+
+### `GET /api/buildings/fine` → GeoJSON `FeatureCollection<Polygon>`
+
+返回由本地武汉建筑轮廓裁剪生成的精细建筑图层，当前包含示范区内约 8,277 栋建筑。
+属性中的 `id` 使用 `WHB000001` 格式，`height` 按楼层数估算，仅用于可视化；
+该接口不替代原始 OSM 建筑接口，也不包含沉降监测关联。
 
 ### `GET /api/buildings/{id}` → 建筑详情
 ```jsonc

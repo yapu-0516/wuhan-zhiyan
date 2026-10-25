@@ -11,10 +11,13 @@ export function parseTime(s?: string | null): Date | null {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-/** HH:mm */
+/** HH:mm（非当天时带上 MM-dd，避免把历史数据误读为今天的时刻） */
 export function hhmm(s?: string | null): string {
   const d = parseTime(s)
-  return d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : '--:--'
+  if (!d) return '--:--'
+  const now = new Date()
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  return sameDay ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : shortTime(s)
 }
 
 /** MM-dd HH:mm */

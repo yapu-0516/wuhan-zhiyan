@@ -19,7 +19,7 @@ def test_health(client):
 
 def test_system_info(client):
     d = client.get("/api/system/info").json()
-    assert d["name"] == "城市之眼 CityEye" and d["database"] == "sqlite"
+    assert d["name"] == "城市智眼 CityEye" and d["database"] == "sqlite"
     assert d["simulator"]["enabled"] is False
     assert len(d["region"]["center"]) == 2 and len(d["region"]["bbox"]) == 4
     assert {a["type"] for a in d["algorithms"]} == {"fire", "traffic", "building", "flood"}

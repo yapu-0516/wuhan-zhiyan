@@ -14,7 +14,7 @@ ALGORITHM_DIR = REPO_ROOT / "algorithm"
 if str(ALGORITHM_DIR) not in sys.path:
     sys.path.insert(0, str(ALGORITHM_DIR))
 
-APP_NAME = "城市之眼 CityEye"
+APP_NAME = "城市智眼 CityEye"
 APP_VERSION = "1.0.0"
 
 
@@ -54,6 +54,9 @@ class Settings:
     files_dir: Path = BACKEND_DIR / "var" / "files"
     samples_dir: Path = REPO_ROOT / "data" / "samples"
     geo_dir: Path = REPO_ROOT / "data" / "geo"
+    fine_buildings_path: Path = (
+        REPO_ROOT / "data" / "datasets" / "derived" / "buildings" / "wuhan_demo_buildings.geojson"
+    )
     cors_origins: list[str] = field(default_factory=lambda: ["*"])
     max_upload_mb: float = 20.0
 
@@ -78,6 +81,10 @@ class Settings:
             files_dir=_path("CITYEYE_FILES_DIR", BACKEND_DIR / "var" / "files"),
             samples_dir=_path("CITYEYE_SAMPLES_DIR", REPO_ROOT / "data" / "samples"),
             geo_dir=_path("CITYEYE_GEO_DIR", REPO_ROOT / "data" / "geo"),
+            fine_buildings_path=_path(
+                "CITYEYE_FINE_BUILDINGS_PATH",
+                REPO_ROOT / "data" / "datasets" / "derived" / "buildings" / "wuhan_demo_buildings.geojson",
+            ),
             cors_origins=[o.strip() for o in origins.split(",") if o.strip()],
             max_upload_mb=max(1.0, _float("CITYEYE_MAX_UPLOAD_MB", 20.0)),
         )

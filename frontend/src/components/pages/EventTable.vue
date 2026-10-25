@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 事件列表表格（纯展示）：排序 / 分页 / 新事件高亮由父级 EventCenter 控制
 import { computed } from 'vue'
-import { Location, Document } from '@element-plus/icons-vue'
+import { Location, Document, RefreshLeft } from '@element-plus/icons-vue'
 import type { CityEvent } from '@/types/event'
 import { EVENT_STATUS_COLOR, EVENT_STATUS_LABEL, EVENT_TYPE_META, SEVERITY_META, SOURCE_META } from '@/types/event'
 import { pct100, shortTime } from '@/composables/pages/format'
@@ -21,6 +21,8 @@ const props = defineProps<{
   /** 实时到达 / 更新的事件高亮：id → 'new' | 'updated' */
   flash: Record<string, 'new' | 'updated'>
   loading?: boolean
+  /** 是否存在有效筛选条件（决定空状态是否显示“清除筛选”） */
+  hasFilter?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -29,6 +31,8 @@ const emit = defineEmits<{
   (e: 'sort', v: SortState): void
   (e: 'open', row: CityEvent): void
   (e: 'locate', row: CityEvent): void
+  (e: 'reset'): void
+  (e: 'create'): void
 }>()
 
 function rowClass(p: { row: CityEvent }): string {
@@ -52,8 +56,8 @@ function onSortChange(p: { prop?: string; order?: 'ascending' | 'descending' | n
 }
 
 const vw = useViewportWidth()
-const showSource = computed(() => vw.value >= 1500)
-const showAssignee = computed(() => vw.value >= 1360)
+const showSource = computed(() => vw.value >= 1760)
+const showAssignee = computed(() => vw.value >= 1500)
 
 const sevText = (e: CityEvent) => SEVERITY_META[e.severity].label.replace(/^\S+\s/, '')
 const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' : '#f0c050')
@@ -73,7 +77,12 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
         @sort-change="onSortChange"
       >
         <template #empty>
-          <el-empty :image-size="84" description="没有符合条件的事件，试试调整筛选条件" />
+          <el-empty :image-size="84" description="没有符合条件的事件">
+            <div class="etable__empty">
+              <el-button v-if="hasFilter" size="small" :icon="RefreshLeft" @click="emit('reset')">清除筛选</el-button>
+              <el-button size="small" type="primary" @click="emit('create')">上报事件</el-button>
+            </div>
+          </el-empty>
         </template>
 
         <el-table-column label="编号" width="88" fixed>
@@ -217,6 +226,12 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
   color: var(--ce-accent, #4fc3f7);
   font-weight: 600;
   padding: 0 2px;
+}
+.etable__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 .eid {
   font-size: 12.5px;

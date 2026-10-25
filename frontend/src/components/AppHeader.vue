@@ -67,7 +67,7 @@ const demoTip = computed(() =>
         <circle class="brand-logo__scan" cx="24" cy="24" r="13" fill="none" stroke="#4fc3f7" stroke-width="1" stroke-dasharray="6 5" />
       </svg>
       <div class="brand-text">
-        <h1>城市之眼</h1>
+        <h1>城市智眼</h1>
         <p>CITYEYE · 城市运行指挥中心</p>
       </div>
     </div>

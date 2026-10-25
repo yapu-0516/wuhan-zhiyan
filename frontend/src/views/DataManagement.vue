@@ -18,8 +18,8 @@ import DataTypeDistribution from '@/components/pages/DataTypeDistribution.vue'
 import DataStatusChart from '@/components/pages/DataStatusChart.vue'
 
 const vw = useViewportWidth()
-const showFormat = computed(() => vw.value >= 1500)
-const showMore = computed(() => vw.value >= 1360)
+const showFormat = computed(() => vw.value >= 1600)
+const showMore = computed(() => vw.value >= 1400)
 const rowKey = (r: DataItem): string => r.id ?? r.name
 
 const loading = ref(true)

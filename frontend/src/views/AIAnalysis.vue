@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// AI 智能分析 —— 真实算法在线运行
-// 选择分析类型 → 选择示例 / 上传数据 → 提交任务 → WebSocket + 轮询跟踪进度 → 展示标注图、检测目标、指标与时序曲线。
+// AI 智能分析 —— 真实算法在线运行（按分析类型拆分为独立页面）
+// 路由 /ai-analysis/:type：每页只承载一种风险分析（火灾 / 拥堵 / 建筑异常 / 内涝）。
+// 选择示例 / 上传数据 → 提交任务 → WebSocket + 轮询跟踪进度 → 展示标注图、检测目标、指标与时序曲线。
 // 诚信原则：离线 / 静态模式下后端返回 prototype 任务，仅提示需要后端，绝不伪造分析结果。
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
 import { getSystemInfo } from '@/api/system'
 import { createTask, getTask, getTasks, uploadTask } from '@/api/task'
@@ -14,7 +15,6 @@ import { errMsg } from '@/composables/pages/format'
 import { typeMeta } from '@/composables/pages/aiMeta'
 import type { SubmitPayload } from '@/composables/pages/aiMeta'
 import PageShell from '@/components/pages/PageShell.vue'
-import AnalysisTypeCards from '@/components/pages/AnalysisTypeCards.vue'
 import TaskInputPanel from '@/components/pages/TaskInputPanel.vue'
 import TaskProgress from '@/components/pages/TaskProgress.vue'
 import TaskResultView from '@/components/pages/TaskResultView.vue'
@@ -23,25 +23,31 @@ import type { AnalysisTask, SystemInfo } from '@/types/api'
 import type { EventType } from '@/types/event'
 
 const route = useRoute()
+const router = useRouter()
 const rt = useRealtime()
 const { connected } = rt
 
 const info = ref<SystemInfo | null>(null)
 const infoLoading = ref(true)
-const selectedType = ref<EventType>('fire')
 const tasks = ref<AnalysisTask[]>([])
 const tasksLoading = ref(false)
 const submitting = ref(false)
 const prototype = ref<AnalysisTask | null>(null)
 const resultEl = ref<HTMLElement>()
 
+/** 当前页面对应的分析类型（由路由参数决定，非法值回退火灾） */
+const selectedType = computed<EventType>(() => {
+  const t = route.params.type
+  return typeof t === 'string' && typeMeta(t) ? (t as EventType) : 'fire'
+})
 const center = computed<[number, number]>(() => info.value?.region?.center ?? [114.2955, 30.5895])
 const algorithms = computed(() => info.value?.algorithms ?? [])
 const curMeta = computed(() => typeMeta(selectedType.value)!)
+const typeAlgo = computed(() => algorithms.value.find((a) => a.type === selectedType.value))
 
-// ---------- 任务列表 ----------
+// ---------- 任务列表（仅当前分析类型） ----------
 function upsertTask(t: AnalysisTask) {
-  if (t.status === 'prototype') return
+  if (t.status === 'prototype' || t.type !== selectedType.value) return
   const i = tasks.value.findIndex((x) => x.id === t.id)
   if (i >= 0) tasks.value.splice(i, 1, { ...tasks.value[i], ...t })
   else tasks.value.unshift(t)
@@ -77,7 +83,9 @@ const { current, active, elapsedMs, stalled } = runner
 async function loadTasks(manual = false) {
   tasksLoading.value = true
   try {
-    tasks.value = (await getTasks()).filter((t) => t.status !== 'prototype')
+    tasks.value = (await getTasks()).filter(
+      (t) => t.status !== 'prototype' && t.type === selectedType.value
+    )
     if (manual) ElMessage.success('任务历史已刷新')
   } catch (e) {
     ElMessage.error(errMsg(e, '任务历史加载失败'))
@@ -136,11 +144,15 @@ async function submit(p: SubmitPayload) {
   }
 }
 
-function onSelectType(t: EventType) {
-  selectedType.value = t
-}
-
 const status = computed(() => current.value?.status)
+
+// 切换分析类型（路由参数变化）：清空上一个类型的结果，只保留本类型任务
+watch(selectedType, () => {
+  prototype.value = null
+  runner.clear()
+  tasks.value = []
+  void loadTasks()
+})
 
 onMounted(async () => {
   rt.start()
@@ -148,16 +160,19 @@ onMounted(async () => {
   try {
     info.value = await getSystemInfo()
   } catch {
-    /* 算法信息缺失时卡片显示"不可用" */
+    /* 算法信息缺失时显示"不可用" */
   } finally {
     infoLoading.value = false
   }
-  // 深链：/ai-analysis?task=T0003
+  // 深链：/ai-analysis/fire?task=T0003（任务类型不一致时跳到对应页面）
   const id = typeof route.query.task === 'string' ? route.query.task : ''
   if (id) {
     try {
       const t = await getTask(id)
-      if (typeMeta(t.type)) selectedType.value = t.type as EventType
+      if (typeMeta(t.type) && t.type !== selectedType.value) {
+        await router.replace({ path: `/ai-analysis/${t.type}`, query: { task: id } })
+        await nextTick()
+      }
       await selectTask(t)
     } catch (e) {
       ElMessage.warning(errMsg(e, `任务 ${id} 不存在`))
@@ -167,7 +182,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <PageShell title="AI 智能分析" hint="四类城市风险的真实算法在线分析：火灾识别、交通拥堵、建筑异常、内涝积水" banner-detail="AI 分析需要后端算法服务。">
+  <PageShell :title="curMeta.label" hint="选择分析场景与数据 → 配置参数并运行 → 查看结果与历史记录" banner-detail="AI 分析需要后端算法服务。">
     <template #actions>
       <span class="chan" :class="{ 'is-on': connected }">
         <i class="cp-dot" :class="{ 'cp-dot--pulse': connected }" :style="{ '--c': connected ? '#4dd984' : '#8aa3c4' }"></i>
@@ -176,9 +191,26 @@ onMounted(async () => {
     </template>
 
     <div class="ai">
-      <section class="ai__types">
-        <h3 class="sec-label">选择分析类型</h3>
-        <AnalysisTypeCards :selected="selectedType" :algorithms="algorithms" :loading="infoLoading" @select="onSelectType" />
+      <!-- 当前分析类型标识 -->
+      <section class="ai-hero cp-panel" :style="{ '--c': curMeta.color }">
+        <span class="ai-hero__icon">{{ curMeta.icon }}</span>
+        <div class="ai-hero__txt">
+          <b>{{ curMeta.label }}</b>
+          <p>{{ curMeta.blurb }}</p>
+          <div class="ai-hero__inputs">
+            <span v-for="i in curMeta.inputs" :key="i" class="ai-hero__chip">{{ i }}</span>
+          </div>
+        </div>
+        <div class="ai-hero__algo">
+          <template v-if="typeAlgo">
+            <span class="cp-label">算法</span>
+            <b class="cp-mono">{{ typeAlgo.name }}</b>
+            <i>v{{ typeAlgo.version }}</i>
+            <p>{{ typeAlgo.method }}</p>
+          </template>
+          <el-skeleton v-else-if="infoLoading" animated :rows="1" />
+          <p v-else class="ai-hero__na">算法信息由后端提供（当前不可用）</p>
+        </div>
       </section>
 
       <section class="cp-panel ai__input">
@@ -214,7 +246,7 @@ onMounted(async () => {
           <TaskResultView v-else-if="current && status === 'done'" :key="`res-${current.id}`" :task="current" />
           <div v-else key="empty" class="idle cp-panel">
             <div class="idle__title">分析结果将在此处呈现</div>
-            <p>选择左侧分析类型，挑选示例数据或上传文件，点击「开始分析」。真实算法在后端异步执行，进度实时推送。</p>
+            <p>选择左侧示例数据或上传文件，点击「开始分析」。真实算法在后端异步执行，进度实时推送。</p>
             <ol class="idle__flow">
               <li><b>01</b>提交任务</li>
               <li><b>02</b>数据预处理</li>
@@ -240,60 +272,121 @@ onMounted(async () => {
 <style scoped>
 .ai {
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr);
+  grid-template-columns: minmax(340px, 440px) minmax(0, 1fr);
   grid-template-areas:
-    'types input'
-    'result result';
+    'hero hero'
+    'input result';
   gap: 16px;
   align-items: start;
 }
-.ai__types {
-  grid-area: types;
+.ai-hero {
+  grid-area: hero;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 20px;
+  border-color: color-mix(in srgb, var(--c) 45%, transparent);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--c) 14%, rgba(16, 26, 48, 0.8)), rgba(16, 26, 48, 0.8) 60%);
+}
+.ai-hero__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 54px;
+  height: 54px;
+  font-size: 28px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--c) 16%, rgba(9, 16, 34, 0.8));
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+}
+.ai-hero__txt {
+  flex: 1 1 auto;
   min-width: 0;
+}
+.ai-hero__txt b {
+  font-size: 17px;
+  color: #f0f6ff;
+}
+.ai-hero__txt p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #9db4d2;
+}
+.ai-hero__inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ai-hero__chip {
+  padding: 0 8px;
+  line-height: 20px;
+  font-size: 11.5px;
+  border-radius: 4px;
+  color: #a9cdf0;
+  background: rgba(79, 195, 247, 0.08);
+  border: 1px solid rgba(64, 120, 180, 0.3);
+}
+.ai-hero__algo {
+  flex: 0 1 320px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(7, 12, 28, 0.55);
+  border: 1px dashed rgba(64, 120, 180, 0.3);
+}
+.ai-hero__algo .cp-label {
+  margin-right: 6px;
+}
+.ai-hero__algo b {
+  font-size: 13px;
+  color: var(--c);
+}
+.ai-hero__algo i {
+  margin-left: 6px;
+  font-style: normal;
+  font-size: 11px;
+  color: #6f89aa;
+}
+.ai-hero__algo p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8aa3c4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ai-hero__na {
+  margin: 0;
+  font-size: 12px;
+  color: #5d748f;
 }
 .ai__input {
   grid-area: input;
+  min-width: 0;
 }
 .ai__result {
   grid-area: result;
   min-width: 0;
 }
-@media (min-width: 2200px) {
-  .ai {
-    grid-template-columns: 330px minmax(440px, 600px) minmax(0, 1fr);
-    grid-template-areas: 'types input result';
-  }
-}
 @media (max-width: 1360px) {
   .ai {
     grid-template-columns: 1fr;
     grid-template-areas:
-      'types'
+      'hero'
       'input'
       'result';
   }
-  .ai__types :deep(.tcs) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .ai-hero {
+    flex-wrap: wrap;
   }
-}
-.sec-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: #a9cdf0;
-}
-.sec-label::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  background: var(--ce-accent, #4fc3f7);
-  box-shadow: 0 0 8px var(--ce-accent, #4fc3f7);
-  transform: rotate(45deg);
+  .ai-hero__algo {
+    flex-basis: 100%;
+  }
 }
 .chan {
   display: inline-flex;

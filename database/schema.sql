@@ -1,4 +1,4 @@
--- 城市之眼 CityEye 数据库结构（SQLite 方言；与 backend/app/models.py 的 SQLAlchemy ORM 一致）
+-- 城市智眼 CityEye 数据库结构（SQLite 方言；与 backend/app/models.py 的 SQLAlchemy ORM 一致）
 -- 后端启动时由 ORM 自动建表（Base.metadata.create_all），本文件用于审阅与手工建库。
 -- 约定：时间字段为东八区（Asia/Shanghai）本地时间；JSON 列在 SQLite 中以 TEXT 存储。
 -- 道路实时路况（speed / tpi / level）由模拟器在内存中维护，不落库；建筑 / 道路几何来自 data/geo/*.geojson。

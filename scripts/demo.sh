@@ -8,5 +8,5 @@ PY="${PYTHON:-python3}"
 if [ ! -f "$ROOT/frontend/dist/index.html" ]; then
   (cd "$ROOT/frontend" && { [ -d node_modules ] || npm ci --no-audit --no-fund; } && npm run build)
 fi
-echo "▶ 城市之眼已启动：http://127.0.0.1:8000"
+echo "▶ 城市智眼已启动：http://127.0.0.1:8000"
 cd "$ROOT" && exec "$PY" -m backend --host "${HOST:-0.0.0.0}" --port "${PORT:-8000}"

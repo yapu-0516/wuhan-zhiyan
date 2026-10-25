@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 城市之眼应用外壳：顶栏 + 左侧导航 + 路由主区 + 底部状态栏
+// 城市智眼应用外壳：顶栏 + 左侧导航 + 路由主区 + 底部状态栏
 // 城市总览（Dashboard）使用 KeepAlive 缓存：切换到管理页面再返回时不重建 Cesium Viewer。
 import AppHeader from '@/components/AppHeader.vue'
 import Sidebar from '@/components/Sidebar.vue'

@@ -1,4 +1,4 @@
-"""把 fetch_osm.py 抓取的 OSM 原始数据加工为城市之眼使用的 GeoJSON。
+"""把 fetch_osm.py 抓取的 OSM 原始数据加工为城市智眼使用的 GeoJSON。
 
 输出（data/geo/）：
     buildings.geojson  真实建筑轮廓 + 高度（OSM 实测 / 楼层推算 / 规则估算，height_source 标明来源）

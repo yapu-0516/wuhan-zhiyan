@@ -211,7 +211,8 @@ function gotoBuilding(id: string) {
   void router.push({ path: '/dashboard', query: { buildingId: id } })
 }
 function gotoTask(id: string) {
-  void router.push({ path: '/ai-analysis', query: { task: id } })
+  const type = event.value?.event_type ?? 'fire'
+  void router.push({ path: `/ai-analysis/${type}`, query: { task: id } })
 }
 async function copyCoord() {
   if (!event.value) return

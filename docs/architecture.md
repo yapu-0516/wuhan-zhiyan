@@ -1,6 +1,6 @@
 # 系统架构
 
-城市之眼（CityEye）是面向城市运行管理的「**感知 → 识别 → 研判 → 处置 → 复盘**」闭环平台。
+城市智眼（CityEye）是面向城市运行管理的「**感知 → 识别 → 研判 → 处置 → 复盘**」闭环平台。
 本文描述 v1.0 的整体架构、数据流与关键设计取舍。
 
 ## 1. 总体架构
@@ -116,4 +116,6 @@ sequenceDiagram
 - **算法替换**：`algorithm/cityeye_algo/registry.py` 按事件类型注册分析器，可无缝替换为 YOLO / SegFormer 等深度模型，接口不变。
 - **数据库**：`CITYEYE_DB_URL` 切换为 PostgreSQL/PostGIS（SQLAlchemy 方言无关）。
 - **三维数据**：配置 `VITE_CESIUM_ION_TOKEN` 后可叠加 Cesium World Terrain、倾斜摄影 3D Tiles。
+- **精细建筑图层**：运行 `data/scripts/build_wuhan_buildings.py` 生成示范区派生 GeoJSON，
+  经 `/api/buildings/fine` 加载；与现有 OSM 建筑图层互斥，避免模型重叠。
 - **新事件类型**：在 `docs/api.md` 枚举、`frontend/src/types/event.ts` 元信息、算法注册表三处追加即可。

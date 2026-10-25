@@ -1,5 +1,5 @@
 /*
- * 城市之眼 CityEye 全局设计系统 —— 深色数字孪生指挥中心风格
+ * 城市智眼 CityEye 全局设计系统 —— 深色数字孪生指挥中心风格
  *
  * 1. 设计令牌（CSS 变量）：颜色 / 字体 / 尺寸，全站统一引用；
  * 2. 公共工具类（页面与大屏共用，类名保持稳定）：
@@ -648,4 +648,13 @@ html.dark .el-notification {
 .ce-notify__btn:hover {
   background: var(--ce-notify-color, #4fc3f7);
   color: #08111f;
+}
+
+/* 键盘焦点环：仅在键盘导航时显示，避免鼠标点击出现描边 */
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--ce-accent, #4fc3f7);
+  outline-offset: 2px;
 }

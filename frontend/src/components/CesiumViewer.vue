@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 城市之眼三维数字孪生场景（Cesium 1.125，无 Ion 依赖）
+ * 城市智眼三维数字孪生场景（Cesium 1.125，无 Ion 依赖）
  *
  * 图层（均为合批 Primitive / Collection，详见 ./scene/*）：
  *   建筑   BuildingLayer   OSM 轮廓拉伸 + 科技渐变/扫描光带/城市生长着色器，选中/告警/预警通过批表切换
@@ -17,7 +17,7 @@ import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
 import { BASEMAPS, CESIUM_ION_TOKEN, DEFAULT_BASEMAP, type BasemapKey } from '@/config/cesium'
-import { getBuildings, getPois, getRoads } from '@/api/geo'
+import { getBuildings, getFineBuildings, getPois, getRoads } from '@/api/geo'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { useRealtime } from '@/composables/useRealtime'
 import { useSystemInfo } from '@/composables/useSystemInfo'
@@ -92,6 +92,8 @@ let clock: SceneClock | null = null
 let basemapCtl: BasemapController | null = null
 let cam: CameraController | null = null
 let buildings: BuildingLayer | null = null
+let fineBuildings: BuildingLayer | null = null
+let fineBuildingsLoading: Promise<number> | null = null
 let roads: RoadLayer | null = null
 let eventLayer: EventLayer | null = null
 let pois: PoiLayer | null = null
@@ -212,6 +214,10 @@ function setLayerVisible(layer: LayerKey, visible: boolean) {
     case 'buildings':
       buildings?.setVisible(visible)
       break
+    case 'buildingsFine':
+      fineBuildings?.setVisible(visible)
+      if (visible) void loadFineBuildings()
+      break
     case 'roads':
       roads?.setVisible(visible)
       if (!visible) roadTip.value = null
@@ -250,6 +256,37 @@ async function demoDispatch(assignee?: string): Promise<CityEvent | null> {
   return detail.demoDispatch(assignee)
 }
 
+async function loadFineBuildings(): Promise<number> {
+  if (!fineBuildings || disposed) return 0
+  if (fineBuildings.count > 0) return fineBuildings.count
+  if (fineBuildingsLoading) return fineBuildingsLoading
+  const showStage = status.ready && !status.loading
+  if (showStage) {
+    status.loading = true
+    status.stage = '构建精细建筑模型…'
+  }
+  fineBuildingsLoading = (async () => {
+    try {
+      const data = await getFineBuildings()
+      const count = await fineBuildings!.load(data)
+      if (!disposed) fineBuildings!.setVisible(layerState.buildingsFine)
+      return count
+    } catch (error) {
+      console.error('[buildings] 精细建筑图层加载失败', error)
+      ElMessage.error('精细建筑图层加载失败，请先生成派生数据')
+      return 0
+    } finally {
+      fineBuildingsLoading = null
+      if (showStage) status.loading = false
+    }
+  })()
+  return fineBuildingsLoading
+}
+
+async function loadFineBuildingLayer(): Promise<boolean> {
+  return (await loadFineBuildings()) > 0
+}
+
 const api: SceneApi = {
   isReady,
   flyHome: (duration?: number) => cam?.flyHome(duration) ?? Promise.resolve(false),
@@ -261,6 +298,7 @@ const api: SceneApi = {
   stopOrbit: () => cam?.stopOrbit(),
   cancelFlight: () => cam?.cancel(),
   setLayerVisible,
+  loadFineBuildingLayer,
   setBasemap,
   highlightCongestion: (on: boolean) => roads?.setHighlight(on),
   openEvent,
@@ -589,6 +627,7 @@ async function init() {
   pois = new PoiLayer(scene)
   roads = new RoadLayer(scene, c)
   buildings = new BuildingLayer(scene, c)
+  fineBuildings = new BuildingLayer(scene, c)
   // 应用初始图层可见性
   ;(Object.keys(layerState) as LayerKey[]).forEach((k) => setLayerVisible(k, layerState[k]))
   bindInteraction(v)
@@ -671,6 +710,7 @@ onBeforeUnmount(() => {
   cam?.destroy()
   basemapCtl?.destroy()
   buildings?.destroy()
+  fineBuildings?.destroy()
   roads?.destroy()
   eventLayer?.destroy()
   pois?.destroy()
