@@ -13,26 +13,30 @@ import type { TrafficUpdate } from '@/types/api'
 import { LINE_VERTEX_FORMAT, byte, fxAttribute, roadAppearance, safeLineAppearance, type SceneClock } from './shaders'
 import { hashByte, lineMidpoint, resampleLine, type LonLat } from './geo'
 
-const LEVEL_COLORS: Record<TrafficLevel, Cesium.Color> = Object.fromEntries(
-  Object.entries(TRAFFIC_LEVEL_META).map(([k, v]) => [k, Cesium.Color.fromCssColorString(v.color)])
-) as Record<TrafficLevel, Cesium.Color>
+const LEVEL_COLORS: Record<TrafficLevel, Cesium.Color> = {
+  smooth: Cesium.Color.fromCssColorString('#5f6b72'),
+  basic: Cesium.Color.fromCssColorString('#727f6e'),
+  light: Cesium.Color.fromCssColorString('#9c8754'),
+  moderate: Cesium.Color.fromCssColorString('#bd7046'),
+  heavy: Cesium.Color.fromCssColorString('#c94d4f')
+}
 
 /** 光点间距（米） */
-const DASH_SPACING = 140
+const DASH_SPACING = 220
 
 function widthOf(highway: string | undefined): number {
   switch (highway) {
     case 'motorway':
     case 'trunk':
-      return 9
+      return 7
     case 'primary':
-      return 8
-    case 'secondary':
       return 6.5
+    case 'secondary':
+      return 5.4
     case 'tertiary':
-      return 5.5
+      return 4.6
     default:
-      return 4.5
+      return 3.8
   }
 }
 
@@ -162,7 +166,7 @@ export class RoadLayer {
 
   private colorOf(rec: RoadRecord): Cesium.Color {
     const c = (LEVEL_COLORS[rec.props.level] ?? LEVEL_COLORS.smooth).clone()
-    c.alpha = 0.95
+    c.alpha = alphaOf(rec.props.level)
     return c
   }
 
@@ -197,7 +201,7 @@ export class RoadLayer {
     for (const rec of this.dirty) {
       const base = LEVEL_COLORS[rec.props.level] ?? LEVEL_COLORS.smooth
       Cesium.Color.clone(base, colorScratch)
-      colorScratch.alpha = 0.95
+      colorScratch.alpha = alphaOf(rec.props.level)
       const colorValue = Cesium.ColorGeometryInstanceAttribute.toValue(colorScratch)
       const hi = this.isHighlighted(rec) ? 1 : 0
       for (const part of rec.parts) {
@@ -280,6 +284,22 @@ export class RoadLayer {
     this.records.clear()
     this.byInstance.clear()
     this.dirty.clear()
+  }
+}
+
+/** 畅通道路退到卫星影像之下，只有拥堵与重点关注路段保持明确覆盖。 */
+function alphaOf(level: TrafficLevel): number {
+  switch (level) {
+    case 'heavy':
+      return 0.78
+    case 'moderate':
+      return 0.66
+    case 'light':
+      return 0.5
+    case 'basic':
+      return 0.34
+    default:
+      return 0.27
   }
 }
 

@@ -78,6 +78,9 @@ erDiagram
 | `data_assets` | 数据资产目录（含 OSM 矢量、示例数据与演示目录条目，上传文件也登记于此） |
 | `sources` | 监测数据源基线配置，实时吞吐由模拟器在内存中刷新 |
 | `app_meta` | 种子版本与生成时间 |
+| `scenario_sessions` | 多轮情景推演会话、当前参数和消息 |
+| `scenario_versions` | 不可变情景参数版本，用于修改前后对比 |
+| `scenario_runs` | 推演时间帧、提供方、数据性质和结构化报告 |
 
 道路实时路况（车速 / TPI / 等级）只存在于内存（`services/traffic.py`），通过 `GET /api/roads` 与 WebSocket `traffic.updated` 输出。
 

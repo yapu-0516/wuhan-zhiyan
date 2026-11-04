@@ -23,7 +23,7 @@ defineEmits<{ (e: 'retry'): void }>()
   border-radius: 8px;
   font-size: 12.5px;
   color: #ffb4a2;
-  background: linear-gradient(90deg, rgba(255, 107, 107, 0.14), rgba(255, 107, 107, 0.04));
+  background: #24191a;
   border: 1px solid rgba(255, 107, 107, 0.38);
 }
 .den__dot {
@@ -32,7 +32,6 @@ defineEmits<{ (e: 'retry'): void }>()
   height: 7px;
   border-radius: 50%;
   background: #ff6b6b;
-  box-shadow: 0 0 8px #ff6b6b;
 }
 .den__text {
   flex: 1;

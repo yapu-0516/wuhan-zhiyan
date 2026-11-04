@@ -23,15 +23,28 @@ const st = computed(() => STATUS[props.source.status] ?? { color: '#8aa3c4' })
 const ratio = computed(() => (props.source.devices_total ? props.source.devices_online / props.source.devices_total : 0))
 const ratioColor = computed(() => (props.source.devices_total === 0 ? '#7f8ea6' : ratio.value >= 0.9 ? '#4dd984' : ratio.value >= 0.6 ? '#f0c050' : '#ff6b6b'))
 const idle = computed(() => props.source.status === '待接入' || props.source.status === '离线')
+const sourceCode = computed(() => {
+  const codes: Record<string, string> = {
+    'S-DRONE': 'UAV',
+    'S-SAT': 'SAT',
+    'S-VIDEO': 'CAM',
+    'S-IOT-WATER': 'H2O',
+    'S-IOT-SETTLE': 'STR',
+    'S-TRAFFIC': 'TRF',
+    'S-CITIZEN': 'CIV',
+    'S-RADAR': 'QPE'
+  }
+  return codes[props.source.id] ?? props.source.type.slice(0, 3).toUpperCase()
+})
 </script>
 
 <template>
-  <article class="sc cp-panel cp-panel--glow" :class="{ 'is-idle': idle }" :style="{ '--c': st.color }">
+  <article class="sc cp-panel" :class="{ 'is-idle': idle }" :style="{ '--c': st.color }">
     <header class="sc__head">
-      <span class="sc__icon">{{ source.icon }}</span>
+      <span class="sc__icon">{{ sourceCode }}</span>
       <div class="sc__title">
         <b>{{ source.name }}</b>
-        <span class="cp-ellipsis" :title="source.desc">{{ source.desc }}</span>
+        <span class="sc__desc" :title="source.desc">{{ source.desc }}</span>
       </div>
       <span class="cp-pill cp-pill--sm" :style="{ '--c': st.color }">
         <i class="cp-dot" :class="{ 'cp-dot--pulse': st.pulse }"></i>{{ source.status }}
@@ -58,7 +71,7 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
     </div>
 
     <footer class="sc__foot">
-      <span class="cp-ellipsis" :title="source.coverage">📍 {{ source.coverage || '—' }}</span>
+      <span class="cp-ellipsis" :title="source.coverage">{{ source.coverage || '—' }}</span>
       <span>{{ relativeTime(source.last_active, now) }}</span>
     </footer>
   </article>
@@ -71,7 +84,7 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
   flex-direction: column;
   gap: 14px;
   padding: 16px 18px 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s;
 }
 .sc.is-idle {
   opacity: 0.82;
@@ -80,6 +93,7 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 .sc__icon {
   flex: none;
@@ -87,14 +101,17 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
   place-items: center;
   width: 42px;
   height: 42px;
-  font-size: 22px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--c) 14%, rgba(9, 16, 34, 0.8));
-  border: 1px solid color-mix(in srgb, var(--c) 42%, transparent);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--c) 22%, transparent);
+  width: 38px;
+  height: 38px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  color: var(--c);
+  background: #1d1f22;
+  border: 1px solid var(--ce-panel-border);
 }
 .sc__title {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -102,11 +119,23 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
 }
 .sc__title b {
   font-size: 15px;
-  color: #f0f6ff;
+  color: var(--ce-text-strong);
 }
 .sc__title span {
-  font-size: 12px;
-  color: #7f98b8;
+  font-size: 13px;
+  color: var(--ce-text-dim);
+}
+.sc__desc {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.45;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.sc__head .cp-pill {
+  flex: none;
 }
 .sc__dev {
   display: flex;
@@ -121,13 +150,13 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
 }
 .sc__devtxt b {
   font-size: 18px;
-  color: #e6f2ff;
+  color: var(--ce-text-strong);
   font-variant-numeric: tabular-nums;
 }
 .sc__devtxt small {
   font-size: 12px;
   font-weight: 400;
-  color: #6f89aa;
+  color: var(--ce-text-faint);
 }
 .sc__dev .cp-bar {
   flex: 1;
@@ -151,15 +180,13 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
   font-size: 26px;
   line-height: 1.15;
   font-weight: 600;
-  color: color-mix(in srgb, var(--c) 40%, #fff);
+  color: var(--ce-text-strong);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 16px color-mix(in srgb, var(--c) 35%, transparent);
 }
 .sc__tpnum small {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 400;
-  color: #7f98b8;
-  text-shadow: none;
+  color: var(--ce-text-dim);
 }
 .sc__spark {
   position: relative;
@@ -170,8 +197,8 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 11px;
-  color: #5d748f;
+  font-size: 12px;
+  color: var(--ce-text-faint);
 }
 .sc__foot {
   display: flex;
@@ -179,11 +206,30 @@ const idle = computed(() => props.source.status === '待接入' || props.source.
   justify-content: space-between;
   gap: 10px;
   padding-top: 10px;
-  font-size: 12px;
-  color: #6f89aa;
-  border-top: 1px dashed rgba(64, 120, 180, 0.2);
+  font-size: 13px;
+  color: var(--ce-text-faint);
+  border-top: 1px solid var(--ce-divider);
 }
 .sc__foot span:last-child {
   flex: none;
+}
+@media (max-width: 700px) {
+  .sc {
+    gap: 10px;
+    padding: 12px 14px 10px;
+  }
+  .sc__icon {
+    width: 32px;
+    height: 32px;
+  }
+  .sc__title b {
+    font-size: 14px;
+  }
+  .sc__tp {
+    gap: 10px;
+  }
+  .sc__tpnum b {
+    font-size: 23px;
+  }
 }
 </style>

@@ -11,7 +11,7 @@
 ![Cesium](https://img.shields.io/badge/CesiumJS-1.125-6caddf?logo=cesium&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.11x-009688?logo=fastapi&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776ab?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-79%20passed-4dd984)
+![Tests](https://img.shields.io/badge/tests-150%20passed-4dd984)
 ![Data](https://img.shields.io/badge/城市底座-OpenStreetMap-7ebc6f?logo=openstreetmap&logoColor=white)
 
 <img src="docs/images/dashboard.jpg" alt="城市总览 · 三维数字孪生指挥大屏" width="100%" />
@@ -25,10 +25,10 @@
 | | |
 | --- | --- |
 | 🏙️ **真实城市底座** | 汉口沿江示范区（江汉路—汉口江滩—武汉天地）**822 栋 OpenStreetMap 真实建筑**、105 条主干道（93.6 km）、84 处医院/消防/公安/学校，四个行政区真实边界，网格化编码 |
-| 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 自研着色器（高度渐变、楼层线、屋顶描边、扫描光带、城市生长动画）；路网按实时 TPI 着色并流光，事件涟漪/光柱告警，GPU 不支持时自动降级 |
+| 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 自研着色器，以精细建筑、中性体块、窗格和檐口轮廓呈现真实城市；实时路况和事件优先级直接叠加在同一视图，不再切换“天际线 / 态势”两套画面。GPU 不支持时自动降级 |
 | 🧠 **7 个真实可运行的算法** | 火灾识别、交通指数与短临预测、航拍车辆占有率、建筑沉降趋势、前后时相变化检测、积水水位研判、积水影像分割 —— 纯 NumPy 实现，**事件只由算法实际检出产生，绝不伪造** |
 | ⚡ **实时闭环** | WebSocket 推送事件/路况/任务进度；事件状态机（待核查→监测中→处置中→已办结）后端校验；派单、办结、处置时间线多终端同步 |
-| 🎬 **一键演示** | 7 步自动导览：飞入城市 → 环绕 CBD → 实时路况 → **触发真实火情识别** → 派单处置 → 建筑沉降预警 → 复位，附字幕，Esc 可退出 |
+| 🎬 **一键演示** | 7 步自动导览：飞入城市 → 环绕 CBD → 实时路况 → **触发真实火情识别** → 派单处置 → 建筑沉降预警 → 自动进入火灾疏散推演，附字幕，Esc 可退出 |
 | 🛟 **永不翻车** | 后端不可达时前端自动降级为「离线演示模式」（读取后端导出的真实数据快照），可直接部署到 GitHub Pages 等静态托管 |
 
 ## 📸 界面预览
@@ -64,6 +64,13 @@ make demo      # 构建前端并由后端单端口托管 → http://127.0.0.1:80
 make dev       # 后端 :8000（Swagger /docs） + 前端 :5173
 ```
 
+Windows 路演可直接双击项目根目录的 `start-demo.cmd`。脚本会检查构建产物、
+启动隐藏后端并打开浏览器；需要强制重建时运行：
+
+```powershell
+.\start-demo.ps1 -Rebuild
+```
+
 <details>
 <summary>不使用 make</summary>
 
@@ -91,8 +98,18 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 | **事件中心** | 多维筛选（类型/状态/等级/关键词）、人工上报、事件详情抽屉（证据图、算法指标、处置时间线）、按状态机派单/办结/重开、三维定位 |
 | **数据管理** | 空间数据资产清单（遥感/无人机/视频/三维模型/传感器/矢量）、类型与状态分布、拖拽上传入库 |
 | **AI 分析** | 4 类分析 × 18 份示例数据或自有数据上传；实时进度；标注结果图、检测框、指标、时序与预测曲线；检出即生成事件并可在三维场景定位 |
+| **虚拟人群仿真** | Three.js 低模人物叠加 Cesium 城市场景；支持人员类型、1—1000 人批量分布、单人路径运动、区域聚集、危险区疏散、实时统计与性能测试 |
+| **应急演练** | 独立平静基线页面：按火灾、交通、积水或建筑异常固定场景推演，支持 1/4/8 倍速、动态风险场、四出口、风险加权路径、出口排队、过程时间线和完成摘要 |
+| **智能情景推演** | 输入一句话生成火灾、内涝或交通情景；演示模式自动补齐参数并生成常规、不利、干预三套可能结果，支持三维回放、时间轴、方案对比和结构化报告 |
 
 5 分钟路演脚本见 [docs/demo-script.md](docs/demo-script.md)。
+
+虚拟人群仿真的技术融合、坐标转换、接口和实测记录见
+[docs/crowd-simulation.md](docs/crowd-simulation.md)。
+城市智能情景推演的架构与接口见
+[docs/scenario-simulation.md](docs/scenario-simulation.md)。
+界面层级、色彩、响应式导航与视觉验收记录见
+[docs/interface-design.md](docs/interface-design.md)。
 
 ## 🏗️ 系统架构
 
@@ -144,6 +161,8 @@ flowchart LR
 | GET · POST | `/api/tasks` · `/api/tasks/upload` · `/api/samples` | AI 分析任务（示例数据 / 上传文件） |
 | GET | `/api/sources` · `/api/system/info` · `/api/health` | 数据源、系统信息、健康检查 |
 | POST | `/api/demo/scenario` · `/api/demo/reset` | 演示控制：触发场景 / 重置数据 |
+| GET · POST | `/api/llm/status` · `/api/llm/parse-task` · `/api/llm/chat` · `/api/llm/report` | 大模型状态、任务解析、多轮治理问答和事件研判报告 |
+| GET · POST | `/api/scenario/status` · `/api/scenario/sessions` · `/api/scenario/runs/{id}` | 情景会话、参数版本、模拟推演、对比与报告 |
 | WS | `/api/ws` | `event.created` · `event.updated` · `task.updated` · `traffic.updated` · `sensor.tick` |
 
 启动后访问 <http://127.0.0.1:8000/docs> 查看交互式 Swagger 文档。
@@ -161,7 +180,7 @@ flowchart LR
 | `CITYEYE_MAX_UPLOAD_MB` | `20` | 单文件上传大小上限（MB） |
 | `CITYEYE_FINE_BUILDINGS_PATH` | `data/datasets/derived/buildings/wuhan_demo_buildings.geojson` | 精细建筑派生图层 |
 | `VITE_USE_MOCK` | `false` | 前端强制使用离线快照 |
-| `VITE_BASEMAP` | `dark` | 底图：`dark` / `satellite` / `offline` |
+| `VITE_BASEMAP` | `satellite` | 底图：`satellite` / `dark` / `offline` |
 | `VITE_CESIUM_ION_TOKEN` | 空 | 可选，启用 Cesium Ion 在线地形/影像 |
 
 前端变量示例见 [`frontend/.env.example`](frontend/.env.example)。
@@ -171,7 +190,7 @@ flowchart LR
 ```bash
 make test
 # algorithm/tests  53 passed   —— 每个算法的正例/反例/边界
-# backend/tests    26 passed   —— REST、状态机、任务执行、WebSocket
+# backend + llm_module + scenario_engine  68 passed —— REST、任务、LLM、情景推演
 cd frontend && npm run lint    # ESLint（Vue + TypeScript）
 cd frontend && npm run test    # Vitest：格式化工具、请求超时/重试
 cd frontend && npm run build   # vue-tsc 严格类型检查 + 生产构建

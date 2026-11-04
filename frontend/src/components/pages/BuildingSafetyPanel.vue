@@ -7,7 +7,7 @@ import { Aim } from '@element-plus/icons-vue'
 import EChart from '@/components/charts/EChart.vue'
 import { getBuilding } from '@/api/geo'
 import { errMsg } from '@/composables/pages/format'
-import { EVENT_STATUS_COLOR, EVENT_STATUS_LABEL, EVENT_TYPE_META, SEVERITY_META } from '@/types/event'
+import { EVENT_STATUS_COLOR, EVENT_STATUS_LABEL, SEVERITY_META } from '@/types/event'
 import { RISK_LEVEL_META } from '@/types/building'
 import type { Building, BuildingDetail, RiskLevel } from '@/types/building'
 
@@ -140,17 +140,7 @@ const chart = computed(() => {
         symbolSize: 5,
         lineStyle: { width: 2.4, shadowBlur: 10, shadowColor: mainColor },
         areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: `${mainColor}44` },
-              { offset: 1, color: `${mainColor}00` }
-            ]
-          }
+          color: `${mainColor}22`
         },
         data: ys
       },
@@ -271,7 +261,6 @@ function openEvent(id: string) {
             <div v-if="detail?.events?.length" class="rel">
               <span class="cp-label">关联事件</span>
               <button v-for="e in detail.events" :key="e.id" type="button" class="rel__item" @click="openEvent(e.id)">
-                <span>{{ EVENT_TYPE_META[e.event_type].icon }}</span>
                 <b class="cp-ellipsis">{{ e.name }}</b>
                 <span class="cp-pill cp-pill--sm" :style="{ '--c': SEVERITY_META[e.severity].color }">{{ SEVERITY_META[e.severity].short }}级</span>
                 <span class="cp-pill cp-pill--sm" :style="{ '--c': EVENT_STATUS_COLOR[e.status] }">{{ EVENT_STATUS_LABEL[e.status] }}</span>
@@ -316,12 +305,15 @@ function openEvent(id: string) {
   padding: 0 10px;
   font: inherit;
   font-size: 12px;
-  border-radius: 999px;
-  color: #b9cdec;
-  background: rgba(9, 16, 34, 0.55);
-  border: 1px solid rgba(64, 120, 180, 0.3);
+  border-radius: 4px;
+  color: var(--ce-text-dim);
+  background: transparent;
+  border: 1px solid var(--ce-panel-border);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .list__chip .cp-dot {
   --c: inherit;
@@ -336,7 +328,7 @@ function openEvent(id: string) {
 .list__chip.is-on {
   color: var(--c);
   border-color: var(--c);
-  background: color-mix(in srgb, var(--c) 14%, rgba(9, 16, 34, 0.55));
+  background: #1d1f22;
 }
 .list__ul {
   list-style: none;
@@ -354,27 +346,28 @@ function openEvent(id: string) {
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
-  background: rgba(9, 16, 34, 0.45);
-  border: 1px solid rgba(64, 120, 180, 0.2);
-  border-left: 3px solid color-mix(in srgb, var(--c) 70%, transparent);
-  transition: all 0.15s;
+  background: #1a1c1e;
+  border: 1px solid var(--ce-panel-border);
+  border-left: 2px solid var(--c);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .item:hover {
-  background: color-mix(in srgb, var(--c) 8%, rgba(9, 16, 34, 0.45));
-  border-color: color-mix(in srgb, var(--c) 45%, transparent);
+  background: #1d1f22;
+  border-color: var(--ce-panel-border-strong);
 }
 .item.is-on {
-  background: color-mix(in srgb, var(--c) 13%, rgba(9, 16, 34, 0.5));
+  background: #202225;
   border-color: var(--c);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 22%, transparent);
 }
 .item--none {
   justify-content: center;
   cursor: default;
   font-size: 12.5px;
-  color: #5d748f;
+  color: var(--ce-text-faint);
   border-left-width: 1px;
 }
 .item__txt {
@@ -387,11 +380,11 @@ function openEvent(id: string) {
 .item__txt b {
   font-size: 13.5px;
   font-weight: 500;
-  color: #e6f0ff;
+  color: var(--ce-text);
 }
 .item__txt small {
-  font-size: 11.5px;
-  color: #6f89aa;
+  font-size: 12px;
+  color: var(--ce-text-faint);
 }
 .detail {
   position: relative;
@@ -414,15 +407,15 @@ function openEvent(id: string) {
 .detail__ttl h4 {
   margin: 0 0 4px;
   font-size: 18px;
-  color: #f0f6ff;
+  color: var(--ce-text-strong);
 }
 .detail__ttl p {
   display: flex;
   flex-wrap: wrap;
   gap: 2px 14px;
   margin: 0;
-  font-size: 12.5px;
-  color: #7f98b8;
+  font-size: 13px;
+  color: var(--ce-text-dim);
 }
 .stats {
   display: grid;
@@ -435,36 +428,36 @@ function openEvent(id: string) {
   flex-direction: column;
   gap: 4px;
   padding: 10px 14px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--c) 7%, rgba(9, 16, 34, 0.6));
-  border: 1px solid color-mix(in srgb, var(--c) 28%, transparent);
+  border-radius: 4px;
+  background: #1a1c1e;
+  border: 1px solid var(--ce-panel-border);
 }
 .stat b {
   font-size: 22px;
   font-weight: 600;
   line-height: 1.15;
-  color: color-mix(in srgb, var(--c) 40%, #fff);
+  color: var(--ce-text-strong);
   font-variant-numeric: tabular-nums;
 }
 .stat b small {
   margin-left: 4px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 400;
-  color: #7f98b8;
+  color: var(--ce-text-dim);
 }
 .analysis {
   --c: #4dd984;
   margin: 0;
   padding: 10px 16px;
-  border-radius: 0 9px 9px 0;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 11%, transparent), transparent);
-  border-left: 3px solid var(--c);
+  border-radius: 0 4px 4px 0;
+  background: #1a1c1e;
+  border-left: 2px solid var(--c);
 }
 .analysis p {
   margin: 4px 0 0;
   font-size: 13.5px;
   line-height: 1.75;
-  color: #d6e4ff;
+  color: var(--ce-text);
 }
 .rel {
   display: flex;
@@ -478,12 +471,14 @@ function openEvent(id: string) {
   padding: 7px 12px;
   font: inherit;
   text-align: left;
-  color: #cfe0fa;
-  border-radius: 8px;
+  color: var(--ce-text);
+  border-radius: 4px;
   cursor: pointer;
-  background: rgba(9, 16, 34, 0.5);
-  border: 1px solid rgba(64, 120, 180, 0.25);
-  transition: all 0.15s;
+  background: #1a1c1e;
+  border: 1px solid var(--ce-panel-border);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .rel__item b {
   flex: 1;
@@ -492,7 +487,7 @@ function openEvent(id: string) {
   font-weight: 500;
 }
 .rel__item:hover {
-  border-color: rgba(79, 195, 247, 0.5);
-  background: rgba(79, 195, 247, 0.08);
+  border-color: var(--ce-accent);
+  background: #1d1f22;
 }
 </style>

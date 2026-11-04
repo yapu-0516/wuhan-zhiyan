@@ -56,6 +56,32 @@ export class CameraController {
     return this.flyTo(p.lon, p.lat, { heading: p.heading, pitch: p.pitch, range: p.range, duration })
   }
 
+  /** 天际线视角：低俯仰、以高层密集区为视觉中心，保留前中后景层次。 */
+  skylineParams(target?: [number, number]) {
+    const lon = target?.[0] ?? this.region.center[0]
+    const lat = target?.[1] ?? this.region.center[1]
+    return { lon, lat, heading: 106, pitch: -27, range: 2400 }
+  }
+
+  jumpSkyline(target?: [number, number]) {
+    const p = this.skylineParams(target)
+    this.camera.lookAt(
+      Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0),
+      new Cesium.HeadingPitchRange(toRad(p.heading), toRad(p.pitch), p.range)
+    )
+    this.camera.lookAtTransform(Cesium.Matrix4.IDENTITY)
+  }
+
+  flySkyline(target?: [number, number], duration = 2.4): Promise<boolean> {
+    const p = this.skylineParams(target)
+    return this.flyTo(p.lon, p.lat, {
+      heading: p.heading,
+      pitch: p.pitch,
+      range: p.range,
+      duration
+    })
+  }
+
   /** 从高空俯冲到示范区 */
   async flyFromSpace(): Promise<boolean> {
     this.stopOrbit()

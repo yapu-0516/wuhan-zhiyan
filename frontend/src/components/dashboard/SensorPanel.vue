@@ -37,6 +37,9 @@ const totals = computed(() => {
   return { online, total }
 })
 const rate = computed(() => (totals.value.total ? (totals.value.online / totals.value.total) * 100 : 0))
+const ringRadius = 34
+const ringLength = 2 * Math.PI * ringRadius
+const ringOffset = computed(() => ringLength * (1 - rate.value / 100))
 const rows = computed(() =>
   sources.value
     .filter((s) => s.devices_total > 0)
@@ -48,6 +51,17 @@ const rows = computed(() =>
 <template>
   <div class="sensor">
     <div class="sensor__ring" :style="{ '--p': rate.toFixed(1) }">
+      <svg viewBox="0 0 84 84" aria-hidden="true">
+        <circle class="sensor__ring-track" cx="42" cy="42" :r="ringRadius" />
+        <circle
+          class="sensor__ring-value"
+          cx="42"
+          cy="42"
+          :r="ringRadius"
+          :stroke-dasharray="ringLength"
+          :stroke-dashoffset="ringOffset"
+        />
+      </svg>
       <div class="sensor__ring-inner">
         <b><AnimatedNumber :value="rate" :decimals="1" /><small>%</small></b>
         <span class="ce-num">{{ totals.online }}/{{ totals.total }}</span>
@@ -55,7 +69,6 @@ const rows = computed(() =>
     </div>
     <ul v-if="rows.length" class="sensor__list">
       <li v-for="s in rows" :key="s.id">
-        <span class="sensor__icon">{{ s.icon }}</span>
         <span class="sensor__name" :title="s.name">{{ s.name }}</span>
         <span class="sensor__bar"><i :style="{ width: s.pct + '%' }" /></span>
         <span class="sensor__v ce-num">{{ s.devices_online }}<em>/{{ s.devices_total }}</em></span>
@@ -72,56 +85,63 @@ const rows = computed(() =>
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 104px 1fr;
+  grid-template-columns: 90px 1fr;
   align-items: center;
   gap: 12px;
 }
 .sensor__ring {
   --p: 0;
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  background:
-    conic-gradient(from 210deg, #1f78d1 0%, #36e4ff calc(var(--p) * 1%), rgba(79, 195, 247, 0.1) calc(var(--p) * 1%) 100%);
-  box-shadow: 0 0 18px rgba(54, 228, 255, 0.25);
   display: grid;
   place-items: center;
 }
-.sensor__ring::after {
-  content: '';
+.sensor__ring svg {
   position: absolute;
-  inset: -5px;
-  border-radius: 50%;
-  border: 1px dashed rgba(79, 195, 247, 0.3);
-  animation: sensor-rot 24s linear infinite;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
 }
-@keyframes sensor-rot {
-  to {
-    transform: rotate(360deg);
-  }
+.sensor__ring-track,
+.sensor__ring-value {
+  fill: none;
+  stroke-width: 5;
+}
+.sensor__ring-track {
+  stroke: #2a3035;
+}
+.sensor__ring-value {
+  stroke: var(--ce-accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s var(--ce-ease);
 }
 .sensor__ring-inner {
-  width: 80px;
-  height: 80px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
-  background: radial-gradient(circle, #0b1a36 0%, #071124 100%);
+  background: var(--ce-panel-solid);
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 .sensor__ring-inner b {
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 600;
   line-height: 1.1;
   color: var(--ce-text-strong);
 }
 .sensor__ring-inner small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ce-text-dim);
 }
 .sensor__ring-inner span {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--ce-text-faint);
 }
 .sensor__list {
@@ -135,10 +155,10 @@ const rows = computed(() =>
 }
 .sensor__list li {
   display: grid;
-  grid-template-columns: 18px 64px 1fr 54px;
+  grid-template-columns: 64px 1fr 54px;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .sensor__name {
   overflow: hidden;
@@ -147,15 +167,14 @@ const rows = computed(() =>
   color: var(--ce-text);
 }
 .sensor__bar {
-  height: 5px;
-  border-radius: 3px;
-  background: rgba(79, 195, 247, 0.08);
+  height: 3px;
+  background: #2a3035;
   overflow: hidden;
 }
 .sensor__bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #1f78d1, #4dd984);
+  background: var(--ce-accent);
   transition: width 0.8s var(--ce-ease);
 }
 .sensor__v {
@@ -168,7 +187,7 @@ const rows = computed(() =>
 }
 .sensor__hint p {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ce-text-dim);
   line-height: 1.6;
 }

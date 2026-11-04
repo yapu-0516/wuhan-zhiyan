@@ -2,7 +2,7 @@
  * 建筑图层：OSM 真实建筑轮廓 → 拉伸 PolygonGeometry → 合批 Primitive（每批 ~400 栋）
  *
  * - 几何在主线程分帧预计算（每帧 ≤12ms），单个退化多边形 try/catch 跳过，不会拖垮整个场景；
- * - 每实例颜色：按高度的深蓝→亮青科技渐变，沉降关注/预警着琥珀/红色；
+ * - 每实例颜色：中性实体建筑，沉降关注/预警着琥珀/红色；
  * - 每实例 fx：x=效果模式（0 常规 / 1 告警脉冲 / 2 选中 / 3 预警呼吸）、y=高度/2、z=随机种子；
  *   模式切换只改批表中的 4 个字节，零重建；
  * - 着色器：竖向渐变 + 楼层线 + 檐口描边 + 上行扫描光带 + 城市生长动画（见 shaders.ts）。
@@ -14,16 +14,16 @@ import { clamp, cleanRing, hashByte, type LonLat } from './geo'
 
 const CHUNK = 400
 
-/** 高度色带：低矮深蓝 → 高层亮青 */
+/** 城市数据块使用冷灰石材层级；高度不再编码为发光亮度。 */
 const HEIGHT_STOPS: [number, Cesium.Color][] = [
-  [0, Cesium.Color.fromCssColorString('#123a78')],
-  [0.3, Cesium.Color.fromCssColorString('#1b62b8')],
-  [0.62, Cesium.Color.fromCssColorString('#2aa6e6')],
-  [1, Cesium.Color.fromCssColorString('#62f1ff')]
+  [0, Cesium.Color.fromCssColorString('#48565f')],
+  [0.3, Cesium.Color.fromCssColorString('#53626b')],
+  [0.62, Cesium.Color.fromCssColorString('#607079')],
+  [1, Cesium.Color.fromCssColorString('#70818a')]
 ]
-const WATCH_COLOR = Cesium.Color.fromCssColorString('#f0b040')
-const WARNING_COLOR = Cesium.Color.fromCssColorString('#ff4d4f')
-const BASE_ALPHA = 0.9
+const WATCH_COLOR = Cesium.Color.fromCssColorString('#c59455')
+const WARNING_COLOR = Cesium.Color.fromCssColorString('#bd5f5d')
+const BASE_ALPHA = 1
 
 export function buildingColor(b: Pick<Building, 'height' | 'risk_level' | 'monitored'>, result = new Cesium.Color()): Cesium.Color {
   const t = clamp((b.height - 6) / 140, 0, 1)
@@ -32,14 +32,17 @@ export function buildingColor(b: Pick<Building, 'height' | 'risk_level' | 'monit
   const [t0, c0] = HEIGHT_STOPS[i]
   const [t1, c1] = HEIGHT_STOPS[i + 1]
   Cesium.Color.lerp(c0, c1, clamp((t - t0) / (t1 - t0), 0, 1), result)
-  if (b.risk_level === 'warning') Cesium.Color.lerp(result, WARNING_COLOR, 0.85, result)
-  else if (b.risk_level === 'watch') Cesium.Color.lerp(result, WATCH_COLOR, 0.75, result)
-  result.alpha = BASE_ALPHA
+  if (b.risk_level === 'warning') {
+    Cesium.Color.lerp(result, WARNING_COLOR, 0.8, result)
+    result.alpha = 1
+  } else if (b.risk_level === 'watch') {
+    Cesium.Color.lerp(result, WATCH_COLOR, 0.66, result)
+    result.alpha = 1
+  } else {
+    result.alpha = BASE_ALPHA
+  }
   return result
 }
-
-/** 建筑高度色带（图例用） */
-export const BUILDING_LEGEND_GRADIENT = `linear-gradient(90deg, ${HEIGHT_STOPS.map(([t, c]) => `${c.toCssColorString()} ${Math.round(t * 100)}%`).join(', ')})`
 
 interface BuildingRecord {
   props: Building
@@ -78,6 +81,7 @@ export class BuildingLayer {
   private destroyed = false
   private safe = false
   private visible = true
+  private riskOnly = false
   private frame = ''
   private startFrame = 0
   /** 建筑覆盖范围中心（用于着色器局部坐标系） */
@@ -155,7 +159,8 @@ export class BuildingLayer {
           id: rec.instanceId,
           attributes: {
             color: Cesium.ColorGeometryInstanceAttribute.fromColor(buildingColor(props)),
-            fx: fxAttribute(...rec.fx)
+            fx: fxAttribute(...rec.fx),
+            show: new Cesium.ShowGeometryInstanceAttribute(this.isShown(props))
           }
         })
       )
@@ -235,6 +240,18 @@ export class BuildingLayer {
     this.prims.forEach((p) => (p.show = v))
   }
 
+  /** 精细建筑启用时，基础图层只保留监测/风险建筑作为业务叠层。 */
+  setRiskOnly(v: boolean) {
+    this.riskOnly = v
+    this.records.forEach((r) => this.dirty.add(r))
+  }
+
+  private isShown(b: Building): boolean {
+    if (this.riskOnly) return b.monitored || b.risk_level === 'watch' || b.risk_level === 'warning' || this.alarms.has(b.id)
+    // 数据块视图使用完整 OSM 轮廓，街区密度本身就是城市信息。
+    return !!b
+  }
+
   setSelected(id: string | null) {
     const prev = this.selected
     this.selected = id
@@ -256,7 +273,10 @@ export class BuildingLayer {
     this.alarms = new Set(ids)
     changed.forEach((id) => {
       const r = this.records.get(id)
-      if (r) this.refreshMode(r)
+      if (r) {
+        this.refreshMode(r)
+        this.dirty.add(r)
+      }
     })
   }
 
@@ -280,7 +300,10 @@ export class BuildingLayer {
       if (!prim.ready) continue
       try {
         const attrs = prim.getGeometryInstanceAttributes(r.instanceId)
-        if (attrs) attrs.fx = r.fx.slice()
+        if (attrs) {
+          attrs.fx = r.fx.slice()
+          attrs.show = Cesium.ShowGeometryInstanceAttribute.toValue(this.isShown(r.props))
+        }
       } catch {
         /* 批表尚未创建 */
         continue

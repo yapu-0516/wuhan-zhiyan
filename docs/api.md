@@ -307,7 +307,48 @@ properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, 
 
 ---
 
-## 9. WebSocket `/api/ws`
+## 9. 大模型与城市治理助手
+
+所有接口都要求服务端已配置 `DEEPSEEK_API_KEY`。密钥未配置、限流或模型服务异常时返回
+`503 {"detail": "..."}`；演示或模拟事件的数据性质不得被改写成真实事件。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/llm/status` | 只检查密钥配置，不调用模型 |
+| POST | `/api/llm/parse-task` | 自然语言任务解析为受控 JSON |
+| POST | `/api/llm/chat` | 最多 8 轮城市治理问答，可选关联事件 |
+| POST | `/api/llm/report` | 基于事件和周边设施生成结构化研判报告 |
+
+治理问答请求：
+
+```json
+{
+  "event_id": "E0001",
+  "messages": [
+    { "role": "user", "content": "这起事件目前有哪些未知信息？" },
+    { "role": "assistant", "content": "还需要现场核验。" },
+    { "role": "user", "content": "下一步应确认什么？" }
+  ]
+}
+```
+
+`event_id` 可省略；当 `messages` 超过 8 条时前端只发送最近 8 条。最后一条消息必须来自
+`user`。响应：
+
+```json
+{
+  "answer": "建议先确认现场情况……",
+  "event_id": "E0001",
+  "data_type": "示例数据，不代表真实事件"
+}
+```
+
+关联事件时，后端从事件目录读取事件、任务来源、1 km 内 POI 和 200 m 内道路，
+并把保守判定的数据性质与信息缺口一并提供给模型。问答接口不执行工具、不修改事件状态。
+
+---
+
+## 10. WebSocket `/api/ws`
 
 服务端推送 JSON：`{ "type": string, "data": any, "ts": "2026-10-22 20:00:00" }`
 
@@ -322,3 +363,50 @@ properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, 
 | `heartbeat` | `{}` | 每 20s |
 
 客户端可发送 `{"type":"ping"}`，服务端回 `{"type":"pong"}`。
+
+---
+
+## 11. 城市智能情景推演
+
+所有情景结果均包含 `provider` 与 `data_classification`。当前默认提供方为 `mock`，
+返回的数据明确标记为 `simulated`。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/scenario/status` | DeepSeek 与提供方可用性 |
+| POST | `/api/scenario/sessions` | 创建多轮情景会话 |
+| GET | `/api/scenario/sessions/{id}` | 获取消息、参数、版本和最近结果 |
+| POST | `/api/scenario/sessions/{id}/messages` | 自然语言更新、运行或比较 |
+| POST | `/api/scenario/sessions/{id}/runs` | 直接运行当前完整版本 |
+| GET | `/api/scenario/runs/{id}` | 获取推演时间帧 |
+| POST | `/api/scenario/sessions/{id}/compare` | 比较两次运行 |
+| POST | `/api/scenario/runs/{id}/report` | 生成结构化推演报告 |
+
+消息请求：
+
+```json
+{ "message": "江汉路在 2026-10-31 15:00 起发生持续60分钟、80毫米/小时的强降雨，请推演内涝影响。" }
+```
+
+响应包含：
+
+```json
+{
+  "session_id": "SCXXXXXXXXXX",
+  "scenario_type": "flood",
+  "state": "completed",
+  "parameters": {},
+  "messages": [],
+  "run_ids": [],
+  "latest_run": {
+    "run_id": "SRXXXXXXXXXX",
+    "provider": "mock",
+    "data_classification": "simulated",
+    "frames": []
+  },
+  "assistant_reply": "……"
+}
+```
+
+情景类型：`flood | traffic | fire`。数据性质：
+`real | professional_analysis | simulated | llm_inference | unknown`。

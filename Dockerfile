@@ -18,6 +18,8 @@ WORKDIR /app
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY algorithm/cityeye_algo algorithm/cityeye_algo
+COPY llm_module llm_module
+COPY scenario_engine scenario_engine
 COPY backend backend
 COPY data/geo data/geo
 COPY data/samples data/samples

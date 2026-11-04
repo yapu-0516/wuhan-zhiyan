@@ -22,6 +22,7 @@ import { apiState } from '@/api/http'
 import { fileUrl } from '@/config/api'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { describeMetrics } from '@/composables/pages/metrics'
+import EventReport from './EventReport.vue'
 import { errMsg, fmtCoord, pct100 } from '@/composables/pages/format'
 import type { CityEvent, EventLog, EventLogAction, EventPatch, EventStatus } from '@/types/event'
 import {
@@ -360,6 +361,11 @@ async function copyCoord() {
           </section>
 
           <section class="sec">
+            <h4 class="sec__t">AI 研判报告 <small>DeepSeek · 当前事件数据 · 点击生成</small></h4>
+            <EventReport :event-id="event.id" />
+          </section>
+
+          <section class="sec">
             <h4 class="sec__t">
               处置流程
               <el-button class="sec__refresh" link :icon="Refresh" :loading="logsLoading" @click="loadLogs">刷新</el-button>
@@ -459,9 +465,8 @@ async function copyCoord() {
   --tc: #4fc3f7;
   flex: none;
   padding: 18px 20px 14px;
-  background:
-    radial-gradient(420px 120px at 0% 0%, color-mix(in srgb, var(--tc) 22%, transparent), transparent 70%),
-    linear-gradient(180deg, rgba(79, 195, 247, 0.06), transparent);
+  background: var(--ce-panel-solid);
+  border-top: 2px solid var(--tc);
   border-bottom: 1px solid var(--ce-panel-border, rgba(64, 120, 180, 0.28));
 }
 .dr__headrow {
@@ -476,10 +481,9 @@ async function copyCoord() {
   width: 46px;
   height: 46px;
   font-size: 24px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--tc) 16%, rgba(9, 16, 34, 0.8));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tc) 14%, var(--ce-panel-solid));
   border: 1px solid color-mix(in srgb, var(--tc) 55%, transparent);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--tc) 35%, transparent);
 }
 .dr__titles {
   flex: 1;
@@ -500,7 +504,7 @@ async function copyCoord() {
 }
 .dr__id {
   font-size: 12.5px;
-  color: #9fc4ea;
+  color: var(--ce-text-dim);
   padding-right: 2px;
 }
 .dr__close {
@@ -514,7 +518,10 @@ async function copyCoord() {
   background: transparent;
   color: var(--ce-text-dim, #8aa3c4);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 .dr__close:hover {
   color: #fff;
@@ -535,17 +542,17 @@ async function copyCoord() {
   padding: 14px 0 6px;
 }
 .sec + .sec {
-  border-top: 1px dashed rgba(64, 120, 180, 0.2);
+  border-top: 1px solid var(--ce-divider);
 }
 .sec__t {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 2px;
-  color: #8fb0d3;
+  letter-spacing: 0;
+  color: var(--ce-text-dim);
 }
 .sec__t::before {
   content: '';
@@ -553,12 +560,11 @@ async function copyCoord() {
   height: 12px;
   border-radius: 2px;
   background: var(--ce-accent, #4fc3f7);
-  box-shadow: 0 0 8px var(--ce-accent, #4fc3f7);
 }
 .sec__t small {
   font-weight: 400;
-  letter-spacing: 0.5px;
-  color: #5d748f;
+  letter-spacing: 0;
+  color: var(--ce-text-faint);
 }
 .sec__refresh {
   margin-left: auto;
@@ -568,9 +574,9 @@ async function copyCoord() {
   grid-template-columns: 1fr 1fr;
   gap: 1px;
   margin: 0;
-  background: rgba(64, 120, 180, 0.14);
-  border: 1px solid rgba(64, 120, 180, 0.2);
-  border-radius: 8px;
+  background: var(--ce-divider);
+  border: 1px solid var(--ce-panel-border);
+  border-radius: 6px;
   overflow: hidden;
 }
 .cell {
@@ -578,25 +584,25 @@ async function copyCoord() {
   flex-direction: column;
   gap: 3px;
   padding: 9px 12px;
-  background: #0c1630;
+  background: #1a1c1e;
   min-width: 0;
 }
 .cell--wide {
   grid-column: 1 / -1;
 }
 .cell dt {
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: #6f89aa;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--ce-text-dim);
 }
 .cell dd {
   margin: 0;
   font-size: 13px;
-  color: #dbe8ff;
+  color: var(--ce-text);
   word-break: break-all;
 }
 .dim {
-  color: #5d748f;
+  color: var(--ce-text-faint);
 }
 .conf {
   display: flex;
@@ -635,18 +641,18 @@ async function copyCoord() {
   padding: 11px 14px;
   font-size: 13.5px;
   line-height: 1.75;
-  color: #cfe0fa;
-  background: linear-gradient(90deg, rgba(79, 195, 247, 0.1), rgba(79, 195, 247, 0.02));
-  border-left: 3px solid var(--ce-accent, #4fc3f7);
-  border-radius: 0 8px 8px 0;
+  color: var(--ce-text);
+  background: #1a1c1e;
+  border-left: 2px solid var(--ce-accent, #4fc3f7);
+  border-radius: 0 4px 4px 0;
 }
 .evidence {
   width: 100%;
   height: 230px;
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid var(--ce-panel-border, rgba(64, 120, 180, 0.28));
   overflow: hidden;
-  background: #060b1a;
+  background: #111214;
 }
 .evidence__err {
   display: flex;
@@ -654,7 +660,7 @@ async function copyCoord() {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: #5d748f;
+  color: var(--ce-text-faint);
   font-size: 13px;
 }
 .metrics {
@@ -667,13 +673,13 @@ async function copyCoord() {
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(79, 195, 247, 0.06);
-  border: 1px solid rgba(64, 120, 180, 0.22);
+  border-radius: 4px;
+  background: #1a1c1e;
+  border: 1px solid var(--ce-panel-border);
 }
 .metric__l {
-  font-size: 11.5px;
-  color: #8aa3c4;
+  font-size: 12px;
+  color: var(--ce-text-dim);
 }
 .metric__v {
   font-size: 19px;
@@ -683,18 +689,18 @@ async function copyCoord() {
 }
 .metric__v small {
   margin-left: 3px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
-  color: #8aa3c4;
+  color: var(--ce-text-dim);
 }
 .tl {
   padding-left: 4px;
   margin-top: 4px;
 }
 .tl :deep(.el-timeline-item__timestamp) {
-  font-size: 11.5px;
-  color: #6f89aa;
-  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--ce-text-faint);
+  font-variant-numeric: tabular-nums;
 }
 .tl :deep(.el-timeline-item__node--large) {
   width: 22px;
@@ -708,10 +714,10 @@ async function copyCoord() {
 .tl__item {
   --c: #4fc3f7;
   padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(79, 195, 247, 0.045);
-  border: 1px solid rgba(64, 120, 180, 0.18);
-  border-left: 3px solid var(--c);
+  border-radius: 4px;
+  background: #1a1c1e;
+  border: 1px solid var(--ce-panel-border);
+  border-left: 2px solid var(--c);
 }
 .tl__title {
   display: flex;
@@ -719,31 +725,31 @@ async function copyCoord() {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #dbe8ff;
+  color: var(--ce-text);
 }
 .tl__chip {
   --c: #4fc3f7;
   padding: 0 7px;
   line-height: 18px;
-  font-size: 11.5px;
+  font-size: 12px;
   border-radius: 4px;
   color: var(--c);
   background: color-mix(in srgb, var(--c) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
 }
 .tl__arrow {
-  color: #5d748f;
+  color: var(--ce-text-faint);
 }
 .tl__op {
   margin-left: auto;
   font-size: 12px;
-  color: #8aa3c4;
+  color: var(--ce-text-dim);
 }
 .tl__note {
   margin: 6px 0 0;
   font-size: 12.5px;
   line-height: 1.6;
-  color: #a9bdd9;
+  color: var(--ce-text);
 }
 .dr__foot {
   flex: none;
@@ -751,9 +757,8 @@ async function copyCoord() {
   flex-direction: column;
   gap: 10px;
   padding: 14px 20px 16px;
-  background: linear-gradient(0deg, #0a1226, #0d1730);
+  background: var(--ce-panel-solid);
   border-top: 1px solid var(--ce-panel-border, rgba(64, 120, 180, 0.28));
-  box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.3);
 }
 .ops__row {
   display: flex;
@@ -773,7 +778,7 @@ async function copyCoord() {
 .ops__suggest {
   margin-top: -4px;
   font-size: 12px;
-  color: #8aa3c4;
+  color: var(--ce-text-dim);
 }
 .ops__suggest .cp-link {
   margin-left: 6px;
@@ -791,18 +796,20 @@ async function copyCoord() {
   gap: 6px;
   height: 34px;
   padding: 0 16px;
-  border-radius: 7px;
+  border-radius: 4px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   color: var(--c);
   background: color-mix(in srgb, var(--c) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
-  transition: all 0.16s;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease;
 }
 .act:hover:not(:disabled) {
   background: color-mix(in srgb, var(--c) 24%, transparent);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--c) 35%, transparent);
 }
 .act--solid {
   color: #06101f;

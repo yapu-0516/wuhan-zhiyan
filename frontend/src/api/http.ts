@@ -113,6 +113,15 @@ export async function request<T>(
         markOffline(`HTTP ${res.status}`)
         return fallback()
       }
+      // 业务后端主动返回的 5xx（如大模型 503）带有可读 detail，透传给用户；网关错误页为非 JSON，忽略
+      try {
+        const body = await res.json()
+        if (typeof body?.detail === 'string' && body.detail) {
+          lastError = new ApiError(res.status, body.detail)
+        }
+      } catch {
+        /* 保持 HTTP 状态码文案 */
+      }
       throw lastError
     }
 

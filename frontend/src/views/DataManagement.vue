@@ -164,15 +164,14 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
 
     <!-- KPI -->
     <section class="kpis">
-      <KpiCard label="数据资产总数" :value="totalCount" unit="项" color="#4fc3f7" icon="🗄️" :hint="`涵盖 ${byType.length} 个数据类别`" />
-      <KpiCard label="总存储容量" :value="totalSize" color="#9b8fff" icon="💾" hint="含上传与采集数据" />
-      <KpiCard label="数据类型数" :value="byType.length" unit="类" color="#5eead4" icon="🧩" hint="遥感 / 无人机 / 视频 / 三维 / 传感 / 矢量" />
+      <KpiCard label="数据资产总数" :value="totalCount" unit="项" color="#67c6df" :hint="`涵盖 ${byType.length} 个数据类别`" />
+      <KpiCard label="总存储容量" :value="totalSize" color="#9ab0ba" hint="含上传与采集数据" />
+      <KpiCard label="数据类型数" :value="byType.length" unit="类" color="#72c39a" hint="遥感 / 无人机 / 视频 / 三维 / 传感 / 矢量" />
       <KpiCard
         label="入库率"
         :value="storedRate"
         unit="%"
         color="#4dd984"
-        icon="✅"
         :hint="`已入库 ${storedCount} / ${list.length} 项`"
       />
     </section>
@@ -214,7 +213,7 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
           :style="{ '--c': dataTypeMeta(t.type).color }"
           @click="typeFilter = typeFilter === t.type ? '' : t.type"
         >
-          <span>{{ dataTypeMeta(t.type).icon }}</span>{{ t.type }}<em>{{ t.count }}</em>
+          <i class="chip__dot" />{{ t.type }}<em>{{ t.count }}</em>
         </button>
       </div>
       <div class="toolbar__right">
@@ -225,7 +224,7 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
         </el-select>
         <el-input v-model="keyword" clearable placeholder="搜索名称 / 来源 / 格式" :prefix-icon="Search" style="width: 240px" />
         <el-select v-model="uploadType" clearable placeholder="入库类型：自动识别" style="width: 170px" popper-class="cp-popper">
-          <el-option v-for="t in DATA_TYPES" :key="t" :value="t" :label="`${dataTypeMeta(t).icon} ${t}`" />
+          <el-option v-for="t in DATA_TYPES" :key="t" :value="t" :label="t" />
         </el-select>
         <el-upload
           :http-request="doUpload"
@@ -257,7 +256,7 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
         <el-table-column label="数据名称" min-width="260">
           <template #default="{ row }">
             <div class="dname">
-              <span class="dname__ic" :style="{ '--c': dataTypeMeta((row as DataItem).type).color }">{{ dataTypeMeta((row as DataItem).type).icon }}</span>
+              <span class="dname__dot" :style="{ '--c': dataTypeMeta((row as DataItem).type).color }" />
               <div class="dname__txt">
                 <span class="dname__t">{{ (row as DataItem).name }}</span>
                 <span v-if="(row as DataItem).description" class="dname__d">{{ (row as DataItem).description }}</span>
@@ -269,7 +268,7 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
         <el-table-column label="类型" width="130">
           <template #default="{ row }">
             <span class="cp-pill cp-pill--sm" :style="{ '--c': dataTypeMeta((row as DataItem).type).color }">
-              {{ dataTypeMeta((row as DataItem).type).icon }} {{ (row as DataItem).type }}
+              {{ (row as DataItem).type }}
             </span>
           </template>
         </el-table-column>
@@ -368,6 +367,13 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   gap: 14px;
 }
+.charts > .cp-panel {
+  display: flex;
+  flex-direction: column;
+}
+.charts > .cp-panel :deep(.cp-panel__body) {
+  flex: 1;
+}
 @media (max-width: 1400px) {
   .charts {
     grid-template-columns: 1fr;
@@ -393,14 +399,17 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
   gap: 6px;
   height: 30px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: 4px;
   font: inherit;
   font-size: 13px;
-  color: #b9cdec;
-  background: rgba(9, 16, 34, 0.55);
-  border: 1px solid rgba(64, 120, 180, 0.3);
+  color: var(--ce-text-dim);
+  background: transparent;
+  border: 1px solid var(--ce-panel-border);
   cursor: pointer;
-  transition: all 0.16s;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease;
 }
 .chip em {
   font-style: normal;
@@ -408,22 +417,27 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
   padding: 0 6px;
   line-height: 17px;
   border-radius: 9px;
-  background: rgba(120, 160, 210, 0.16);
-  color: #8aa3c4;
+  background: #2a2c2f;
+  color: var(--ce-text-dim);
 }
 .chip:hover {
-  border-color: color-mix(in srgb, var(--c) 60%, transparent);
-  color: #fff;
+  border-color: var(--c);
+  color: var(--ce-text-strong);
 }
 .chip.is-on {
   color: var(--c);
   border-color: var(--c);
-  background: color-mix(in srgb, var(--c) 15%, rgba(9, 16, 34, 0.55));
-  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 28%, transparent);
+  background: #1d1f22;
 }
 .chip.is-on em {
-  background: color-mix(in srgb, var(--c) 25%, transparent);
+  background: #2a2c2f;
   color: var(--c);
+}
+.chip__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c);
 }
 .toolbar__right {
   display: flex;
@@ -445,17 +459,13 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
   gap: 12px;
   min-width: 0;
 }
-.dname__ic {
+.dname__dot {
   --c: #4fc3f7;
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  font-size: 18px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--c) 13%, rgba(9, 16, 34, 0.7));
-  border: 1px solid color-mix(in srgb, var(--c) 38%, transparent);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c);
 }
 .dname__txt {
   display: flex;
@@ -465,7 +475,7 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
   line-height: 1.4;
 }
 .dname__t {
-  color: #e6f0ff;
+  color: var(--ce-text);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -484,17 +494,17 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
   line-height: 20px;
   font-size: 11.5px;
   border-radius: 4px;
-  color: #a9cdf0;
-  background: rgba(79, 195, 247, 0.08);
-  border: 1px solid rgba(64, 120, 180, 0.3);
+  color: var(--ce-text-dim);
+  background: transparent;
+  border: 1px solid var(--ce-panel-border);
 }
 .num {
   font-size: 12.5px;
-  color: #c9dbf5;
+  color: var(--ce-text);
   font-variant-numeric: tabular-nums;
 }
 .dim {
-  color: #5d748f;
+  color: var(--ce-text-faint);
 }
 .ops {
   display: inline-flex;
@@ -507,7 +517,7 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  border-top: 1px solid rgba(64, 120, 180, 0.16);
+  border-top: 1px solid var(--ce-divider);
   flex-wrap: wrap;
 }
 .foot__total {

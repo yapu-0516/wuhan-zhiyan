@@ -133,7 +133,7 @@ const emit = defineEmits<{ (e: 'stop'): void }>()
   padding: 0 4px;
   border: 1px solid var(--ce-panel-border);
   border-radius: 2px;
-  font-family: var(--ce-font-mono);
+  font-family: var(--ce-font);
   font-size: 10px;
   color: var(--ce-text-dim);
 }

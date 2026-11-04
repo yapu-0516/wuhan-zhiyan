@@ -56,8 +56,13 @@ function shade(hex: string, amt: number): string {
 }
 
 /** 事件定位针：外圈等级色环 + 类型色填充 + 类型图标 + 底部落点 */
-export function eventIcon(type: EventType, severity: Severity, dim = false): { key: string; canvas: HTMLCanvasElement } {
-  const key = `ev|${type}|${severity}|${dim ? 1 : 0}`
+export function eventIcon(
+  type: EventType,
+  severity: Severity,
+  dim = false,
+  quiet = false
+): { key: string; canvas: HTMLCanvasElement } {
+  const key = `ev|${type}|${severity}|${dim ? 1 : 0}|${quiet ? 1 : 0}`
   const hit = cache.get(key)
   if (hit) return { key, canvas: hit }
 
@@ -69,13 +74,13 @@ export function eventIcon(type: EventType, severity: Severity, dim = false): { k
   const ctx = c.getContext('2d')
   if (!ctx) return { key, canvas: c }
 
-  const typeColor = dim ? '#6b7c96' : EVENT_TYPE_META[type].color
-  const sevColor = dim ? '#56657c' : SEVERITY_META[severity].color
+  const typeColor = dim ? '#6b7c96' : quiet ? '#7c878f' : EVENT_TYPE_META[type].color
+  const sevColor = dim ? '#56657c' : quiet ? '#879198' : SEVERITY_META[severity].color
   const cx = W / 2
   const cy = 36
   const R = 27
 
-  ctx.globalAlpha = dim ? 0.75 : 1
+  ctx.globalAlpha = dim ? 0.65 : quiet ? 0.78 : 1
 
   // 落点光斑
   const g0 = ctx.createRadialGradient(cx, H - 8, 0, cx, H - 8, 14)
@@ -98,18 +103,18 @@ export function eventIcon(type: EventType, severity: Severity, dim = false): { k
   // 外发光 + 等级色环
   ctx.save()
   ctx.shadowColor = typeColor
-  ctx.shadowBlur = dim ? 0 : 14
+  ctx.shadowBlur = dim || quiet ? 0 : 14
   ctx.beginPath()
   ctx.arc(cx, cy, R, 0, Math.PI * 2)
   ctx.fillStyle = '#081226'
   ctx.fill()
   ctx.restore()
-  ctx.lineWidth = 4
+  ctx.lineWidth = quiet ? 2 : 4
   ctx.strokeStyle = sevColor
   ctx.beginPath()
   ctx.arc(cx, cy, R - 2, 0, Math.PI * 2)
   ctx.stroke()
-  if (severity === 'critical' && !dim) {
+  if (severity === 'critical' && !dim && !quiet) {
     ctx.lineWidth = 1.5
     ctx.strokeStyle = 'rgba(255,255,255,0.85)'
     ctx.beginPath()

@@ -67,12 +67,15 @@ const KIND: Record<Sample['kind'], string> = { image: '影像', csv: 'CSV 时序
   font: inherit;
   padding: 0;
   overflow: hidden;
-  border-radius: 9px;
+  border-radius: 4px;
   cursor: pointer;
   color: var(--ce-text, #d6e4ff);
-  background: rgba(9, 16, 34, 0.6);
-  border: 1px solid rgba(64, 120, 180, 0.3);
-  transition: all 0.18s;
+  background: #1a1c1e;
+  border: 1px solid var(--ce-panel-border);
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease;
 }
 .sc:hover {
   border-color: color-mix(in srgb, var(--c) 60%, transparent);
@@ -80,9 +83,6 @@ const KIND: Record<Sample['kind'], string> = { image: '影像', csv: 'CSV 时序
 }
 .sc.is-on {
   border-color: var(--c);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent),
-    0 0 20px color-mix(in srgb, var(--c) 28%, transparent);
 }
 .sc:focus-visible {
   outline: 2px solid var(--c);
@@ -91,7 +91,7 @@ const KIND: Record<Sample['kind'], string> = { image: '影像', csv: 'CSV 时序
 .sc__thumb {
   position: relative;
   aspect-ratio: 16 / 10;
-  background: #060b1a;
+  background: #111214;
   overflow: hidden;
 }
 .sc__thumb img {
@@ -113,10 +113,7 @@ const KIND: Record<Sample['kind'], string> = { image: '影像', csv: 'CSV 时序
   gap: 6px;
   font-size: 12px;
   color: #6f89aa;
-  background:
-    linear-gradient(rgba(79, 195, 247, 0.07) 1px, transparent 1px) 0 0 / 100% 22px,
-    linear-gradient(90deg, rgba(79, 195, 247, 0.07) 1px, transparent 1px) 0 0 / 22px 100%,
-    linear-gradient(135deg, rgba(79, 195, 247, 0.08), rgba(155, 143, 255, 0.06));
+  background: #141618;
 }
 .sc__chart .el-icon {
   font-size: 34px;
@@ -133,7 +130,6 @@ const KIND: Record<Sample['kind'], string> = { image: '影像', csv: 'CSV 时序
   border-radius: 4px;
   color: #dff3ff;
   background: rgba(6, 12, 28, 0.78);
-  backdrop-filter: blur(4px);
   border: 1px solid rgba(79, 195, 247, 0.35);
 }
 .sc__check {
@@ -153,7 +149,6 @@ const KIND: Record<Sample['kind'], string> = { image: '影像', csv: 'CSV 时序
 .sc.is-on .sc__check {
   background: var(--c);
   border-color: var(--c);
-  box-shadow: 0 0 10px var(--c);
 }
 .sc__txt {
   display: flex;

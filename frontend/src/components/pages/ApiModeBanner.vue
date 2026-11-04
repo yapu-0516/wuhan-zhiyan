@@ -54,7 +54,7 @@ async function retry() {
   border-radius: 8px;
   font-size: 12.5px;
   color: #f6d78a;
-  background: linear-gradient(90deg, rgba(240, 192, 80, 0.14), rgba(240, 192, 80, 0.04));
+  background: #211d16;
   border: 1px solid rgba(240, 192, 80, 0.32);
 }
 .mode-banner__dot {
@@ -62,7 +62,6 @@ async function retry() {
   height: 7px;
   border-radius: 50%;
   background: #f0c050;
-  box-shadow: 0 0 8px #f0c050;
   flex: none;
 }
 .mode-banner__text {

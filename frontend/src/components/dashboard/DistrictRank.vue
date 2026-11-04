@@ -14,7 +14,7 @@ const rows = computed(() => {
 <template>
   <ol v-if="rows.length" class="rank">
     <li v-for="r in rows" :key="r.name" :class="'r' + r.rank">
-      <span class="rank__no ce-num">{{ String(r.rank).padStart(2, '0') }}</span>
+      <span class="rank__no ce-num">{{ r.rank }}</span>
       <span class="rank__name" :title="r.name">{{ r.name }}</span>
       <span class="rank__bar"><i :style="{ width: r.pct + '%' }" /></span>
       <b class="rank__v ce-num">{{ r.count }}</b>
@@ -31,36 +31,22 @@ const rows = computed(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
 }
 .rank li {
   display: grid;
-  grid-template-columns: 24px 64px 1fr 32px;
+  grid-template-columns: 18px 64px 1fr 32px;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .rank__no {
-  display: grid;
-  place-items: center;
-  height: 18px;
-  border-radius: 2px;
-  font-size: 11px;
-  color: var(--ce-text-dim);
-  background: rgba(79, 195, 247, 0.08);
+  font-size: 12px;
+  color: var(--ce-text-faint);
 }
 .r1 .rank__no {
-  color: #08111f;
-  background: linear-gradient(135deg, #ffd36b, #ff9f43);
-}
-.r2 .rank__no {
-  color: #08111f;
-  background: linear-gradient(135deg, #8fe7ff, #4fc3f7);
-}
-.r3 .rank__no {
-  color: #08111f;
-  background: linear-gradient(135deg, #b9a8ff, #8b7cff);
+  color: var(--ce-text-strong);
 }
 .rank__name {
   overflow: hidden;
@@ -69,33 +55,29 @@ const rows = computed(() => {
   color: var(--ce-text);
 }
 .rank__bar {
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(79, 195, 247, 0.08);
+  height: 3px;
+  background: #2a3035;
   overflow: hidden;
 }
 .rank__bar i {
   display: block;
   height: 100%;
-  border-radius: 3px;
-  background: linear-gradient(90deg, rgba(31, 120, 209, 0.6), #36e4ff);
-  box-shadow: 0 0 8px rgba(54, 228, 255, 0.5);
+  background: #6d777f;
   transition: width 0.8s var(--ce-ease);
 }
 .r1 .rank__bar i {
-  background: linear-gradient(90deg, rgba(255, 159, 67, 0.5), #ffd36b);
-  box-shadow: 0 0 8px rgba(255, 191, 90, 0.5);
+  background: var(--ce-accent);
 }
 .rank__v {
   text-align: right;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ce-text-strong);
 }
 .rank__empty {
   flex: 1;
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ce-text-faint);
 }
 </style>

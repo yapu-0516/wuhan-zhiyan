@@ -1,0 +1,26 @@
+[
+  {
+    "id": "fire-missing-details",
+    "event_type": "fire",
+    "user": "帮我分析一起火灾的影响，重点关注周边医院和道路。",
+    "expected": "指出地点、时间、火势和人员情况未知，不编造医院、道路或风险数值，并主动询问。"
+  },
+  {
+    "id": "flood-demo-data",
+    "event_type": "flood",
+    "user": "这是一次演练数据：某主干道降雨强度60毫米/小时，积水深度35厘米，已持续30分钟。请研判风险。",
+    "expected": "明确标注为演练数据，只依据给出的降雨、积水深度和持续时间分析，不补造交通或人员情况。"
+  },
+  {
+    "id": "building-insufficient-data",
+    "event_type": "building",
+    "user": "帮我判断这栋楼有没有倒塌风险。",
+    "expected": "不直接下结论，询问建筑位置、结构类型、可见变形、沉降监测和现场情况。"
+  },
+  {
+    "id": "traffic-general-question",
+    "event_type": "traffic",
+    "user": "下小雨一定会造成交通拥堵吗？",
+    "expected": "说明小雨不一定导致拥堵，列举车流、道路排水、事故等条件，不虚构某次事件。"
+  }
+]

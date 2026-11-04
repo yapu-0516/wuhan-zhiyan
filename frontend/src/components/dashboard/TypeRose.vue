@@ -1,7 +1,6 @@
 <script setup lang="ts">
-// 事件类型分布：南丁格尔玫瑰图 + 直接标注的图例（图标 + 名称 + 数量 + 占比）
+// 事件类型分布：横向条形列表，便于在大屏内快速比较数量。
 import { computed } from 'vue'
-import EChart from '@/components/charts/EChart.vue'
 import type { EventType } from '@/types/event'
 import { EVENT_TYPES, EVENT_TYPE_META } from '@/types/event'
 
@@ -15,50 +14,20 @@ const rows = computed(() =>
   })
 )
 
-const option = computed(() => ({
-  tooltip: { trigger: 'item', formatter: '{b}：{c} 件（{d}%）' },
-  series: [
-    {
-      type: 'pie',
-      roseType: 'radius',
-      radius: ['26%', '88%'],
-      center: ['50%', '50%'],
-      itemStyle: { borderRadius: 3, borderColor: 'rgba(7,17,36,0.9)', borderWidth: 2 },
-      label: { show: false },
-      labelLine: { show: false },
-      emphasis: { scale: true, scaleSize: 4 },
-      data: rows.value.map((r) => ({
-        name: r.label,
-        value: r.n,
-        itemStyle: { color: r.color, shadowColor: r.color, shadowBlur: 8 }
-      }))
-    },
-    {
-      type: 'pie',
-      radius: ['18%', '20%'],
-      center: ['50%', '50%'],
-      silent: true,
-      label: { show: false },
-      data: [{ value: 1, itemStyle: { color: 'rgba(79,195,247,0.35)' } }]
-    }
-  ]
-}))
 </script>
 
 <template>
-  <div class="rose">
-    <div class="rose__chart">
-      <EChart :option="option" />
-      <div class="rose__center">
-        <b class="ce-num">{{ total }}</b>
-        <span>事件总数</span>
-      </div>
+  <div class="types">
+    <div class="types__total">
+      <span>事件总数</span>
+      <b class="ce-num">{{ total }}</b>
+      <span>件</span>
     </div>
-    <ul class="rose__legend">
+    <ul class="types__list">
       <li v-for="r in rows" :key="r.t">
-        <i class="dot" :style="{ background: r.color, boxShadow: `0 0 6px ${r.color}` }" />
-        <span class="icon">{{ r.icon }}</span>
+        <i class="dot" :style="{ background: r.color }" />
         <span class="name">{{ r.label }}</span>
+        <span class="bar"><i :style="{ width: `${r.pct}%`, background: r.color }" /></span>
         <b class="ce-num">{{ r.n }}</b>
         <em class="ce-num">{{ r.pct }}%</em>
       </li>
@@ -67,78 +36,71 @@ const option = computed(() => ({
 </template>
 
 <style scoped>
-.rose {
+.types {
   flex: 1;
   min-height: 140px;
-  display: grid;
-  grid-template-columns: 1fr 1.05fr;
-  align-items: center;
-  gap: 6px;
-}
-.rose__chart {
-  position: relative;
-  height: 100%;
-  min-height: 140px;
-}
-.rose__center {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  pointer-events: none;
+  gap: 10px;
 }
-.rose__center b {
-  font-size: 18px;
-  line-height: 1;
+.types__total {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ce-text-dim);
+}
+.types__total b {
+  margin-left: auto;
+  font-size: 24px;
   color: var(--ce-text-strong);
 }
-.rose__center span {
-  font-size: 9px;
-  color: var(--ce-text-faint);
-  transform: scale(0.9);
-}
-.rose__legend {
+.types__list {
+  flex: 1;
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 4px;
 }
-.rose__legend li {
+.types__list li {
   display: grid;
-  grid-template-columns: 8px 18px 1fr auto 38px;
+  grid-template-columns: 7px 52px 1fr 26px 32px;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  border-radius: 2px;
-  font-size: 12.5px;
-  background: rgba(79, 195, 247, 0.04);
-  cursor: default;
-}
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-}
-.icon {
+  gap: 8px;
+  min-height: 22px;
   font-size: 13px;
 }
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
 .name {
-  color: var(--ce-text);
+  color: var(--ce-text-dim);
   white-space: nowrap;
 }
-.rose__legend b {
-  font-size: 15px;
+.bar {
+  height: 3px;
+  overflow: hidden;
+  background: #2a3035;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  transition: width 0.5s var(--ce-ease);
+}
+.types__list b {
+  font-size: 13px;
+  text-align: right;
   color: var(--ce-text-strong);
 }
-.rose__legend em {
+.types__list em {
   font-style: normal;
   font-size: 12px;
   text-align: right;
-  color: var(--ce-text-dim);
+  color: var(--ce-text-faint);
 }
 </style>

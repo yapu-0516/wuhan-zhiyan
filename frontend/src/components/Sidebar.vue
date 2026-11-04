@@ -1,30 +1,38 @@
 <script setup lang="ts">
-// 左侧导航：5 个主页面；AI 分析拆分为火灾 / 拥堵 / 建筑异常 / 内涝四个独立页面；事件中心显示未办结事件数徽标；可折叠为图标栏
+// 左侧导航：主页面与 AI 分析入口；桌面保留文字，平板收为图标栏，手机转为底部导航。
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Location, Monitor, Warning, Files, Sunny, Van, OfficeBuilding, Umbrella, Fold, Expand } from '@element-plus/icons-vue'
+import { Location, Monitor, FirstAidKit, Warning, Files, Sunny, Van, OfficeBuilding, Umbrella, Fold, Expand, Menu, Close } from '@element-plus/icons-vue'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { useLayout } from '@/composables/useLayout'
 
 const route = useRoute()
 const { stats } = useCityEvents()
 const { sidebarCollapsed, toggleSidebar } = useLayout()
+const mobileMoreOpen = ref(false)
 
 const navItems = [
-  { to: '/dashboard', label: '城市总览', en: 'OVERVIEW', icon: Location },
-  { to: '/monitoring', label: '城市监测', en: 'MONITOR', icon: Monitor },
-  { to: '/event-center', label: '事件中心', en: 'EVENTS', icon: Warning, badge: true },
-  { to: '/data-management', label: '数据管理', en: 'DATA', icon: Files }
+  { to: '/dashboard', label: '总览', icon: Location },
+  { to: '/drill', label: '演练', icon: FirstAidKit },
+  { to: '/monitoring', label: '监测', icon: Monitor },
+  { to: '/event-center', label: '事件', icon: Warning, badge: true },
+  { to: '/data-management', label: '数据', icon: Files }
 ]
 
 // AI 分析按风险类型独立成页，互不混排
 const aiItems = [
-  { to: '/ai-analysis/fire', label: '火灾识别', en: 'FIRE', icon: Sunny },
-  { to: '/ai-analysis/traffic', label: '交通拥堵', en: 'TRAFFIC', icon: Van },
-  { to: '/ai-analysis/building', label: '建筑异常', en: 'BUILDING', icon: OfficeBuilding },
-  { to: '/ai-analysis/flood', label: '内涝积水', en: 'FLOOD', icon: Umbrella }
+  { to: '/ai-analysis/fire', label: '火灾识别', icon: Sunny },
+  { to: '/ai-analysis/traffic', label: '交通拥堵', icon: Van },
+  { to: '/ai-analysis/building', label: '建筑异常', icon: OfficeBuilding },
+  { to: '/ai-analysis/flood', label: '内涝积水', icon: Umbrella }
 ]
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
+
+watch(
+  () => route.fullPath,
+  () => (mobileMoreOpen.value = false)
+)
 </script>
 
 <template>
@@ -41,13 +49,12 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
         <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
         <span class="nav-text">
           <span class="nav-label">{{ item.label }}</span>
-          <span class="nav-en">{{ item.en }}</span>
         </span>
         <span v-if="item.badge && stats.active > 0" class="nav-badge ce-num">{{ stats.active > 99 ? '99+' : stats.active }}</span>
       </RouterLink>
 
       <div class="nav-group-label" title="AI 分析">
-        <span>AI 分析</span><em>AI LAB</em>
+        <span>AI 分析</span>
       </div>
       <RouterLink
         v-for="item in aiItems"
@@ -60,9 +67,18 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
         <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
         <span class="nav-text">
           <span class="nav-label">{{ item.label }}</span>
-          <span class="nav-en">{{ item.en }}</span>
         </span>
       </RouterLink>
+      <button
+        class="nav-item nav-item--more"
+        type="button"
+        aria-label="打开 AI 分析导航"
+        :aria-expanded="mobileMoreOpen"
+        @click="mobileMoreOpen = true"
+      >
+        <el-icon class="nav-icon"><Menu /></el-icon>
+        <span class="nav-text"><span class="nav-label">更多</span></span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       <button class="collapse-btn" :title="sidebarCollapsed ? '展开导航' : '收起导航'" @click="toggleSidebar">
@@ -71,6 +87,30 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
       <span class="ver">CityEye v1.0</span>
     </div>
   </aside>
+
+  <Teleport to="body">
+    <Transition name="nav-sheet">
+      <div v-if="mobileMoreOpen" class="nav-sheet" @click.self="mobileMoreOpen = false">
+        <section role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title">
+          <header>
+            <div>
+              <h2 id="mobile-nav-title">AI 分析</h2>
+              <p>按风险类型进入独立分析页</p>
+            </div>
+            <button type="button" aria-label="关闭 AI 分析导航" @click="mobileMoreOpen = false">
+              <el-icon><Close /></el-icon>
+            </button>
+          </header>
+          <nav>
+            <RouterLink v-for="item in aiItems" :key="item.to" :to="item.to">
+              <el-icon><component :is="item.icon" /></el-icon>
+              <span>{{ item.label }}</span>
+            </RouterLink>
+          </nav>
+        </section>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -82,15 +122,14 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
   justify-content: space-between;
   min-width: 0;
   overflow: hidden;
-  background: linear-gradient(180deg, #08122a 0%, #060d1f 100%);
-  border-right: 1px solid var(--ce-panel-border);
-  box-shadow: 4px 0 18px rgba(0, 0, 0, 0.35);
+  background: var(--ce-bg);
+  border-right: 1px solid var(--ce-divider);
 }
 .nav-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 8px;
+  gap: 2px;
+  padding: 12px 8px;
   overflow-y: auto;
 }
 .nav-group-label {
@@ -101,102 +140,183 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
   padding: 6px 8px 0;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 2px;
-  color: #6f89aa;
+  letter-spacing: 0;
+  color: var(--ce-text-faint);
   border-top: 1px solid var(--ce-divider);
 }
-.nav-group-label em {
-  font-style: normal;
-  font-family: var(--ce-font-num);
-  font-size: 9.5px;
-  letter-spacing: 1.5px;
-  color: var(--ce-text-faint);
-}
 .nav-item--sub {
-  height: 40px;
-  padding-left: 18px;
+  height: 38px;
+  padding-left: 14px;
 }
 .nav-item--sub .nav-icon {
-  font-size: 16px;
+  font-size: 15px;
 }
 .nav-item--sub .nav-label {
   font-size: 13px;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 .nav-item {
   position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 46px;
-  padding: 0 12px;
+  height: 42px;
+  padding: 0 10px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 5px;
   color: var(--ce-text-dim);
   text-decoration: none;
   white-space: nowrap;
   transition:
     color 0.15s ease,
-    background 0.15s ease,
+    background-color 0.15s ease,
     border-color 0.15s ease;
 }
 .nav-item:hover {
   color: var(--ce-text-strong);
-  background: rgba(79, 195, 247, 0.08);
+  background: #1a1c1e;
 }
 .nav-item.active {
-  color: #fff;
-  border-color: rgba(79, 195, 247, 0.35);
-  background: linear-gradient(90deg, rgba(79, 195, 247, 0.24), rgba(79, 195, 247, 0.04));
-  box-shadow: inset 0 0 16px rgba(79, 195, 247, 0.12);
+  color: var(--ce-text-strong);
+  border-color: transparent;
+  background: #1d1f22;
 }
 .nav-item.active::before {
   content: '';
   position: absolute;
-  left: -9px;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-  background: var(--ce-accent-2);
-  box-shadow: 0 0 10px var(--ce-accent);
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  width: auto;
+  height: 1px;
+  background: var(--ce-accent);
 }
 .nav-icon {
   flex: none;
   font-size: 18px;
 }
 .nav-item.active .nav-icon {
-  color: var(--ce-accent-2);
-  filter: drop-shadow(0 0 5px var(--ce-accent));
+  color: currentColor;
 }
 .nav-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .nav-label {
   font-size: 14px;
-  letter-spacing: 2px;
-}
-.nav-en {
-  font-family: var(--ce-font-num);
-  font-size: 9.5px;
-  letter-spacing: 1.5px;
-  color: var(--ce-text-faint);
+  letter-spacing: 0;
 }
 .nav-badge {
   margin-left: auto;
   min-width: 20px;
   height: 18px;
   padding: 0 5px;
-  border-radius: 9px;
+  border-radius: 4px;
   font-size: 11px;
   line-height: 18px;
   text-align: center;
   color: #fff;
-  background: linear-gradient(135deg, #ff6b6b, #e0393e);
-  box-shadow: 0 0 10px rgba(255, 107, 107, 0.6);
+  background: #463033;
+  color: #f0b2b4;
+}
+.nav-item--more {
+  display: none;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+.nav-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.62);
+}
+.nav-sheet section {
+  width: 100%;
+  padding: 16px;
+  border-top: 1px solid var(--ce-panel-border);
+  background: var(--ce-panel-solid);
+}
+.nav-sheet header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ce-divider);
+}
+.nav-sheet h2 {
+  margin: 0;
+  color: var(--ce-text-strong);
+  font-size: 20px;
+  font-weight: 600;
+}
+.nav-sheet p {
+  margin: 4px 0 0;
+  color: var(--ce-text-dim);
+  font-size: 13px;
+}
+.nav-sheet header button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ce-panel-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ce-text-dim);
+}
+.nav-sheet nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 12px;
+  background: var(--ce-divider);
+  border: 1px solid var(--ce-divider);
+}
+.nav-sheet a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px;
+  background: var(--ce-panel-solid);
+  color: var(--ce-text);
+  font-size: 14px;
+  text-decoration: none;
+}
+.nav-sheet a.router-link-active {
+  color: var(--ce-text-strong);
+}
+.nav-sheet a.router-link-active::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  height: 1px;
+  background: var(--ce-accent);
+}
+.nav-sheet-enter-active,
+.nav-sheet-leave-active {
+  transition: opacity 0.2s ease;
+}
+.nav-sheet-enter-active section,
+.nav-sheet-leave-active section {
+  transition: transform 0.25s var(--ce-ease);
+}
+.nav-sheet-enter-from,
+.nav-sheet-leave-to {
+  opacity: 0;
+}
+.nav-sheet-enter-from section,
+.nav-sheet-leave-to section {
+  transform: translateY(100%);
 }
 .sidebar-footer {
   display: flex;
@@ -222,9 +342,8 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
   border-color: var(--ce-panel-border-strong);
 }
 .ver {
-  font-family: var(--ce-font-num);
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-size: 12px;
+  letter-spacing: 0;
   color: var(--ce-text-faint);
   white-space: nowrap;
 }
@@ -235,8 +354,10 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
   padding: 0;
 }
 .collapsed .nav-text,
-.collapsed .ver,
 .collapsed .nav-group-label {
+  display: none;
+}
+.collapsed .ver {
   display: none;
 }
 .collapsed .nav-badge {
@@ -248,6 +369,96 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
   padding: 0 3px;
   font-size: 10px;
   line-height: 16px;
+}
+
+@media (max-width: 1100px) {
+  .nav-text,
+  .nav-group-label,
+  .ver {
+    display: none;
+  }
+  .nav-list {
+    padding-inline: 6px;
+  }
+  .nav-item,
+  .nav-item--sub {
+    justify-content: center;
+    height: 42px;
+    padding: 0;
+  }
+  .sidebar-footer {
+    justify-content: center;
+    padding: 8px 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    height: 56px;
+    border-top: 1px solid var(--ce-divider);
+    border-right: 0;
+  }
+  .nav-list {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .nav-group-label,
+  .sidebar-footer {
+    display: none;
+  }
+  .nav-item,
+  .nav-item--sub {
+    flex: 1 0 16.666%;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    height: 56px;
+    padding: 0 2px;
+    border-radius: 0;
+  }
+  .nav-text {
+    display: flex;
+  }
+  .nav-label {
+    font-size: 12px;
+    line-height: 1.1;
+  }
+  .nav-icon {
+    font-size: 17px;
+  }
+  .nav-item.active::before {
+    left: 8px;
+    right: 8px;
+  }
+  .nav-badge {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    font-size: 10px;
+    line-height: 15px;
+  }
+  .nav-item--sub {
+    display: none;
+  }
+  .nav-item--more {
+    display: flex;
+  }
+  .nav-sheet {
+    display: flex;
+  }
 }
 .collapsed .sidebar-footer {
   justify-content: center;

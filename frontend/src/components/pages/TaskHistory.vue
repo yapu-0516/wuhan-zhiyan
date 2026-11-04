@@ -63,7 +63,7 @@ function onRowClick(row: AnalysisTask) {
       <el-table-column label="类型" width="150">
         <template #default="{ row }">
           <span class="hist__type" :style="{ '--c': typeMeta((row as AnalysisTask).type)?.color ?? '#4fc3f7' }">
-            {{ typeMeta((row as AnalysisTask).type)?.icon ?? '🧠' }}
+            <i class="hist__dot" />
             {{ typeMeta((row as AnalysisTask).type)?.label ?? (row as AnalysisTask).type }}
           </span>
         </template>
@@ -148,6 +148,12 @@ function onRowClick(row: AnalysisTask) {
 .hist__id {
   color: #a9cdf0;
   font-size: 12.5px;
+}
+.hist__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 .hist__type {
   --c: #4fc3f7;

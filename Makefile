@@ -21,7 +21,7 @@ build:  ## 构建前端
 
 test:  ## 运行算法与后端测试
 	$(PY) -m pytest algorithm/tests -q
-	cd backend && $(PY) -m pytest tests -q
+	$(PY) -m pytest backend/tests llm_module/tests scenario_engine/tests -q
 
 snapshot:  ## 从后端导出前端离线快照（frontend/public/snapshot）
 	$(PY) scripts/export_snapshot.py

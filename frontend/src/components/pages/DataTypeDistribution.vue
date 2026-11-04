@@ -18,7 +18,7 @@ const option = computed(() => ({
   tooltip: {
     trigger: 'item',
     formatter: (p: { name: string; value: number; percent: number }) =>
-      `${dataTypeMeta(p.name).icon} ${p.name}<br/><b>${p.value}</b> 项 · ${p.percent}%`
+      `${p.name}<br/><b>${p.value}</b> 项 · ${p.percent}%`
   },
   series: [
     {
@@ -30,8 +30,8 @@ const option = computed(() => ({
       avoidLabelOverlap: true,
       label: { show: false },
       labelLine: { show: false },
-      itemStyle: { borderRadius: 6, borderColor: 'rgba(12, 20, 40, 0.95)', borderWidth: 2 },
-      emphasis: { scale: true, scaleSize: 5, itemStyle: { shadowBlur: 18, shadowColor: 'rgba(79, 195, 247, 0.5)' } },
+      itemStyle: { borderRadius: 4, borderColor: '#17181a', borderWidth: 2 },
+      emphasis: { scale: true, scaleSize: 3 },
       data: props.items.map((i) => ({
         name: i.type,
         value: i.count,
@@ -62,7 +62,7 @@ const option = computed(() => ({
         :style="{ '--c': dataTypeMeta(i.type).color }"
         @click="emit('select', selected === i.type ? '' : i.type)"
       >
-        <span class="dist__ic">{{ dataTypeMeta(i.type).icon }}</span>
+        <span class="dist__dot" />
         <span class="dist__name">{{ i.type }}</span>
         <span class="dist__bar"><i :style="{ width: total ? `${(i.count / total) * 100}%` : '0%' }"></i></span>
         <b class="dist__n">{{ i.count }}</b>
@@ -97,11 +97,10 @@ const option = computed(() => ({
   font-size: 30px;
   font-weight: 600;
   color: #eaf5ff;
-  text-shadow: 0 0 18px rgba(79, 195, 247, 0.5);
 }
 .dist__center span {
   font-size: 12px;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   color: var(--ce-text-dim, #8aa3c4);
 }
 .dist__legend {
@@ -115,35 +114,40 @@ const option = computed(() => ({
 .dist__legend li {
   --c: #4fc3f7;
   display: grid;
-  grid-template-columns: 24px 82px 1fr 30px 38px;
+  grid-template-columns: 12px 82px 1fr 30px 38px;
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 7px;
+  border-radius: 4px;
   border: 1px solid transparent;
   font-size: 13px;
-  color: #c9dbf5;
+  color: var(--ce-text);
   cursor: pointer;
-  transition: all 0.16s;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease;
 }
 .dist__legend li:hover {
-  background: color-mix(in srgb, var(--c) 9%, transparent);
+  background: #1d1f22;
 }
 .dist__legend li.is-on {
-  border-color: color-mix(in srgb, var(--c) 55%, transparent);
-  background: color-mix(in srgb, var(--c) 13%, transparent);
+  border-color: var(--c);
+  background: #1d1f22;
 }
 .dist__legend li.is-dim {
   opacity: 0.55;
 }
-.dist__ic {
-  font-size: 16px;
-  text-align: center;
+.dist__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c);
 }
 .dist__bar {
   height: 5px;
   border-radius: 3px;
-  background: rgba(120, 160, 210, 0.15);
+  background: #2a2c2f;
   overflow: hidden;
 }
 .dist__bar i {
@@ -151,7 +155,6 @@ const option = computed(() => ({
   height: 100%;
   border-radius: 3px;
   background: var(--c);
-  box-shadow: 0 0 8px var(--c);
   transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .dist__n {
@@ -162,11 +165,11 @@ const option = computed(() => ({
 .dist__p {
   text-align: right;
   font-size: 12px;
-  color: #6f89aa;
+  color: var(--ce-text-faint);
   font-variant-numeric: tabular-nums;
 }
 .dist__empty {
-  color: #5d748f;
+  color: var(--ce-text-faint);
   cursor: default !important;
 }
 @media (max-width: 1500px) {

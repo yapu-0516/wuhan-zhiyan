@@ -1,18 +1,30 @@
 <script setup lang="ts">
 // 场景图例：路况等级 / 事件类型（可点击筛选）/ 事件等级 / 建筑高度与沉降风险
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { EventType } from '@/types/event'
 import { EVENT_TYPES, EVENT_TYPE_META, SEVERITY_META } from '@/types/event'
 import type { Severity } from '@/types/event'
 import type { TrafficLevel } from '@/types/building'
 import { RISK_LEVEL_META, TRAFFIC_LEVEL_META } from '@/types/building'
-import { BUILDING_LEGEND_GRADIENT } from '@/components/scene/buildingLayer'
 import type { EventTypeFilter } from '@/components/scene/types'
 
-defineProps<{ eventTypes: EventTypeFilter; showResolved: boolean }>()
+const props = withDefaults(
+  defineProps<{
+    eventTypes: EventTypeFilter
+    showResolved: boolean
+    defaultOpen?: boolean
+  }>(),
+  { defaultOpen: true }
+)
 const emit = defineEmits<{ (e: 'toggle-type', t: EventType): void; (e: 'toggle-resolved'): void }>()
 
-const open = ref(true)
+const open = ref(props.defaultOpen)
+watch(
+  () => props.defaultOpen,
+  (value) => {
+    open.value = value
+  }
+)
 const LEVELS: TrafficLevel[] = ['smooth', 'basic', 'light', 'moderate', 'heavy']
 const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
 </script>
@@ -43,7 +55,7 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
             :style="{ '--c': EVENT_TYPE_META[t].color }"
             @click="emit('toggle-type', t)"
           >
-            <span>{{ EVENT_TYPE_META[t].icon }}</span>{{ EVENT_TYPE_META[t].label }}
+            <i class="lg-type__dot" />{{ EVENT_TYPE_META[t].label }}
           </button>
         </div>
         <label class="lg-check">
@@ -58,15 +70,18 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
             <i :style="{ borderColor: SEVERITY_META[s].color }" />{{ SEVERITY_META[s].label }}
           </span>
         </div>
+        <p class="lg-note">
+          强提示用于当前选中项、优先级前三项和最多六个高等级事件；其余保留小尺寸静态点位。
+        </p>
+        <div class="lg-row lg-row--zone">
+          <span class="lg-zone"><i />片区待办聚合</span>
+          <span class="lg-note-inline">圆环面积显示待办密度，暖色表示片区内有高等级事件</span>
+        </div>
       </div>
       <div class="lg-sec">
-        <div class="lg-title">建筑高度 / 沉降风险</div>
-        <div class="lg-height">
-          <span class="ce-num">0m</span>
-          <i :style="{ background: BUILDING_LEGEND_GRADIENT }" />
-          <span class="ce-num">150m+</span>
-        </div>
+        <div class="lg-title">建筑与沉降风险</div>
         <div class="lg-row">
+          <span class="lg-traffic"><i style="background: #65747d" />普通建筑</span>
           <span class="lg-traffic"><i :style="{ background: RISK_LEVEL_META.watch.color }" />沉降关注</span>
           <span class="lg-traffic"><i :style="{ background: RISK_LEVEL_META.warning.color }" />沉降预警</span>
           <span class="lg-traffic"><i class="pulse" />关联活动事件</span>
@@ -81,9 +96,7 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
   width: 268px;
   border: 1px solid var(--ce-panel-border);
   border-radius: 4px;
-  background: linear-gradient(180deg, rgba(12, 28, 58, 0.86), rgba(6, 15, 34, 0.84));
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
+  background: var(--ce-panel-solid);
   font-size: 12px;
 }
 .legend.collapsed {
@@ -124,15 +137,21 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
 }
 .lg-title {
   margin-bottom: 5px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ce-text-faint);
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 .lg-title small {
   margin-left: 4px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--ce-text-faint);
   opacity: 0.8;
+}
+.lg-note {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ce-text-faint);
 }
 .lg-row {
   display: flex;
@@ -140,11 +159,27 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
   gap: 5px 10px;
 }
 .lg-traffic,
-.lg-sev {
+.lg-sev,
+.lg-zone {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   color: var(--ce-text-dim);
+}
+.lg-row--zone {
+  margin-top: 7px;
+  align-items: center;
+}
+.lg-zone i {
+  width: 22px;
+  height: 12px;
+  border: 1px solid #84a5b2;
+  border-radius: 50%;
+  background: rgba(111, 152, 168, 0.12);
+}
+.lg-note-inline {
+  font-size: 12px;
+  color: var(--ce-text-faint);
 }
 .lg-traffic i {
   width: 14px;
@@ -161,7 +196,6 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
   }
   to {
     opacity: 1;
-    box-shadow: 0 0 8px #ff3b30;
   }
 }
 .lg-sev i {
@@ -174,20 +208,30 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 22px;
+  height: 24px;
   padding: 0 7px;
   border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
-  border-radius: 11px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--c) 14%, transparent);
   color: var(--ce-text);
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
 }
 .lg-type.off {
   opacity: 0.4;
   filter: grayscale(0.8);
   border-style: dashed;
+}
+.lg-type__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c);
 }
 .lg-check {
   display: inline-flex;
@@ -199,18 +243,5 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
 }
 .lg-check input {
   accent-color: #4fc3f7;
-}
-.lg-height {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  font-size: 10px;
-  color: var(--ce-text-faint);
-}
-.lg-height i {
-  flex: 1;
-  height: 6px;
-  border-radius: 3px;
 }
 </style>

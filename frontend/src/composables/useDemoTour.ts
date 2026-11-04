@@ -8,7 +8,7 @@
  *                   离线/失败：自动选择已有最高等级火情事件
  *  5 一键派单处置   在事件详情中打开派单表单并提交（状态机合法时）
  *  6 建筑沉降预警   飞往沉降预警建筑并展示监测曲线
- *  7 回到全局
+ *  7 联动疏散推演   进入火灾演练页并自动启动演示倍速下的疏散
  *
  * 可随时按 Esc 或点击"退出演示"取消；所有等待均可中断。
  */
@@ -26,7 +26,10 @@ class TourCancelled extends Error {}
 
 const TOTAL = 7
 
-export function useDemoTour(getApi: () => SceneApi | null) {
+export function useDemoTour(
+  getApi: () => SceneApi | null,
+  enterEmergencyDrill?: () => Promise<void>
+) {
   const state = reactive<TourState>({ running: false, index: 0, total: TOTAL, title: '', caption: '', focus: null })
   const { lastCreated, events, getEventById, upsert } = useCityEvents()
   let runId = 0
@@ -200,8 +203,19 @@ export function useDemoTour(getApi: () => SceneApi | null) {
       await sleep(2500, id)
     }
 
-    // 7 回到全局
+    // 7 联动疏散推演
     api.closePanels()
+    if (enterEmergencyDrill) {
+      step(
+        7,
+        '联动疏散推演',
+        '进入应急演练：烟气风险扩大后，系统沿临时道路图重新计算安全出口、通行路径和出口排队。',
+        'safety'
+      )
+      await sleep(2500, id)
+      await enterEmergencyDrill()
+      return
+    }
     step(7, '感知 · 分析 · 决策 · 处置', '城市智眼：多源感知接入、AI 智能识别、三维态势研判、事件闭环处置。', 'safety')
     await api.flyHome(3)
     await sleep(3500, id)

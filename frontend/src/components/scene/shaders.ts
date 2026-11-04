@@ -11,7 +11,6 @@
  * - 安全模式：若自定义着色器在某些显卡上编译失败，CesiumViewer 捕获 renderError 后切回 Cesium 内置外观（见 safe*）。
  */
 import * as Cesium from 'cesium'
-
 // ------------------------------------------------------------------ 场景时钟
 
 const CLOCK_SOURCE = `
@@ -19,6 +18,8 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
 {
     czm_material material = czm_getDefaultMaterial(materialInput);
     material.specular = u_time;
+    // x 表示真实感建筑材质；y/z 留给独立的业务叠加层调节。
+    material.diffuse = vec3(1.0, 0.0, 0.0);
     return material;
 }
 `
@@ -34,7 +35,11 @@ export interface SceneClock {
 export function createSceneClock(): SceneClock {
   const material = new Cesium.Material({
     translucent: true,
-    fabric: { type: 'CeSceneClock', uniforms: { u_time: 0 }, source: CLOCK_SOURCE }
+    fabric: {
+      type: 'CeSceneClock',
+      uniforms: { u_time: 0 },
+      source: CLOCK_SOURCE
+    }
   })
   const t0 = performance.now()
   let current = 0
@@ -116,6 +121,9 @@ out vec3 v_positionEC;
 out vec4 v_color;
 out vec4 v_info;
 out float v_shade;
+out vec3 v_local;
+out float v_seed;
+out vec3 v_normalEC;
 ${frame}
 const float ce_startFrame = ${startFrame.toFixed(1)};
 
@@ -138,6 +146,9 @@ void main()
     v_color = color;
     v_info = vec4(h, top, fx.x, dot(normal, ce_up));
     v_shade = dot(normal, ce_light);
+    v_local = rel;
+    v_seed = fx.z / 255.0;
+    v_normalEC = normalize(czm_normal * normal);
     gl_Position = czm_modelViewProjectionRelativeToEye * p;
 }
 `
@@ -148,62 +159,104 @@ in vec3 v_positionEC;
 in vec4 v_color;
 in vec4 v_info;
 in float v_shade;
+in vec3 v_local;
+in float v_seed;
+in vec3 v_normalEC;
 
 void main()
 {
     czm_materialInput materialInput;
     materialInput.positionToEyeEC = -v_positionEC;
-    float t = czm_getMaterial(materialInput).specular;
+    czm_material clockMaterial = czm_getMaterial(materialInput);
+    float t = clockMaterial.specular;
+    float skyline = step(0.5, clockMaterial.diffuse.x);
 
     float h = v_info.x;
     float top = v_info.y;
     float mode = v_info.z;
     float roof = smoothstep(0.6, 0.9, v_info.w);
+    float facade = pow(1.0 - abs(v_info.w), 1.3);
     float k = clamp(h / top, 0.0, 1.0);
     vec3 base = v_color.rgb;
-
-    // 竖向渐变：底部深、顶部亮
-    vec3 c = base * (0.26 + 0.92 * pow(k, 0.85));
-    // 立面朝向明暗
-    c *= 0.7 + 0.3 * clamp(v_shade * 0.5 + 0.5, 0.0, 1.0);
-    // 楼层线
     float floorLine = smoothstep(0.88, 1.0, fract(h / 3.6)) * (1.0 - roof) * step(4.0, h);
-    c += base * floorLine * 0.12;
-    // 檐口描边光
-    float rim = smoothstep(top - 2.4, top - 0.2, h) * (1.0 - roof);
-    c += vec3(0.32, 0.86, 1.0) * rim * 0.55;
-    // 屋顶
-    c = mix(c, base * 0.8 + vec3(0.03, 0.09, 0.13), roof);
-
-    // 上行扫描光带（约 8 秒一个周期）
-    float scanH = mod(t * 40.0, 340.0) - 20.0;
-    float band = 1.0 - smoothstep(0.0, 7.0, abs(h - scanH));
-    c += vec3(0.3, 0.85, 1.0) * band * 0.7 * (1.0 - roof * 0.7);
-
+    float rim = smoothstep(top - 2.2, top - 0.15, h) * (1.0 - roof);
     float alpha = v_color.a;
-    if (mode > 0.5 && mode < 1.5) {
-        // 关联活动事件：红色告警脉冲
-        float pulse = 0.5 + 0.5 * sin(t * 5.5);
-        vec3 alarm = vec3(1.0, 0.2, 0.17) * (0.55 + 0.8 * k);
-        c = mix(c, alarm, 0.5 + 0.42 * pulse);
-        c += vec3(1.0, 0.45, 0.35) * rim * pulse;
+    vec3 c;
+
+    if (skyline > 0.5) {
+        // 城市数据块：冷灰实体、方向光照和清楚屋顶，不使用发光高度编码。
+        float directional = clamp(v_shade * 0.5 + 0.58, 0.28, 1.0);
+        c = base * (0.74 + directional * 0.46);
+        c *= 0.93 + 0.07 * fract(v_seed * 13.71);
+
+        // 窗格只保留稀疏暖光，避免整片建筑变成噪点纹理。
+        float facadeU = v_local.x * 0.62 + v_local.z * 0.46 + v_seed * 9.0;
+        float windowU = mod(facadeU, 3.4);
+        float windowRow = mod(h + v_seed * 3.1, 4.2);
+        float winX = smoothstep(0.62, 0.76, windowU) * (1.0 - smoothstep(1.18, 1.32, windowU));
+        float winY = smoothstep(1.32, 1.46, windowRow) * (1.0 - smoothstep(2.26, 2.4, windowRow));
+        float lit = step(
+            0.86,
+            fract(sin(v_seed * 91.7 + floor(windowU) * 17.3 + floor(windowRow) * 43.1) * 43758.5453)
+        );
+        c += vec3(0.58, 0.44, 0.27) * facade * winX * winY * lit * 0.08;
+        float fresnel = pow(1.0 - abs(normalize(v_normalEC).z), 2.0);
+        c += vec3(0.22, 0.27, 0.3) * fresnel * facade * 0.04;
+
+        // 高层屋顶保留一半卫星纹理，低层街区则完全由卫星影像呈现。
+        c = mix(c, base * 1.14, roof * 0.92);
+        c += vec3(0.2, 0.24, 0.27) * floorLine * 0.035;
+        c += vec3(0.3, 0.34, 0.37) * rim * 0.08;
         alpha = 1.0;
-    } else if (mode > 1.5 && mode < 2.5) {
-        // 选中高亮
-        float pulse = 0.5 + 0.5 * sin(t * 3.2);
-        c = mix(c, vec3(0.55, 0.95, 1.0), 0.32 + 0.14 * pulse);
-        c += vec3(0.3, 0.75, 0.9) * rim;
-        alpha = 1.0;
-    } else if (mode > 2.5) {
-        // 沉降预警：缓慢呼吸
-        float breathe = 0.5 + 0.5 * sin(t * 2.0);
-        c += base * (0.12 + 0.28 * breathe) * k;
-        alpha = max(alpha, 0.96);
+
+        if (mode > 0.5 && mode < 1.5) {
+            float pulse = 0.5 + 0.5 * sin(t * 5.5);
+            c = mix(c, vec3(0.62, 0.18, 0.16), 0.08 + 0.05 * pulse);
+            c += vec3(1.0, 0.32, 0.22) * rim * (0.36 + 0.14 * pulse);
+            alpha = max(alpha, mix(0.52, 0.18, roof));
+        } else if (mode > 1.5 && mode < 2.5) {
+            c = mix(c, vec3(0.28, 0.56, 0.66), 0.2);
+            c += vec3(0.55, 0.92, 1.0) * rim * 0.58;
+            alpha = max(alpha, mix(0.62, 0.24, roof));
+        } else if (mode > 2.5) {
+            float breathe = 0.5 + 0.5 * sin(t * 2.0);
+            c = mix(c, vec3(0.56, 0.34, 0.12), 0.14 + breathe * 0.06);
+            c += vec3(1.0, 0.62, 0.22) * rim * (0.34 + 0.16 * breathe);
+            alpha = max(alpha, mix(0.54, 0.3, roof));
+        }
+    } else {
+        // 态势模式：保留原有高度色带、扫描光带和风险呼吸。
+        c = base * (0.26 + 0.92 * pow(k, 0.85));
+        c *= 0.7 + 0.3 * clamp(v_shade * 0.5 + 0.5, 0.0, 1.0);
+        c += base * floorLine * 0.12;
+        c += vec3(0.32, 0.86, 1.0) * rim * 0.55;
+        c = mix(c, base * 0.8 + vec3(0.03, 0.09, 0.13), roof);
+
+        float scanH = mod(t * 40.0, 340.0) - 20.0;
+        float band = 1.0 - smoothstep(0.0, 7.0, abs(h - scanH));
+        c += vec3(0.3, 0.85, 1.0) * band * 0.7 * (1.0 - roof * 0.7);
+
+        if (mode > 0.5 && mode < 1.5) {
+            float pulse = 0.5 + 0.5 * sin(t * 5.5);
+            vec3 alarm = vec3(1.0, 0.2, 0.17) * (0.55 + 0.8 * k);
+            c = mix(c, alarm, 0.5 + 0.42 * pulse);
+            c += vec3(1.0, 0.45, 0.35) * rim * pulse;
+            alpha = 1.0;
+        } else if (mode > 1.5 && mode < 2.5) {
+            float pulse = 0.5 + 0.5 * sin(t * 3.2);
+            c = mix(c, vec3(0.55, 0.95, 1.0), 0.32 + 0.14 * pulse);
+            c += vec3(0.3, 0.75, 0.9) * rim;
+            alpha = 1.0;
+        } else if (mode > 2.5) {
+            float breathe = 0.5 + 0.5 * sin(t * 2.0);
+            c += base * (0.12 + 0.28 * breathe) * k;
+            alpha = max(alpha, 0.96);
+        }
     }
 
-    // 远景雾化，融入暗色底图
-    float fog = smoothstep(3500.0, 14000.0, length(v_positionEC));
-    c = mix(c, vec3(0.02, 0.05, 0.1), fog * 0.6);
+    float fog = smoothstep(4500.0, 12000.0, length(v_positionEC));
+    vec3 fogColor = mix(vec3(0.09, 0.13, 0.16), vec3(0.2, 0.23, 0.25), skyline);
+    c = mix(c, fogColor, fog * mix(0.45, 0.22, skyline));
     out_FragColor = vec4(c, alpha);
 }
 `
@@ -211,7 +264,7 @@ void main()
 export function buildingAppearance(clock: SceneClock, frame: string, startFrame: number): Cesium.MaterialAppearance {
   return new Cesium.MaterialAppearance({
     material: clock.material,
-    translucent: true,
+    translucent: false,
     closed: true,
     materialSupport: Cesium.MaterialAppearance.MaterialSupport.BASIC,
     vertexShaderSource: buildingVS(frame, startFrame),
@@ -220,7 +273,7 @@ export function buildingAppearance(clock: SceneClock, frame: string, startFrame:
 }
 
 export function safeBuildingAppearance(): Cesium.PerInstanceColorAppearance {
-  return new Cesium.PerInstanceColorAppearance({ translucent: true, closed: true })
+  return new Cesium.PerInstanceColorAppearance({ translucent: false, closed: true })
 }
 
 // ------------------------------------------------------------------ 地面圆（事件涟漪 / 雷达扫描）
@@ -258,7 +311,9 @@ void main()
 {
     czm_materialInput materialInput;
     materialInput.positionToEyeEC = -v_positionEC;
-    float t = czm_getMaterial(materialInput).specular;
+    czm_material clockMaterial = czm_getMaterial(materialInput);
+    float t = clockMaterial.specular;
+    float skyline = clamp(clockMaterial.diffuse.y, 0.0, 1.0);
 
     float d = length(v_st - vec2(0.5)) * 2.0;
     if (d > 1.0) {
@@ -277,6 +332,7 @@ void main()
 
     float a = ripple * (0.3 + 0.7 * fade) * mix(0.8, 1.0, strong) + edge * 0.5 + core * 0.35;
     vec3 c = mix(v_color.rgb, vec3(1.0), core * 0.35 + ripple * 0.12);
+    a *= mix(1.0, 0.34, skyline);
     out_FragColor = vec4(c, clamp(a * v_color.a, 0.0, 1.0));
 }
 `
@@ -291,7 +347,9 @@ void main()
 {
     czm_materialInput materialInput;
     materialInput.positionToEyeEC = -v_positionEC;
-    float t = czm_getMaterial(materialInput).specular;
+    czm_material clockMaterial = czm_getMaterial(materialInput);
+    float t = clockMaterial.specular;
+    float skyline = clamp(clockMaterial.diffuse.y, 0.0, 1.0);
 
     vec2 q = v_st - vec2(0.5);
     float d = length(q) * 2.0;
@@ -311,6 +369,7 @@ void main()
 
     float a = (trail * 0.32 + lead * 0.5) * centerFade * (0.35 + 0.65 * d) + grid * 0.1 + edge * 0.45;
     vec3 c = mix(v_color.rgb, vec3(0.85, 1.0, 1.0), lead * 0.6);
+    a *= mix(1.0, 0.16, skyline);
     out_FragColor = vec4(c, clamp(a * v_color.a, 0.0, 1.0));
 }
 `
@@ -364,7 +423,9 @@ in vec4 v_fx;
 void main()
 {
     czm_materialInput materialInput;
-    float t = czm_getMaterial(materialInput).specular;
+    czm_material clockMaterial = czm_getMaterial(materialInput);
+    float t = clockMaterial.specular;
+    float skyline = clamp(clockMaterial.diffuse.y, 0.0, 1.0);
 
     vec2 st = v_st;
     st.t = czm_readNonPerspective(st.t, gl_FragCoord.w);
@@ -379,9 +440,14 @@ void main()
     float hi = step(0.5, v_fx.z) * (0.6 + 0.4 * sin(t * 6.0));
 
     vec3 base = v_color.rgb;
-    vec3 rgb = base * (0.5 * glow + 0.7 * core) + mix(base, vec3(1.0), 0.55) * trail * (core + glow * 0.35);
-    rgb *= 1.0 + hi * 0.9;
-    float a = clamp(glow * 0.45 + core * 0.5 + trail * 0.55 * (core + glow * 0.3) + hi * glow * 0.3, 0.0, 1.0);
+    vec3 rgb = base * (0.82 + glow * 0.12 + core * 0.16);
+    rgb += base * trail * 0.2;
+    rgb *= 1.0 + hi * 0.55;
+    float a = clamp(0.5 + glow * 0.18 + core * 0.2 + trail * 0.16 + hi * 0.2, 0.0, 0.9);
+    float selectedRoad = step(0.5, v_fx.z);
+    rgb = mix(rgb, base * 0.88, (1.0 - selectedRoad) * 0.38);
+    rgb = mix(rgb, base * 0.78, skyline * 0.72);
+    a *= mix(mix(0.54, 1.0, selectedRoad), 0.42, skyline);
     out_FragColor = vec4(rgb, a * v_color.a);
     czm_writeLogDepth();
 }
@@ -395,7 +461,9 @@ in vec4 v_fx;
 void main()
 {
     czm_materialInput materialInput;
-    float t = czm_getMaterial(materialInput).specular;
+    czm_material clockMaterial = czm_getMaterial(materialInput);
+    float t = clockMaterial.specular;
+    float skyline = clamp(clockMaterial.diffuse.y, 0.0, 1.0);
 
     vec2 st = v_st;
     st.t = czm_readNonPerspective(st.t, gl_FragCoord.w);
@@ -409,6 +477,7 @@ void main()
 
     vec3 c = mix(v_color.rgb, vec3(1.0), core * 0.45 + rise * 0.35);
     float a = (glow * fadeUp * 0.8 + rise * glow * 0.7 * (1.0 - st.s)) * pulse;
+    a *= mix(1.0, 0.36, skyline);
     out_FragColor = vec4(c, clamp(a * v_color.a, 0.0, 1.0));
     czm_writeLogDepth();
 }

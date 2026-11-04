@@ -134,8 +134,8 @@ function start() {
           <div class="tip__uptext">拖拽文件到此处，或 <em>点击选择</em></div>
           <template #tip>
             <div class="tip__rule" :class="{ 'is-bad': !!uploadError }">
-              <template v-if="uploadError">⚠ {{ uploadError }}</template>
-              <template v-else-if="fileList.length">✓ 已选择 {{ fileList.length }} 个文件，满足「{{ meta.label }}」输入要求</template>
+              <template v-if="uploadError">上传错误：{{ uploadError }}</template>
+              <template v-else-if="fileList.length">已选择 {{ fileList.length }} 个文件，满足「{{ meta.label }}」输入要求</template>
               <template v-else>{{ meta.rule }}</template>
             </div>
           </template>

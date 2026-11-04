@@ -40,7 +40,6 @@ const age = computed(() => (props.ageSec < 3 ? '刚刚' : props.ageSec < 60 ? `$
 
 <template>
   <section class="rh cp-panel">
-    <div class="rh__grid"></div>
     <div class="rh__main">
       <span class="cp-label">当前监测区域</span>
       <el-skeleton v-if="loading && !info" animated :rows="1" style="width: 240px" />
@@ -93,19 +92,8 @@ const age = computed(() => (props.ageSec < 3 ? '刚刚' : props.ageSec < 60 ? `$
   gap: 18px 36px;
   padding: 18px 24px;
   overflow: hidden;
-  background:
-    radial-gradient(700px 200px at 0% 0%, rgba(79, 195, 247, 0.12), transparent 70%),
-    var(--ce-panel, rgba(16, 26, 48, 0.72));
-}
-.rh__grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.5;
-  background:
-    linear-gradient(rgba(79, 195, 247, 0.05) 1px, transparent 1px) 0 0 / 100% 26px,
-    linear-gradient(90deg, rgba(79, 195, 247, 0.05) 1px, transparent 1px) 0 0 / 26px 100%;
-  mask-image: linear-gradient(90deg, #000, transparent 70%);
+  background: var(--ce-panel-solid);
+  border-top: 2px solid var(--ce-accent);
 }
 .rh__main {
   position: relative;
@@ -122,21 +110,19 @@ const age = computed(() => (props.ageSec < 3 ? '刚刚' : props.ageSec < 60 ? `$
   margin: 0;
   font-size: 26px;
   font-weight: 600;
-  letter-spacing: 3px;
-  color: #f0f7ff;
-  text-shadow: 0 0 24px rgba(79, 195, 247, 0.4);
+  letter-spacing: 0;
+  color: var(--ce-text-strong);
 }
 .rh__name .el-icon {
-  color: var(--ce-accent, #4fc3f7);
-  filter: drop-shadow(0 0 8px var(--ce-accent, #4fc3f7));
+  color: var(--ce-accent);
 }
 .rh__ext {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
   margin: 0;
-  font-size: 12.5px;
-  color: #7f98b8;
+  font-size: 13px;
+  color: var(--ce-text-dim);
 }
 .rh__stats {
   position: relative;
@@ -166,15 +152,15 @@ const age = computed(() => (props.ageSec < 3 ? '刚刚' : props.ageSec < 60 ? `$
 .rs b small {
   font-size: 12px;
   font-weight: 400;
-  color: #7f98b8;
+  color: var(--ce-text-dim);
 }
 .rs em {
   display: flex;
   align-items: center;
   gap: 6px;
   font-style: normal;
-  font-size: 11.5px;
-  color: #6f89aa;
+  font-size: 12px;
+  color: var(--ce-text-faint);
 }
 .rs .cp-bar {
   width: 100%;
@@ -185,5 +171,34 @@ const age = computed(() => (props.ageSec < 3 ? '刚刚' : props.ageSec < 60 ? `$
 }
 .rs--time {
   min-width: 190px;
+}
+@media (max-width: 700px) {
+  .rh {
+    gap: 12px;
+    padding: 14px;
+  }
+  .rh__main {
+    min-width: 0;
+    width: 100%;
+  }
+  .rh__name {
+    font-size: 22px;
+  }
+  .rh__ext {
+    font-size: 12px;
+  }
+  .rh__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    width: 100%;
+  }
+  .rs,
+  .rs--time {
+    min-width: 0;
+  }
+  .rs b {
+    font-size: 23px;
+  }
 }
 </style>

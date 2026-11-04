@@ -83,7 +83,7 @@ function gotoEvent(id: string) {
   <section v-if="result" class="res cp-panel" :style="{ '--c': color, '--v': verdictColor }">
     <!-- 结论横幅 -->
     <header class="verdict">
-      <div class="verdict__icon">{{ detected ? '⚠️' : '✅' }}</div>
+      <div class="verdict__icon">{{ detected ? '检出' : '未检出' }}</div>
       <div class="verdict__main">
         <h3>{{ detected ? '检测到异常' : '未发现异常' }}<small>{{ meta?.label }}</small></h3>
         <p>{{ result.summary || (detected ? '算法判定存在异常，请结合现场核查。' : '算法未发现需要关注的异常。') }}</p>
@@ -95,11 +95,10 @@ function gotoEvent(id: string) {
           <span v-if="task.location">位置 {{ task.location.longitude.toFixed(4) }}, {{ task.location.latitude.toFixed(4) }}</span>
         </div>
       </div>
-      <div class="ring" :style="{ '--p': confPct }">
-        <div class="ring__in">
-          <b>{{ confPct }}<small>%</small></b>
-          <span>置信度</span>
-        </div>
+      <div class="confidence">
+        <span>置信度</span>
+        <b>{{ confPct }}<small>%</small></b>
+        <i><em :style="{ width: `${confPct}%` }" /></i>
       </div>
     </header>
 
@@ -222,7 +221,7 @@ function gotoEvent(id: string) {
       <h4 class="blk__t"><el-icon><Position /></el-icon>由本次分析生成的事件<em>{{ eventCards.length }}</em></h4>
       <div class="events__list">
         <div v-for="c in eventCards" :key="c.id" class="ev" :style="{ '--ec': c.event ? EVENT_TYPE_META[c.event.event_type].color : '#4fc3f7' }">
-          <span class="ev__icon">{{ c.event ? EVENT_TYPE_META[c.event.event_type].icon : '📍' }}</span>
+          <span class="ev__icon"><i /></span>
           <div class="ev__txt">
             <b>{{ c.event?.name ?? '事件详情加载中' }}</b>
             <span class="ev__sub">
@@ -261,22 +260,22 @@ function gotoEvent(id: string) {
   align-items: center;
   gap: 18px;
   padding: 18px 22px;
-  background:
-    radial-gradient(520px 160px at 0% 0%, color-mix(in srgb, var(--v) 22%, transparent), transparent 70%),
-    linear-gradient(90deg, color-mix(in srgb, var(--v) 9%, transparent), transparent 60%);
+  background: color-mix(in srgb, var(--v) 7%, #17181a);
   border-bottom: 1px solid color-mix(in srgb, var(--v) 35%, transparent);
 }
 .verdict__icon {
   flex: none;
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
-  font-size: 28px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--v) 16%, rgba(9, 16, 34, 0.85));
-  border: 1px solid color-mix(in srgb, var(--v) 60%, transparent);
-  box-shadow: 0 0 26px color-mix(in srgb, var(--v) 35%, transparent);
+  min-width: 58px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  color: var(--v);
+  background: color-mix(in srgb, var(--v) 10%, #17181a);
+  border: 1px solid color-mix(in srgb, var(--v) 45%, var(--ce-panel-border));
 }
 .verdict__main {
   flex: 1;
@@ -288,16 +287,14 @@ function gotoEvent(id: string) {
   align-items: baseline;
   gap: 12px;
   font-size: 20px;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   color: var(--v);
-  text-shadow: 0 0 18px color-mix(in srgb, var(--v) 45%, transparent);
 }
 .verdict__main h3 small {
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 1px;
   color: #8aa3c4;
-  text-shadow: none;
 }
 .verdict__main p {
   margin: 0 0 8px;
@@ -312,42 +309,38 @@ function gotoEvent(id: string) {
   font-size: 12px;
   color: #7f98b8;
 }
-.ring {
-  --p: 0;
+.confidence {
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 86px;
-  height: 86px;
-  border-radius: 50%;
-  background: conic-gradient(var(--v) calc(var(--p) * 1%), rgba(120, 160, 210, 0.16) 0);
-  box-shadow: 0 0 22px color-mix(in srgb, var(--v) 25%, transparent);
+  width: 116px;
 }
-.ring__in {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: #0c1630;
+.confidence > span {
+  display: block;
+  font-size: 12px;
+  color: var(--ce-text-faint);
 }
-.ring__in b {
+.confidence > b {
+  display: block;
+  margin: 2px 0 6px;
   font-size: 22px;
   line-height: 1.1;
-  color: #fff;
+  color: var(--ce-text-strong);
   font-variant-numeric: tabular-nums;
 }
-.ring__in b small {
-  font-size: 11px;
+.confidence > b small {
+  font-size: 12px;
   margin-left: 1px;
-  color: #8aa3c4;
+  color: var(--ce-text-dim);
 }
-.ring__in span {
-  font-size: 10.5px;
-  letter-spacing: 1px;
-  color: #6f89aa;
+.confidence > i {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  background: #2a2c2f;
+}
+.confidence > i em {
+  display: block;
+  height: 100%;
+  background: var(--v);
 }
 .res__body {
   display: grid;
@@ -619,7 +612,17 @@ function gotoEvent(id: string) {
   border: 1px solid color-mix(in srgb, var(--ec) 35%, transparent);
 }
 .ev__icon {
-  font-size: 22px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 8px;
+  height: 8px;
+}
+.ev__icon i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ec);
 }
 .ev__txt {
   flex: 1;

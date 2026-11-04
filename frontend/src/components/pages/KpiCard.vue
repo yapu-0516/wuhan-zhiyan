@@ -30,7 +30,6 @@ const emit = defineEmits<{ (e: 'click'): void }>()
     @click="clickable && emit('click')"
   >
     <span class="kpi__bar"></span>
-    <span v-if="icon" class="kpi__icon">{{ icon }}</span>
     <span class="kpi__main">
       <span class="kpi__label">{{ label }}</span>
       <span class="kpi__row">
@@ -60,24 +59,16 @@ const emit = defineEmits<{ (e: 'click'): void }>()
   min-width: 0;
   transition:
     border-color 0.2s,
-    box-shadow 0.2s,
-    transform 0.2s,
-    background 0.2s;
+    background-color 0.2s;
 }
 .kpi__bar {
   position: absolute;
   left: 0;
   top: 12px;
   bottom: 12px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
+  width: 2px;
+  border-radius: 0;
   background: var(--c);
-  box-shadow: 0 0 10px var(--c);
-}
-.kpi__icon {
-  font-size: 24px;
-  line-height: 1;
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c) 60%, transparent));
 }
 .kpi__main {
   display: flex;
@@ -87,8 +78,8 @@ const emit = defineEmits<{ (e: 'click'): void }>()
   flex: 1;
 }
 .kpi__label {
-  font-size: 12px;
-  letter-spacing: 1.2px;
+  font-size: 13px;
+  letter-spacing: 0;
   color: var(--ce-text-dim, #8aa3c4);
 }
 .kpi__row {
@@ -100,17 +91,16 @@ const emit = defineEmits<{ (e: 'click'): void }>()
   font-size: 28px;
   font-weight: 600;
   line-height: 1.15;
-  color: color-mix(in srgb, var(--c) 35%, #fff);
+  color: var(--ce-text-strong);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 18px color-mix(in srgb, var(--c) 40%, transparent);
 }
 .kpi__unit {
   font-size: 12px;
   color: var(--ce-text-dim, #8aa3c4);
 }
 .kpi__hint {
-  font-size: 11.5px;
-  color: #6f89aa;
+  font-size: 12px;
+  color: var(--ce-text-faint);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -119,21 +109,14 @@ const emit = defineEmits<{ (e: 'click'): void }>()
   cursor: pointer;
 }
 .kpi.is-clickable:hover {
-  border-color: color-mix(in srgb, var(--c) 60%, transparent);
-  box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.3),
-    0 0 18px color-mix(in srgb, var(--c) 22%, transparent);
-  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--c) 42%, var(--ce-panel-border));
 }
 .kpi.is-clickable:focus-visible {
   outline: 2px solid var(--c);
   outline-offset: 2px;
 }
 .kpi.is-active {
-  border-color: color-mix(in srgb, var(--c) 70%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--c) 14%, rgba(16, 26, 48, 0.72)), rgba(16, 26, 48, 0.72) 70%);
-  box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.3),
-    0 0 22px color-mix(in srgb, var(--c) 25%, transparent);
+  border-color: color-mix(in srgb, var(--c) 48%, var(--ce-panel-border));
+  background: #1e2023;
 }
 </style>

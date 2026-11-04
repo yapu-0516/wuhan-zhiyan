@@ -5,7 +5,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Refresh, Search, RefreshLeft } from '@element-plus/icons-vue'
+import { Plus, Refresh, Search, RefreshLeft, List, Sunny, Van, OfficeBuilding, Umbrella } from '@element-plus/icons-vue'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { todayPrefix } from '@/composables/pages/format'
 import PageShell from '@/components/pages/PageShell.vue'
@@ -206,13 +206,15 @@ function resetFilters() {
 
 // ---------- KPI ----------
 const kpis = computed(() => [
-  { key: 'all', label: '全部事件', value: stats.value.total, color: '#4fc3f7', icon: '📋', hint: `活跃 ${stats.value.active} · 已办结 ${stats.value.byStatus.resolved}` },
-  { key: 'pending', label: EVENT_STATUS_LABEL.pending, value: stats.value.byStatus.pending, color: EVENT_STATUS_COLOR.pending, icon: '🔔', hint: '等待人工核查确认' },
-  { key: 'monitoring', label: EVENT_STATUS_LABEL.monitoring, value: stats.value.byStatus.monitoring, color: EVENT_STATUS_COLOR.monitoring, icon: '👁️', hint: '持续观察中' },
-  { key: 'processing', label: EVENT_STATUS_LABEL.processing, value: stats.value.byStatus.processing, color: EVENT_STATUS_COLOR.processing, icon: '🚨', hint: '已派单处置' },
-  { key: 'resolved', label: EVENT_STATUS_LABEL.resolved, value: stats.value.byStatus.resolved, color: EVENT_STATUS_COLOR.resolved, icon: '✅', hint: '已闭环办结' },
-  { key: 'today', label: '今日新增', value: todayCount.value, color: '#9b8fff', icon: '🆕', hint: todayPrefix() }
+  { key: 'all', label: '全部事件', value: stats.value.total, color: '#67c6df', hint: `活跃 ${stats.value.active} · 已办结 ${stats.value.byStatus.resolved}` },
+  { key: 'pending', label: EVENT_STATUS_LABEL.pending, value: stats.value.byStatus.pending, color: EVENT_STATUS_COLOR.pending, hint: '等待人工核查确认' },
+  { key: 'monitoring', label: EVENT_STATUS_LABEL.monitoring, value: stats.value.byStatus.monitoring, color: EVENT_STATUS_COLOR.monitoring, hint: '持续观察中' },
+  { key: 'processing', label: EVENT_STATUS_LABEL.processing, value: stats.value.byStatus.processing, color: EVENT_STATUS_COLOR.processing, hint: '已派单处置' },
+  { key: 'resolved', label: EVENT_STATUS_LABEL.resolved, value: stats.value.byStatus.resolved, color: EVENT_STATUS_COLOR.resolved, hint: '已闭环办结' },
+  { key: 'today', label: '今日新增', value: todayCount.value, color: '#9ab0ba', hint: todayPrefix() }
 ])
+
+const typeIcons = { fire: Sunny, traffic: Van, building: OfficeBuilding, flood: Umbrella }
 
 function kpiActive(key: string): boolean {
   if (key === 'today') return todayOnly.value
@@ -339,10 +341,10 @@ function onCreated(ev: CityEvent) {
       <KpiCard
         v-for="k in kpis"
         :key="k.key"
+        class="kpi-card"
         :label="k.label"
         :value="k.value"
         :color="k.color"
-        :icon="k.icon"
         :hint="k.hint"
         :active="kpiActive(k.key)"
         clickable
@@ -353,10 +355,10 @@ function onCreated(ev: CityEvent) {
     <!-- 过滤工具栏 -->
     <section class="cp-panel toolbar">
       <el-select v-model="typeFilter" clearable placeholder="全部类型" class="toolbar__type" popper-class="cp-popper">
-        <template #prefix>{{ typeFilter ? EVENT_TYPE_META[typeFilter].icon : '🗂️' }}</template>
+        <template #prefix><el-icon><component :is="typeFilter ? typeIcons[typeFilter] : List" /></el-icon></template>
         <el-option v-for="t in EVENT_TYPES" :key="t" :value="t" :label="EVENT_TYPE_META[t].label">
           <span class="opt">
-            <span>{{ EVENT_TYPE_META[t].icon }}</span>
+            <el-icon :style="{ color: EVENT_TYPE_META[t].color }"><component :is="typeIcons[t]" /></el-icon>
             <span :style="{ color: EVENT_TYPE_META[t].color }">{{ EVENT_TYPE_META[t].label }}</span>
             <em>{{ stats.byType[t] }}</em>
           </span>
@@ -369,6 +371,10 @@ function onCreated(ev: CityEvent) {
         </template>
       </el-segmented>
 
+      <el-select v-model="statusFilter" class="toolbar__status-mobile" popper-class="cp-popper" aria-label="事件状态">
+        <el-option v-for="s in statusOptions" :key="s.value" :value="s.value" :label="`${s.label} ${s.count}`" />
+      </el-select>
+
       <el-select v-model="severityFilter" clearable placeholder="全部等级" class="toolbar__sev" popper-class="cp-popper">
         <el-option v-for="s in severityOptions" :key="s.value" :value="s.value" :label="s.label">
           <span class="opt"><i class="cp-dot" :style="{ '--c': s.color }"></i>{{ s.label }}</span>
@@ -377,8 +383,14 @@ function onCreated(ev: CityEvent) {
 
       <el-input v-model="keyword" clearable placeholder="搜索编号 / 名称 / 地址 / 网格 / 处置单位" :prefix-icon="Search" class="toolbar__kw" />
 
-      <el-switch v-model="activeOnly" inline-prompt active-text="活跃" inactive-text="全部" />
-      <span class="toolbar__swlabel">仅看活跃</span>
+      <el-switch
+        v-model="activeOnly"
+        inline-prompt
+        active-text="活跃"
+        inactive-text="全部"
+        title="仅显示未办结事件"
+        aria-label="仅显示未办结事件"
+      />
 
       <el-button v-if="hasFilter" link type="primary" :icon="RefreshLeft" @click="resetFilters">重置筛选</el-button>
       <span class="toolbar__count">命中 <b>{{ filtered.length }}</b> / {{ stats.total }}</span>
@@ -418,6 +430,17 @@ function onCreated(ev: CityEvent) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+@media (max-width: 700px) {
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .kpi-card {
+    min-height: 82px;
+    padding: 10px 10px 10px 14px;
+  }
+}
 .toolbar {
   display: flex;
   align-items: center;
@@ -431,15 +454,13 @@ function onCreated(ev: CityEvent) {
 .toolbar__sev {
   width: 150px;
 }
+.toolbar__status-mobile {
+  display: none;
+}
 .toolbar__kw {
   flex: 1 1 260px;
   min-width: 220px;
   max-width: 460px;
-}
-.toolbar__swlabel {
-  margin-left: -6px;
-  font-size: 12.5px;
-  color: var(--ce-text-dim, #8aa3c4);
 }
 .toolbar__count {
   margin-left: auto;
@@ -478,5 +499,14 @@ function onCreated(ev: CityEvent) {
   flex-direction: column;
   min-height: 480px;
   overflow: hidden;
+}
+@media (max-width: 700px) {
+  .toolbar__status {
+    display: none;
+  }
+  .toolbar__status-mobile {
+    display: block;
+    width: 100%;
+  }
 }
 </style>

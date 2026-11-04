@@ -14,6 +14,7 @@ export type LayerKey =
 export type LayerVisibility = Record<LayerKey, boolean>
 
 export const DEFAULT_LAYERS: LayerVisibility = {
+  // 默认只显示少量超高层、风险建筑与事件关联建筑，街区仍以卫星屋顶为主。
   buildings: true,
   buildingsFine: false,
   roads: true,
@@ -60,6 +61,7 @@ export interface SceneApi {
   /** 场景与数据是否就绪 */
   isReady(): boolean
   flyHome(duration?: number): Promise<boolean>
+  flySkyline(duration?: number): Promise<boolean>
   flyFromSpace(): Promise<boolean>
   flyTo(lon: number, lat: number, opts?: FlyOptions): Promise<boolean>
   flyToEvent(id: string, opts?: { open?: boolean } & FlyOptions): Promise<boolean>
@@ -68,6 +70,7 @@ export interface SceneApi {
   stopOrbit(): void
   cancelFlight(): void
   setLayerVisible(layer: LayerKey, visible: boolean): void
+  setBuildingRiskOnly(on: boolean): void
   loadFineBuildingLayer(): Promise<boolean>
   setBasemap(key: BasemapKey): void
   /** 高亮拥堵路段（演示用） */

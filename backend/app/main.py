@@ -25,7 +25,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import seed
 from .config import APP_NAME, APP_VERSION, Settings
 from .context import AppContext
-from .routers import data, demo, events, geo, stats, system, tasks, ws
+from .routers import data, demo, events, geo, llm, scenario, stats, system, tasks, ws
 from .services.simulator import Simulator
 
 log = logging.getLogger("cityeye")
@@ -110,7 +110,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         detail: Any = _HTTP_CN.get(exc.detail, exc.detail) if isinstance(exc.detail, str) else exc.detail
         return JSONResponse(status_code=exc.status_code, content={"detail": detail}, headers=getattr(exc, "headers", None))
 
-    for r in (system.router, events.router, geo.router, stats.router, data.router, tasks.router, demo.router, ws.router):
+    for r in (
+        system.router,
+        events.router,
+        geo.router,
+        stats.router,
+        data.router,
+        tasks.router,
+        demo.router,
+        ws.router,
+        llm.router,
+        scenario.router,
+    ):
         app.include_router(r, prefix="/api")
     app.mount("/files/samples", StaticFiles(directory=settings.samples_dir, check_dir=False), name="samples")
     app.mount("/files", StaticFiles(directory=settings.files_dir, check_dir=False), name="files")

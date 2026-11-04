@@ -3,6 +3,7 @@
 // 全屏三维数字孪生场景 + 左右 HUD 数据面板 + 顶部场景工具条 + 左下图例 + 一键演示字幕。
 // 组件名 Dashboard 与 App.vue 中 <KeepAlive include="Dashboard"> 对应：切页时不销毁 Cesium Viewer。
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import CesiumViewer from '@/components/CesiumViewer.vue'
 import HudPanel from '@/components/dashboard/HudPanel.vue'
@@ -15,11 +16,21 @@ import DistrictRank from '@/components/dashboard/DistrictRank.vue'
 import SensorPanel from '@/components/dashboard/SensorPanel.vue'
 import SceneToolbar from '@/components/dashboard/SceneToolbar.vue'
 import SceneLegend from '@/components/dashboard/SceneLegend.vue'
+import TaskParsePanel from '@/components/pages/TaskParsePanel.vue'
+import AssistantChatPanel from '@/components/pages/AssistantChatPanel.vue'
+import CrowdSimulationPanel from '@/components/pages/CrowdSimulationPanel.vue'
+import ScenarioWorkspace from '@/components/pages/ScenarioWorkspace.vue'
 import DataErrorNotice from '@/components/pages/DataErrorNotice.vue'
 import { useOverview } from '@/composables/useOverview'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { DEFAULT_BASEMAP, type BasemapKey } from '@/config/cesium'
-import { DEFAULT_LAYERS, type EventTypeFilter, type LayerKey, type LayerVisibility, type TourFocus } from '@/components/scene/types'
+import {
+  DEFAULT_LAYERS,
+  type EventTypeFilter,
+  type LayerKey,
+  type LayerVisibility,
+  type TourFocus
+} from '@/components/scene/types'
 import type { EventType } from '@/types/event'
 import { hhmm, shortTime } from '@/utils/format'
 import { apiState } from '@/api/http'
@@ -28,9 +39,39 @@ defineOptions({ name: 'Dashboard' })
 
 const viewerRef = ref<InstanceType<typeof CesiumViewer> | null>(null)
 const rootRef = ref<HTMLDivElement | null>(null)
+const router = useRouter()
+
+// 自然语言任务解析：工具条入口 + 弹窗（付费 API，仅在点击「解析」时触发）
+const parseOpen = ref(false)
+const assistantOpen = ref(false)
+const crowdOpen = ref(false)
+const scenarioOpen = ref(false)
+const scenarioMapReview = ref(false)
+const crowdLayer = computed(() => viewerRef.value?.getCrowd() ?? null)
+function openScenario() {
+  scenarioMapReview.value = false
+  scenarioOpen.value = true
+}
+function viewScenarioMap() {
+  scenarioOpen.value = false
+  scenarioMapReview.value = true
+}
+function reopenScenario() {
+  scenarioMapReview.value = false
+  scenarioOpen.value = true
+}
+function gotoScene(t: EventType) {
+  parseOpen.value = false
+  void router.push({ path: `/ai-analysis/${t}` })
+}
 
 // ---------------- 场景状态（工具条 / 图例 → CesiumViewer）
-const layers = reactive<LayerVisibility>({ ...DEFAULT_LAYERS })
+const layers = reactive<LayerVisibility>({ ...DEFAULT_LAYERS, effects: false, pois: false })
+const sceneLayers = computed<LayerVisibility>(() => ({
+  ...layers,
+  events: scenarioOpen.value || scenarioMapReview.value ? false : layers.events,
+  pois: scenarioOpen.value || scenarioMapReview.value ? false : layers.pois
+}))
 const basemap = ref<BasemapKey>(DEFAULT_BASEMAP)
 const autoTrack = ref(false)
 const eventTypes = reactive<EventTypeFilter>({ fire: true, traffic: true, building: true, flood: true })
@@ -43,12 +84,18 @@ const touring = computed(() => viewerRef.value?.tourState?.running ?? false)
 
 async function toggleLayer(key: LayerKey) {
   layers[key] = !layers[key]
-  if (layers[key] && key === 'buildings') layers.buildingsFine = false
   if (layers[key] && key === 'buildingsFine') {
     ElMessage.info('正在构建精细建筑模型…')
     const ok = await viewerRef.value?.loadFineBuildingLayer()
-    if (ok && layers.buildingsFine) layers.buildings = false
-    else if (!ok) layers.buildingsFine = false
+    if (ok && layers.buildingsFine) {
+      viewerRef.value?.setBuildingRiskOnly(true)
+      layers.buildings = true
+    } else if (!ok) {
+      layers.buildingsFine = false
+    }
+  } else if (!layers[key] && key === 'buildingsFine') {
+    viewerRef.value?.setBuildingRiskOnly(true)
+    layers.buildings = true
   }
 }
 function toggleType(t: EventType) {
@@ -56,7 +103,7 @@ function toggleType(t: EventType) {
 }
 function goHome() {
   viewerRef.value?.closePanels()
-  void viewerRef.value?.flyHome()
+  void viewerRef.value?.flySkyline()
 }
 function toggleTour() {
   const v = viewerRef.value
@@ -122,8 +169,8 @@ function onResize(w: number) {
 }
 
 const cssVars = computed(() => ({
-  '--scene-inset-left': leftOpen.value ? 'calc(var(--hud-w) + 24px)' : '12px',
-  '--scene-inset-right': rightOpen.value ? 'calc(var(--hud-w) + 24px)' : '12px',
+  '--scene-inset-left': leftOpen.value ? 'calc(var(--hud-w) + 24px)' : '16px',
+  '--scene-inset-right': rightOpen.value ? 'calc(var(--hud-w) + 24px)' : '32px',
   '--scene-inset-top': '60px',
   '--scene-inset-bottom': '14px'
 }))
@@ -144,15 +191,21 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="rootRef" class="dashboard" :style="cssVars">
+  <div
+    ref="rootRef"
+    class="dashboard"
+    :class="{ 'is-scenario': scenarioOpen, 'is-scenario-map': scenarioMapReview }"
+    :style="cssVars"
+  >
     <CesiumViewer
       ref="viewerRef"
       class="dashboard__scene"
-      :layers="layers"
+      :layers="sceneLayers"
       :basemap="basemap"
       :auto-track="autoTrack"
       :event-types="eventTypes"
       :show-resolved="showResolved"
+      :live-alerts="!scenarioOpen && !scenarioMapReview"
       @ready="onSceneReady"
       @basemap-change="(k: BasemapKey) => (basemap = k)"
       @tour-focus="(f: TourFocus | null) => (focus = f)"
@@ -222,8 +275,46 @@ onBeforeUnmount(() => {
         @auto-track="(v: boolean) => (autoTrack = v)"
         @home="goHome"
         @tour="toggleTour"
+        @parse="parseOpen = true"
+        @assistant="assistantOpen = true"
+        @crowd="crowdOpen = true"
+        @scenario="openScenario"
       />
     </div>
+
+    <!-- AI 任务解析弹窗（主界面唯一入口，AI 分析页不再重复） -->
+    <el-dialog v-model="parseOpen" title="AI 任务解析" width="min(600px, 94vw)" align-center append-to-body>
+      <TaskParsePanel compact @goto="gotoScene" />
+      <template #footer>
+        <span class="ai-tip">DeepSeek 大模型 · 点击「解析」才调用 · 付费 API</span>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="assistantOpen" title="城市治理助手" width="min(680px, 94vw)" align-center append-to-body>
+      <AssistantChatPanel :event-id="selectedEventId" />
+      <template #footer>
+        <span class="ai-tip">DeepSeek 大模型 · 发送后才调用 · 付费 API</span>
+      </template>
+    </el-dialog>
+
+    <el-drawer v-model="crowdOpen" title="虚拟人群仿真" size="min(520px, 94vw)" append-to-body>
+      <CrowdSimulationPanel :crowd="crowdLayer" />
+    </el-drawer>
+
+    <el-drawer
+      v-model="scenarioOpen"
+      title="城市智能情景推演"
+      size="min(480px, 94vw)"
+      :modal="false"
+      :with-header="false"
+      append-to-body
+    >
+      <ScenarioWorkspace :viewer="viewerRef" @view-map="viewScenarioMap" @close="scenarioOpen = false" />
+    </el-drawer>
+
+    <button v-if="scenarioMapReview" class="scenario-review-return" @click="reopenScenario">
+      返回情景推演
+    </button>
 
     <!-- 左下图例 -->
     <transition name="hud-fade">
@@ -231,6 +322,7 @@ onBeforeUnmount(() => {
         <SceneLegend
           :event-types="eventTypes"
           :show-resolved="showResolved"
+          :default-open="false"
           @toggle-type="toggleType"
           @toggle-resolved="showResolved = !showResolved"
         />
@@ -241,7 +333,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .dashboard {
-  --hud-w: clamp(288px, 21vw, 352px);
+  --hud-w: clamp(248px, 18.5vw, 276px);
   position: relative;
   width: 100%;
   height: 100%;
@@ -251,25 +343,77 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
 }
+.dashboard.is-scenario .hud-col,
+.dashboard.is-scenario .hud-toggle,
+.dashboard.is-scenario .hud-toolbar,
+.dashboard.is-scenario .hud-legend,
+.dashboard.is-scenario-map .hud-col,
+.dashboard.is-scenario-map .hud-toggle,
+.dashboard.is-scenario-map .hud-toolbar,
+.dashboard.is-scenario-map .hud-legend {
+  opacity: 0;
+  pointer-events: none;
+}
+.dashboard.is-scenario .hud-col--left,
+.dashboard.is-scenario-map .hud-col--left {
+  transform: translateX(calc(-100% - 24px));
+}
+.dashboard.is-scenario .hud-col--right,
+.dashboard.is-scenario-map .hud-col--right {
+  transform: translateX(calc(100% + 24px));
+}
+.dashboard.is-scenario .hud-toolbar,
+.dashboard.is-scenario-map .hud-toolbar {
+  transform: translateY(-18px);
+}
+.scenario-review-return {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 8;
+  height: 36px;
+  padding: 0 14px;
+  color: #dff8ff;
+  background: rgba(7, 34, 58, 0.94);
+  border: 1px solid rgba(79, 195, 247, 0.65);
+  cursor: pointer;
+}
+.scenario-review-return:hover,
+.scenario-review-return:focus-visible {
+  border-color: #74e8ff;
+  outline: none;
+}
 
 .hud-col {
   position: absolute;
-  top: 12px;
-  bottom: 12px;
+  top: 10px;
+  bottom: 10px;
   z-index: 5;
   width: var(--hud-w);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
+  overflow: hidden;
+  background: var(--ce-panel-solid);
+  border: 1px solid var(--ce-panel-border);
+  border-radius: var(--ce-radius);
   transition:
     transform 0.45s var(--ce-ease),
     opacity 0.35s ease;
 }
 .hud-col--left {
-  left: 12px;
+  left: 24px;
 }
 .hud-col--right {
-  right: 12px;
+  right: 24px;
+}
+.hud-col :deep(.ce-panel) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.hud-col :deep(.ce-panel + .ce-panel) {
+  border-top: 1px solid var(--ce-divider);
 }
 .hud-col--left.hidden {
   transform: translateX(calc(-100% - 24px));
@@ -285,18 +429,18 @@ onBeforeUnmount(() => {
 /* 左列各面板高度分配 */
 .p-safety {
   flex: 0 0 auto;
-  min-height: 196px;
+  min-height: 188px;
 }
 .p-kpi {
   flex: 0 0 auto;
 }
 .p-types {
-  flex: 1 1 0;
-  min-height: 168px;
+  flex: 1.05 1 0;
+  min-height: 190px;
 }
 .p-trend {
-  flex: 1.15 1 0;
-  min-height: 168px;
+  flex: 0.95 1 0;
+  min-height: 180px;
 }
 /* 右列 */
 .p-feed {
@@ -305,11 +449,11 @@ onBeforeUnmount(() => {
 }
 .p-district {
   flex: 1 1 0;
-  min-height: 170px;
+  min-height: 158px;
 }
 .p-sensor {
   flex: 0 0 auto;
-  min-height: 150px;
+  min-height: 142px;
 }
 
 .hud-toggle {
@@ -321,15 +465,15 @@ onBeforeUnmount(() => {
   margin-top: -32px;
   padding: 0;
   border: 1px solid var(--ce-panel-border);
-  background: rgba(8, 18, 38, 0.85);
+  background: var(--ce-panel-solid);
   cursor: pointer;
   transition:
     left 0.45s var(--ce-ease),
     right 0.45s var(--ce-ease),
-    background 0.2s ease;
+    background-color 0.2s ease;
 }
 .hud-toggle:hover {
-  background: rgba(79, 195, 247, 0.22);
+  background: #242a2f;
 }
 .hud-toggle i {
   display: block;
@@ -340,7 +484,7 @@ onBeforeUnmount(() => {
   border-bottom: 1.5px solid var(--ce-accent);
 }
 .hud-toggle--left {
-  left: calc(var(--hud-w) + 14px);
+  left: calc(var(--hud-w) + 25px);
   border-left: none;
   border-radius: 0 4px 4px 0;
 }
@@ -354,7 +498,7 @@ onBeforeUnmount(() => {
   transform: translateX(-1px) rotate(-135deg);
 }
 .hud-toggle--right {
-  right: calc(var(--hud-w) + 14px);
+  right: calc(var(--hud-w) + 25px);
   border-right: none;
   border-radius: 4px 0 0 4px;
 }
@@ -371,7 +515,7 @@ onBeforeUnmount(() => {
 .hud-toolbar {
   container: hud-toolbar / inline-size;
   position: absolute;
-  top: 12px;
+  top: 10px;
   left: var(--scene-inset-left);
   right: var(--scene-inset-right);
   z-index: 6;
@@ -410,7 +554,7 @@ onBeforeUnmount(() => {
   }
   .p-types,
   .p-trend {
-    min-height: 132px;
+    min-height: 168px;
   }
   .p-district {
     min-height: 140px;
@@ -420,5 +564,25 @@ onBeforeUnmount(() => {
   .p-sensor {
     display: none;
   }
+}
+@media (max-width: 1100px) {
+  /* 平板宽度切换时立即收起侧栏，避免过渡中的面板压住地图或越过屏幕边缘。 */
+  .hud-col,
+  .hud-toggle,
+  .hud-toolbar,
+  .hud-legend {
+    transition: none;
+  }
+}
+@media (max-width: 700px) {
+  .hud-col,
+  .hud-toggle {
+    display: none;
+  }
+}
+/* 弹窗被 teleport 到 body，scoped 样式不生效 */
+:global(.ai-tip) {
+  font-size: 12px;
+  color: #6f89aa;
 }
 </style>

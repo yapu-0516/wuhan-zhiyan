@@ -5,13 +5,14 @@ import { BASEMAPS, type BasemapKey } from '@/config/cesium'
 
 /** 各底图的色彩调校：让底图退居背景，突出三维对象与 HUD */
 const STYLE: Record<BasemapKey, Partial<Pick<Cesium.ImageryLayer, 'alpha' | 'brightness' | 'contrast' | 'saturation' | 'gamma' | 'hue'>>> = {
-  dark: { alpha: 0.95, brightness: 0.85, contrast: 1.3 },
-  satellite: { alpha: 1, brightness: 0.62, contrast: 1.12, saturation: 0.75, gamma: 1.05 },
+  dark: { alpha: 1, brightness: 0.94, contrast: 1.18, saturation: 0.45 },
+  // 卫星影像是“真实武汉”的底稿。只做轻微校正，不再压暗成背景纹理。
+  satellite: { alpha: 1, brightness: 0.86, contrast: 1.08, saturation: 0.55, gamma: 0.99 },
   offline: { alpha: 1, brightness: 0.42, contrast: 1.1, saturation: 0.45 }
 }
 
-/** 底色：深海军蓝，暗色底图半透明叠加后整体偏蓝 */
-export const GLOBE_BASE_COLOR = '#0a1c40'
+/** 底色：中性深灰，瓦片加载前也不会出现蓝色数据底板。 */
+export const GLOBE_BASE_COLOR = '#101519'
 
 export class BasemapController {
   private layer: Cesium.ImageryLayer | null = null

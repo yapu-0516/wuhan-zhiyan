@@ -35,8 +35,8 @@ function setSplash(text: string) {
 function hideSplash() {
   const splash = document.getElementById('splash')
   if (!splash) return
-  splash.classList.add('is-hidden')
-  window.setTimeout(() => splash.remove(), 700)
+  // 应用外壳和地图各自已有加载状态，全屏遮罩不应在挂载后继续盖住 HUD。
+  splash.remove()
 }
 
 function timeout(ms: number) {

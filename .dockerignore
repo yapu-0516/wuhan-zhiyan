@@ -1,9 +1,12 @@
 **/node_modules
 **/__pycache__
 **/.pytest_cache
+.env
+**/.env
 frontend/dist
 backend/var
 data/raw
+data/datasets
 .git
 .github
 docs

@@ -31,7 +31,7 @@ const tip = computed(() => {
 <template>
   <section class="prog cp-panel" :style="{ '--c': color }">
     <header class="prog__head">
-      <span class="prog__icon">{{ meta?.icon ?? '🧠' }}</span>
+      <span class="prog__icon"><i /></span>
       <div class="prog__who">
         <b>{{ meta?.label ?? task.type }}</b>
         <span class="cp-mono">{{ task.id }}</span>
@@ -90,12 +90,10 @@ const tip = computed(() => {
 .prog__icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  font-size: 19px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--c) 15%, rgba(9, 16, 34, 0.8));
-  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c);
 }
 .prog__who {
   flex: 1;

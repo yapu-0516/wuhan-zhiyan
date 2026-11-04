@@ -90,7 +90,7 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
               <span class="cp-pill" :style="{ '--c': meta.color }">{{ meta.label }}</span>
             </div>
           </div>
-          <div class="gauge__cap"><span class="cp-label">全路网交通运行指数 TPI</span></div>
+          <div class="gauge__cap"><span class="cp-label">全路网交通运行指数</span></div>
 
           <div class="lv">
             <div class="lv__bar">
@@ -116,7 +116,7 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
         <div class="tp__right">
           <div class="rk__head">
             <span class="cp-label">最拥堵道路 TOP {{ top10.length }}</span>
-            <span class="rk__cols"><i>车速</i><i>TPI</i><i>等级</i></span>
+            <span class="rk__cols"><i>车速</i><i>指数</i><i>等级</i></span>
           </div>
           <TransitionGroup name="rank" tag="ol" class="rk">
             <li v-for="(g, i) in top10" :key="g.key" class="rk__row" :style="{ '--c': TRAFFIC_LEVEL_META[g.level].color }">
@@ -184,7 +184,7 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
   display: grid;
   place-items: center;
   min-width: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 90%, #fff), var(--c));
+  background: var(--c);
   transition: flex-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .lv__seg b {
@@ -198,7 +198,7 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
   gap: 4px 12px;
   margin: 10px 0 0;
   padding: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: #9db4d2;
 }
 .lv__legend li {
@@ -218,7 +218,7 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
 }
 .lv__sum {
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   color: #6f89aa;
 }
 .lv__sum b {
@@ -238,9 +238,9 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
   display: grid;
   grid-template-columns: 84px 108px 78px;
   gap: 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-style: normal;
-  letter-spacing: 1.2px;
+  letter-spacing: 0;
   color: #5d748f;
 }
 .rk__cols i {
@@ -285,7 +285,6 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
   color: #06101f;
   font-weight: 700;
   background: var(--c);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent);
 }
 .rk__name {
   display: flex;
@@ -299,7 +298,7 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
   color: #e6f0ff;
 }
 .rk__name small {
-  font-size: 11px;
+  font-size: 12px;
   color: #6f89aa;
 }
 .rk__speed {

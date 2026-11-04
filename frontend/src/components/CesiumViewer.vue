@@ -38,6 +38,7 @@ import { RoadLayer } from './scene/roadLayer'
 import { EventLayer } from './scene/eventLayer'
 import { PoiLayer } from './scene/poiLayer'
 import { AmbientEffects } from './scene/effects'
+import { CrowdLayer } from './scene/crowd/crowdLayer'
 import {
   DEFAULT_LAYERS,
   type EventTypeFilter,
@@ -68,7 +69,15 @@ const props = withDefaults(
     /** 首次加载入场动画 */
     intro?: boolean
   }>(),
-  { layers: undefined, basemap: undefined, eventTypes: undefined, autoTrack: false, showResolved: false, liveAlerts: true, intro: true }
+  {
+    layers: undefined,
+    basemap: undefined,
+    eventTypes: undefined,
+    autoTrack: false,
+    showResolved: false,
+    liveAlerts: true,
+    intro: true
+  }
 )
 
 const emit = defineEmits<{
@@ -86,6 +95,7 @@ const systemInfo = useSystemInfo()
 
 // ------------------------------------------------------------------ 非响应式场景对象（避免 Vue 深度代理 WebGL 资源）
 const containerRef = ref<HTMLDivElement | null>(null)
+const crowdLayerRef = ref<HTMLDivElement | null>(null)
 const creditRef = ref<HTMLDivElement | null>(null)
 let viewer: Cesium.Viewer | null = null
 let clock: SceneClock | null = null
@@ -98,6 +108,7 @@ let roads: RoadLayer | null = null
 let eventLayer: EventLayer | null = null
 let pois: PoiLayer | null = null
 let effects: AmbientEffects | null = null
+let crowd: CrowdLayer | null = null
 let handler: Cesium.ScreenSpaceEventHandler | null = null
 const disposers: Array<() => void> = []
 let disposed = false
@@ -140,6 +151,11 @@ function regionCenter(): [number, number] {
   return cam?.region.center ?? systemInfo.region.value.center
 }
 
+function denseCenter(): [number, number] {
+  const layer = layerState.buildingsFine && (fineBuildings?.count ?? 0) > 0 ? fineBuildings : buildings
+  return layer?.denseCenter() ?? regionCenter()
+}
+
 async function flyToEvent(id: string, opts: { open?: boolean } & FlyOptions = {}): Promise<boolean> {
   const e = getEventById(id)
   if (!e) {
@@ -157,7 +173,7 @@ async function flyToEvent(id: string, opts: { open?: boolean } & FlyOptions = {}
 }
 
 async function flyToBuilding(id: string, opts: { open?: boolean } & FlyOptions = {}): Promise<boolean> {
-  const b = buildings?.get(id)
+  const b = findBuildingById(id)
   if (!b) {
     if (!status.buildingsReady) {
       pendingTarget = { kind: 'building', id }
@@ -178,21 +194,27 @@ async function flyToBuilding(id: string, opts: { open?: boolean } & FlyOptions =
 }
 
 function openEvent(id: string) {
-  if (!getEventById(id)) return
+  const event = getEventById(id)
+  if (!event) return
   selectedBuilding.value = null
-  buildings?.setSelected(null)
+  // 选中事件时同步高亮其关联建筑与路段，让列表、事件点和空间对象形成一条关系链。
+  buildings?.setSelected(event.building_id ?? null)
+  fineBuildings?.setSelected(event.building_id ?? null)
   selectedEventId.value = id
+  roads?.setSelected(event.road_id ?? null)
   roadTip.value = null
   poiTip.value = null
   emit('selection', { kind: 'event', id })
 }
 
 function openBuilding(id: string) {
-  const b = buildings?.get(id)
+  const b = findBuildingById(id)
   if (!b) return
   selectedEventId.value = null
   selectedBuilding.value = b
   buildings?.setSelected(id)
+  fineBuildings?.setSelected(id)
+  roads?.setSelected(null)
   roadTip.value = null
   poiTip.value = null
   emit('selection', { kind: 'building', id })
@@ -202,6 +224,7 @@ function closePanels() {
   selectedEventId.value = null
   selectedBuilding.value = null
   buildings?.setSelected(null)
+  fineBuildings?.setSelected(null)
   roads?.setSelected(null)
   roadTip.value = null
   poiTip.value = null
@@ -243,8 +266,13 @@ function setBasemap(key: BasemapKey) {
   basemapCtl?.set(key)
 }
 
+function findBuildingById(id: string): Building | undefined {
+  return buildings?.get(id) ?? fineBuildings?.get(id)
+}
+
 function findRiskBuilding(): Building | null {
-  const list = buildings?.all() ?? []
+  const layers = [fineBuildings, buildings].filter((layer): layer is BuildingLayer => !!layer)
+  const list = layers.flatMap((layer) => layer.all())
   const pick = (risk: Building['risk_level']) =>
     list.filter((b) => b.monitored && b.risk_level === risk).sort((a, b) => b.height - a.height)[0]
   return pick('warning') ?? pick('watch') ?? list.filter((b) => b.monitored).sort((a, b) => b.height - a.height)[0] ?? null
@@ -290,6 +318,7 @@ async function loadFineBuildingLayer(): Promise<boolean> {
 const api: SceneApi = {
   isReady,
   flyHome: (duration?: number) => cam?.flyHome(duration) ?? Promise.resolve(false),
+  flySkyline: (duration?: number) => cam?.flySkyline(denseCenter(), duration) ?? Promise.resolve(false),
   flyFromSpace: () => cam?.flyFromSpace() ?? Promise.resolve(false),
   flyTo: (lon: number, lat: number, opts?: FlyOptions) => cam?.flyTo(lon, lat, opts) ?? Promise.resolve(false),
   flyToEvent,
@@ -298,6 +327,7 @@ const api: SceneApi = {
   stopOrbit: () => cam?.stopOrbit(),
   cancelFlight: () => cam?.cancel(),
   setLayerVisible,
+  setBuildingRiskOnly: (on: boolean) => buildings?.setRiskOnly(on),
   loadFineBuildingLayer,
   setBasemap,
   highlightCongestion: (on: boolean) => roads?.setHighlight(on),
@@ -306,19 +336,24 @@ const api: SceneApi = {
   closePanels,
   demoDispatch,
   regionCenter,
-  denseCenter: () => buildings?.denseCenter() ?? regionCenter(),
+  denseCenter,
   congestedSpot: () => roads?.mostCongested() ?? null,
   cityTraffic: () => roads?.cityTraffic() ?? null,
   findRiskBuilding,
   sceneStats: () => ({
-    buildings: buildings?.count ?? 0,
+    buildings: layerState.buildingsFine && (fineBuildings?.count ?? 0) > 0 ? fineBuildings!.count : (buildings?.count ?? 0),
     roads: roads?.count ?? 0,
     pois: pois?.count ?? 0,
-    monitored: buildings?.monitoredCount ?? 0
+    monitored: (buildings?.monitoredCount ?? 0) + (layerState.buildingsFine ? (fineBuildings?.monitoredCount ?? 0) : 0)
   })
 }
 
-const tour = useDemoTour(() => (isReady() ? api : null))
+const tour = useDemoTour(
+  () => (isReady() ? api : null),
+  async () => {
+    await router.push({ path: '/drill', query: { demo: 'fire', autoplay: '1', speed: '4' } })
+  }
+)
 watch(
   () => tour.state.focus,
   (f) => emit('tour-focus', f)
@@ -341,6 +376,7 @@ function syncEvents() {
   if (!eventLayer) return
   eventLayer.sync(events.value, { showResolved: props.showResolved, types: typeFilter, selectedId: selectedEventId.value })
   buildings?.setAlarms(alarmBuildingIds())
+  fineBuildings?.setAlarms(alarmBuildingIds())
 }
 
 watch([eventSig, selectedEventId, () => props.showResolved], syncEvents)
@@ -355,6 +391,7 @@ watch(selectedEvent, (e) => {
 function notify(e: CityEvent) {
   const meta = EVENT_TYPE_META[e.event_type] ?? EVENT_TYPE_META.fire
   const sev = SEVERITY_META[e.severity] ?? SEVERITY_META.medium
+  const mark = { fire: '火', traffic: '堵', building: '楼', flood: '涝' }[e.event_type]
   let handle: { close: () => void } | null = null
   const locate = () => {
     handle?.close()
@@ -368,7 +405,7 @@ function notify(e: CityEvent) {
     offset: 68,
     duration: 9000,
     message: h('div', { class: 'ce-notify__row' }, [
-      h('div', { class: 'ce-notify__icon' }, meta.icon),
+      h('div', { class: 'ce-notify__icon' }, mark),
       h('div', { class: 'ce-notify__main' }, [
         h('div', { class: 'ce-notify__title' }, [
           h('span', `新事件 · ${meta.label}`),
@@ -476,8 +513,8 @@ function createViewer(el: HTMLElement): Cesium.Viewer {
   scene.backgroundColor = Cesium.Color.fromCssColorString('#02050d')
   if (scene.skyAtmosphere) {
     scene.skyAtmosphere.show = true
-    scene.skyAtmosphere.brightnessShift = -0.45
-    scene.skyAtmosphere.saturationShift = -0.2
+    scene.skyAtmosphere.brightnessShift = -0.52
+    scene.skyAtmosphere.saturationShift = -0.32
   }
   scene.highDynamicRange = false
   scene.globe.baseColor = Cesium.Color.fromCssColorString(GLOBE_BASE_COLOR)
@@ -486,7 +523,7 @@ function createViewer(el: HTMLElement): Cesium.Viewer {
   scene.globe.enableLighting = false
   scene.globe.maximumScreenSpaceError = 1.5
   scene.fog.enabled = true
-  scene.fog.density = 1.6e-4
+  scene.fog.density = 1.15e-4
   scene.postProcessStages.fxaa.enabled = !scene.msaaSupported
   const ctrl = scene.screenSpaceCameraController
   ctrl.minimumZoomDistance = 60
@@ -515,7 +552,7 @@ function bindInteraction(v: Cesium.Viewer) {
     roads?.setSelected(null)
     const evId = eventLayer?.fromPick(id)
     if (evId) return openEvent(evId)
-    const b = buildings?.fromPick(id)
+    const b = buildings?.fromPick(id) ?? fineBuildings?.fromPick(id)
     if (b) return openBuilding(b.id)
     const r = roads?.fromPick(id)
     if (r) {
@@ -535,7 +572,7 @@ function bindInteraction(v: Cesium.Viewer) {
     const id = pickId(m.position)
     const evId = eventLayer?.fromPick(id)
     if (evId) return void flyToEvent(evId, { range: 520 })
-    const b = buildings?.fromPick(id)
+    const b = buildings?.fromPick(id) ?? fineBuildings?.fromPick(id)
     if (b) return void flyToBuilding(b.id)
   }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
 
@@ -610,6 +647,13 @@ async function init() {
   cam = new CameraController(v)
   cam.setRegion(systemInfo.region.value)
   cam.jumpHome()
+  if (crowdLayerRef.value) {
+    try {
+      crowd = new CrowdLayer(crowdLayerRef.value, scene, systemInfo.region.value)
+    } catch (error) {
+      console.warn('[crowd] Three.js 人群图层初始化失败', error)
+    }
+  }
 
   basemapCtl = new BasemapController(
     v,
@@ -628,6 +672,10 @@ async function init() {
   roads = new RoadLayer(scene, c)
   buildings = new BuildingLayer(scene, c)
   fineBuildings = new BuildingLayer(scene, c)
+  if (v.scene.skyAtmosphere) {
+    v.scene.skyAtmosphere.brightnessShift = -0.52
+    v.scene.skyAtmosphere.saturationShift = -0.32
+  }
   // 应用初始图层可见性
   ;(Object.keys(layerState) as LayerKey[]).forEach((k) => setLayerVisible(k, layerState[k]))
   bindInteraction(v)
@@ -645,6 +693,7 @@ async function init() {
   if (disposed) return
   const region = systemInfo.region.value
   cam.setRegion(region)
+  crowd?.setRegion(region)
   effects.setRegion(region)
   status.ready = true
   syncEvents()
@@ -658,7 +707,10 @@ async function init() {
   const [bRes, rRes, pRes] = await dataPromise
   if (disposed) return
   const failed: string[] = []
-  if (rRes.status === 'fulfilled') roads.load(rRes.value)
+  if (rRes.status === 'fulfilled') {
+    roads.load(rRes.value)
+    crowd?.setRoads(rRes.value)
+  }
   else failed.push('路网')
   if (pRes.status === 'fulfilled') pois.load(pRes.value)
   else failed.push('应急资源')
@@ -672,6 +724,9 @@ async function init() {
   syncEvents()
   flushPending()
   if (failed.length) ElMessage.warning(`${failed.join('、')}数据加载失败，相关图层暂不可用`)
+  if (!hasTarget && !tour.state.running) {
+    await cam.flySkyline(denseCenter(), 2.4)
+  }
   emit('ready')
 }
 
@@ -715,10 +770,12 @@ onBeforeUnmount(() => {
   eventLayer?.destroy()
   pois?.destroy()
   effects?.destroy()
+  crowd?.destroy()
   buildings = roads = null
   eventLayer = null
   pois = null
   effects = null
+  crowd = null
   if (viewer && !viewer.isDestroyed()) viewer.destroy()
   viewer = null
   clock = null
@@ -743,6 +800,7 @@ defineExpose({
   stopTour: () => tour.stop(),
   tourState: tour.state,
   layers: layerState,
+  getCrowd: () => crowd,
   getViewer: () => viewer
 })
 </script>
@@ -750,6 +808,7 @@ defineExpose({
 <template>
   <div class="cesium-viewer-root" :class="{ 'is-touring': tour.state.running }">
     <div ref="containerRef" class="cv-canvas" />
+    <div ref="crowdLayerRef" class="cv-crowd-layer" />
     <div class="cv-vignette" />
 
     <!-- 详情停靠区：事件详情 / 建筑信息 -->
@@ -839,6 +898,18 @@ defineExpose({
   position: absolute;
   inset: 0;
 }
+.cv-crowd-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  visibility: hidden;
+}
+.cv-crowd-layer :deep(canvas) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .cv-canvas :deep(.cesium-viewer),
 .cv-canvas :deep(.cesium-widget),
 .cv-canvas :deep(.cesium-widget canvas) {
@@ -851,14 +922,12 @@ defineExpose({
 .cv-canvas :deep(canvas:focus) {
   outline: none;
 }
-/* 四周暗角，突出中心与 HUD */
+/* 地图保持完整亮度，不使用装饰性暗角。 */
 .cv-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(2, 5, 13, 0.55) 100%),
-    linear-gradient(180deg, rgba(2, 5, 13, 0.45) 0%, transparent 14%, transparent 86%, rgba(2, 5, 13, 0.5) 100%);
+  background: transparent;
 }
 
 .cv-dock {

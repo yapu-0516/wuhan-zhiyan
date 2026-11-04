@@ -149,3 +149,50 @@ class AppMeta(Base):
 
     key: Mapped[str] = mapped_column(String(32), primary_key=True)
     value: Mapped[str] = mapped_column(Text)
+
+
+class ScenarioSession(Base):
+    """多轮情景推演会话。"""
+
+    __tablename__ = "scenario_sessions"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    title: Mapped[str] = mapped_column(String(128), default="未命名情景")
+    scenario_type: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    state: Mapped[str] = mapped_column(String(16), default="initial")
+    parameters: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    messages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    current_version_id: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    last_comparison: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ScenarioVersion(Base):
+    """不可变的情景参数版本。"""
+
+    __tablename__ = "scenario_versions"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey("scenario_sessions.id", ondelete="CASCADE"), index=True)
+    version_no: Mapped[int] = mapped_column(Integer)
+    scenario_type: Mapped[str] = mapped_column(String(16))
+    title: Mapped[str] = mapped_column(String(128))
+    parameters: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ScenarioRunRecord(Base):
+    """一次情景推演结果，frames 与报告输入均保存在 payload。"""
+
+    __tablename__ = "scenario_runs"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey("scenario_sessions.id", ondelete="CASCADE"), index=True)
+    version_id: Mapped[str] = mapped_column(ForeignKey("scenario_versions.id", ondelete="CASCADE"), index=True)
+    scenario_type: Mapped[str] = mapped_column(String(16), index=True)
+    provider: Mapped[str] = mapped_column(String(32))
+    data_classification: Mapped[str] = mapped_column(String(24))
+    status: Mapped[str] = mapped_column(String(16), default="success")
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime)

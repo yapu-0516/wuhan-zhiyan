@@ -36,9 +36,9 @@ const option = computed(() => {
         max: 100,
         splitNumber: 10,
         silent: true,
-        axisLine: { lineStyle: { width: 1, color: [[1, 'rgba(79,195,247,0.25)']] } },
-        axisTick: { distance: -7, length: 3, splitNumber: 4, lineStyle: { color: 'rgba(79,195,247,0.35)', width: 1 } },
-        splitLine: { distance: -9, length: 7, lineStyle: { color: 'rgba(79,195,247,0.7)', width: 1.5 } },
+        axisLine: { lineStyle: { width: 1, color: [[1, '#343a3f']] } },
+        axisTick: { distance: -7, length: 3, splitNumber: 4, lineStyle: { color: '#4b535a', width: 1 } },
+        splitLine: { distance: -9, length: 7, lineStyle: { color: '#626b73', width: 1 } },
         axisLabel: { show: false },
         pointer: { show: false },
         detail: { show: false },
@@ -57,26 +57,22 @@ const option = computed(() => {
           show: true,
           width: 9,
           roundCap: true,
-          itemStyle: {
-            color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#1f78d1' }, { offset: 1, color: c }] },
-            shadowColor: c,
-            shadowBlur: 12
-          }
+          itemStyle: { color: c }
         },
-        axisLine: { roundCap: true, lineStyle: { width: 9, color: [[1, 'rgba(79,195,247,0.1)']] } },
+        axisLine: { roundCap: true, lineStyle: { width: 7, color: [[1, '#2a3035']] } },
         axisTick: { show: false },
         splitLine: { show: false },
         axisLabel: { show: false },
         pointer: { show: false },
         anchor: { show: false },
-        title: { show: true, offsetCenter: [0, '46%'], color: '#8aa3c4', fontSize: 12 },
+        title: { show: true, offsetCenter: [0, '46%'], color: '#a2a9af', fontSize: 12 },
         detail: {
           valueAnimation: true,
           offsetCenter: [0, '2%'],
-          fontSize: 32,
-          fontWeight: 700,
+          fontSize: 30,
+          fontWeight: 600,
           fontFamily: 'DIN Alternate, Bahnschrift, Roboto Condensed, Arial',
-          color: '#f0f7ff',
+          color: '#f5f7f8',
           formatter: '{value}'
         },
         data: [{ value: score, name: `安全等级 · ${grade.value.label}` }]
@@ -130,21 +126,19 @@ const option = computed(() => {
   border-left: 1px solid var(--ce-divider);
 }
 .tpi-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ce-text-dim);
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 .tpi-value {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 30px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 600;
   line-height: 1.1;
-  text-shadow: 0 0 14px currentColor;
 }
 .tpi-value .ce-tag {
-  text-shadow: none;
   font-weight: 400;
 }
 .tpi-scale {
@@ -161,7 +155,6 @@ const option = computed(() => {
 }
 .tpi-scale i.on {
   opacity: 1;
-  box-shadow: 0 0 8px currentColor;
 }
 .tpi-marker {
   position: absolute;
@@ -172,18 +165,17 @@ const option = computed(() => {
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
   border-top: 6px solid #fff;
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
   transition: left 0.8s var(--ce-ease);
 }
 .tpi-ticks {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--ce-text-faint);
 }
 .tpi-foot {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ce-text-dim);
 }
 .tpi-foot b {

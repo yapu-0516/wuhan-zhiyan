@@ -12,7 +12,7 @@ const { connected, lastMessageAt } = useRealtime()
 
 const MODE_LABEL = { live: '实时数据', offline: '离线快照', mock: '演示数据' } as const
 
-const pad = (n: number) => String(n).padStart(2, '0')
+const pad = (n: number) => String(n).padStart(2, '0') // taste-skill-ignore numbering: clock/date formatting
 
 // 最近更新：WS 最近一条消息时间；离线时取最新事件时间
 const lastUpdate = computed(() => {
@@ -41,7 +41,7 @@ const lastUpdate = computed(() => {
     <span class="sp-divider" />
     <div class="sp-types">
       <span v-for="t in EVENT_TYPES" :key="t" class="sp-type">
-        <span class="sp-emoji">{{ EVENT_TYPE_META[t].icon }}</span>
+        <i class="sp-type-dot" :style="{ background: EVENT_TYPE_META[t].color }" />
         <span class="sp-name">{{ EVENT_TYPE_META[t].label }}</span>
         <span class="sp-count ce-num" :style="{ color: EVENT_TYPE_META[t].color }">{{ stats.byType[t] ?? 0 }}</span>
       </span>
@@ -66,9 +66,9 @@ const lastUpdate = computed(() => {
   align-items: center;
   gap: 18px;
   padding: 0 18px;
-  background: linear-gradient(180deg, #071228, #050c1d);
-  border-top: 1px solid var(--ce-panel-border);
-  font-size: 12.5px;
+  background: var(--ce-bg);
+  border-top: 1px solid var(--ce-divider);
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
 }
@@ -82,19 +82,17 @@ const lastUpdate = computed(() => {
   color: var(--ce-text-dim);
 }
 .sp-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--ce-accent);
-  text-shadow: 0 0 10px rgba(79, 195, 247, 0.4);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ce-text-strong);
 }
 .sp-value--warn {
-  color: #ffb37a;
-  text-shadow: 0 0 10px rgba(255, 159, 67, 0.4);
+  color: var(--ce-warning);
 }
 .sp-divider {
   width: 1px;
   height: 18px;
-  background: var(--ce-panel-border);
+  background: var(--ce-divider);
 }
 .sp-types {
   display: flex;
@@ -107,12 +105,14 @@ const lastUpdate = computed(() => {
   gap: 5px;
   color: var(--ce-text-dim);
 }
-.sp-emoji {
-  font-size: 13px;
+.sp-type-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
 }
 .sp-count {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
 }
 .sp-spacer {
   flex: 1;
@@ -127,10 +127,10 @@ const lastUpdate = computed(() => {
   align-items: center;
   gap: 6px;
   height: 22px;
-  padding: 0 9px;
+  padding: 0 7px;
   border: 1px solid var(--ce-divider);
-  border-radius: 11px;
-  font-size: 11.5px;
+  border-radius: 4px;
+  font-size: 12px;
   color: var(--ce-text-dim);
 }
 .sp-chip b {
@@ -139,14 +139,14 @@ const lastUpdate = computed(() => {
 }
 .sp-chip.ok {
   color: #2ed47a;
-  border-color: rgba(46, 212, 122, 0.3);
+  color: var(--ce-success);
 }
 .sp-chip.off {
   color: var(--ce-text-faint);
 }
 .sp-chip.warn {
   color: var(--ce-warning);
-  border-color: rgba(240, 192, 80, 0.3);
+  color: var(--ce-warning);
 }
 @media (max-width: 1200px) {
   .sp-name {

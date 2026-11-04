@@ -129,3 +129,42 @@ CREATE TABLE app_meta (
     "key"  VARCHAR(32) NOT NULL PRIMARY KEY,
     value  TEXT        NOT NULL
 );
+
+-- 城市情景推演：会话、不可变版本与运行时间帧
+CREATE TABLE scenario_sessions (
+    id                  VARCHAR(24) NOT NULL PRIMARY KEY,
+    title               VARCHAR(128) NOT NULL,
+    scenario_type       VARCHAR(16),
+    state               VARCHAR(16) NOT NULL,
+    parameters          JSON        NOT NULL,
+    messages            JSON        NOT NULL,
+    current_version_id  VARCHAR(24),
+    last_comparison     JSON,
+    created_at          DATETIME    NOT NULL,
+    updated_at          DATETIME    NOT NULL
+);
+
+CREATE TABLE scenario_versions (
+    id             VARCHAR(24) NOT NULL PRIMARY KEY,
+    session_id     VARCHAR(24) NOT NULL REFERENCES scenario_sessions(id) ON DELETE CASCADE,
+    version_no     INTEGER     NOT NULL,
+    scenario_type  VARCHAR(16) NOT NULL,
+    title          VARCHAR(128) NOT NULL,
+    parameters     JSON        NOT NULL,
+    created_at     DATETIME    NOT NULL
+);
+CREATE INDEX ix_scenario_versions_session_id ON scenario_versions (session_id);
+
+CREATE TABLE scenario_runs (
+    id                   VARCHAR(24) NOT NULL PRIMARY KEY,
+    session_id           VARCHAR(24) NOT NULL REFERENCES scenario_sessions(id) ON DELETE CASCADE,
+    version_id           VARCHAR(24) NOT NULL REFERENCES scenario_versions(id) ON DELETE CASCADE,
+    scenario_type        VARCHAR(16) NOT NULL,
+    provider             VARCHAR(32) NOT NULL,
+    data_classification  VARCHAR(24) NOT NULL,
+    status               VARCHAR(16) NOT NULL,
+    payload              JSON        NOT NULL,
+    created_at           DATETIME    NOT NULL
+);
+CREATE INDEX ix_scenario_runs_session_id ON scenario_runs (session_id);
+CREATE INDEX ix_scenario_runs_version_id ON scenario_runs (version_id);

@@ -19,6 +19,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '城市监测' }
   },
   {
+    path: '/drill',
+    name: 'emergency-drill',
+    component: () => import('@/views/EmergencyDrill.vue'),
+    meta: { title: '应急演练' }
+  },
+  {
     path: '/event-center',
     name: 'event-center',
     component: () => import('@/views/EventCenter.vue'),

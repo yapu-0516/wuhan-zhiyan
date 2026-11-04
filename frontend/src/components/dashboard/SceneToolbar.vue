@@ -1,21 +1,30 @@
 <script setup lang="ts">
 // 场景浮动工具条：图层开关 / 底图切换 / 自动追踪 / 复位视角 / 一键演示
-import { OfficeBuilding, Guide, Location, FirstAidKit, Aim, RefreshLeft, VideoPlay, SwitchButton, Grid } from '@element-plus/icons-vue'
+import { OfficeBuilding, Guide, Location, FirstAidKit, Aim, RefreshLeft, VideoPlay, SwitchButton, MagicStick, Grid, User, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
 import type { LayerKey, LayerVisibility } from '@/components/scene/types'
 import type { BasemapKey } from '@/config/cesium'
 
-defineProps<{ layers: LayerVisibility; basemap: BasemapKey; autoTrack: boolean; touring: boolean }>()
+defineProps<{
+  layers: LayerVisibility
+  basemap: BasemapKey
+  autoTrack: boolean
+  touring: boolean
+}>()
 const emit = defineEmits<{
   (e: 'toggle-layer', key: LayerKey): void
   (e: 'basemap', key: BasemapKey): void
   (e: 'auto-track', on: boolean): void
   (e: 'home'): void
   (e: 'tour'): void
+  (e: 'parse'): void
+  (e: 'assistant'): void
+  (e: 'crowd'): void
+  (e: 'scenario'): void
 }>()
 
 const LAYERS: { key: LayerKey; label: string; icon: typeof OfficeBuilding }[] = [
-  { key: 'buildings', label: '建筑', icon: OfficeBuilding },
-  { key: 'buildingsFine', label: '精细楼', icon: Grid },
+  { key: 'buildings', label: '建筑体量', icon: OfficeBuilding },
+  { key: 'buildingsFine', label: '全城楼', icon: Grid },
   { key: 'roads', label: '路况', icon: Guide },
   { key: 'events', label: '事件', icon: Location },
   { key: 'pois', label: '应急资源', icon: FirstAidKit }
@@ -55,16 +64,37 @@ const BASEMAP_OPTIONS: { key: BasemapKey; label: string }[] = [
       </button>
     </div>
     <span class="tb-sep" />
-    <button class="tb-switch" :class="{ on: autoTrack }" title="新事件到达时相机自动飞往" @click="emit('auto-track', !autoTrack)">
-      <i class="tb-switch__knob" />
-      <el-icon><Aim /></el-icon><span class="tb-label">自动追踪</span>
-    </button>
-    <button class="tb-btn" title="复位到示范区默认视角" @click="emit('home')">
-      <el-icon><RefreshLeft /></el-icon><span class="tb-label">复位视角</span>
-    </button>
-    <button class="tb-btn tb-btn--tour" :class="{ running: touring }" @click="emit('tour')">
-      <el-icon><component :is="touring ? SwitchButton : VideoPlay" /></el-icon>{{ touring ? '退出演示' : '一键演示' }}
-    </button>
+    <div class="tb-actions">
+      <button class="tb-switch" :class="{ on: autoTrack }" title="新事件到达时相机自动飞往" @click="emit('auto-track', !autoTrack)">
+        <i class="tb-switch__knob" />
+        <el-icon><Aim /></el-icon><span class="tb-label">自动追踪</span>
+      </button>
+      <button class="tb-btn" title="复位到示范区默认视角" @click="emit('home')">
+        <el-icon><RefreshLeft /></el-icon><span class="tb-label">复位视角</span>
+      </button>
+      <button class="tb-btn" title="用一句话描述任务，交给大模型解析" @click="emit('parse')">
+        <el-icon><MagicStick /></el-icon><span class="tb-label">AI 解析</span>
+      </button>
+      <button class="tb-btn" title="打开城市治理助手，可围绕当前事件连续提问" @click="emit('assistant')">
+        <el-icon><ChatDotRound /></el-icon><span class="tb-label">AI 问答</span>
+      </button>
+      <button class="tb-btn" title="打开虚拟人群仿真控制台" @click="emit('crowd')">
+        <el-icon><User /></el-icon><span class="tb-label">人群仿真</span>
+      </button>
+      <button class="tb-btn" title="打开大模型城市情景推演" @click="emit('scenario')">
+        <el-icon><DataAnalysis /></el-icon><span class="tb-label">情景推演</span>
+      </button>
+      <button
+        class="tb-btn tb-btn--tour"
+        :class="{ running: touring }"
+        :title="touring ? '退出演示' : '一键演示'"
+        :aria-label="touring ? '退出演示' : '一键演示'"
+        @click="emit('tour')"
+      >
+        <el-icon><component :is="touring ? SwitchButton : VideoPlay" /></el-icon>
+        <span class="tb-label">{{ touring ? '退出演示' : '一键演示' }}</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -76,15 +106,12 @@ const BASEMAP_OPTIONS: { key: BasemapKey; label: string }[] = [
   padding: 6px 8px;
   border: 1px solid var(--ce-panel-border);
   border-radius: 6px;
-  background: linear-gradient(180deg, rgba(12, 28, 58, 0.88), rgba(6, 15, 34, 0.84));
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(79, 195, 247, 0.15);
-  backdrop-filter: blur(10px);
+  background: var(--ce-panel-solid);
   white-space: nowrap;
 }
 .tb-group,
-.tb-seg {
+.tb-seg,
+.tb-actions {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -104,9 +131,12 @@ button {
   border-radius: 3px;
   background: transparent;
   color: var(--ce-text-dim);
-  font-size: 12.5px;
+  font-size: 13px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 button:hover {
   color: var(--ce-text-strong);
@@ -114,18 +144,18 @@ button:hover {
 }
 .tb-chip.on {
   color: var(--ce-text-strong);
-  border-color: rgba(79, 195, 247, 0.35);
-  background: rgba(79, 195, 247, 0.14);
+  border-color: transparent;
+  border-bottom-color: var(--ce-accent);
+  background: transparent;
 }
 .tb-chip.on .el-icon {
-  color: var(--ce-accent-2);
-  filter: drop-shadow(0 0 4px var(--ce-accent));
+  color: currentColor;
 }
 .tb-seg {
   padding: 2px;
-  border: 1px solid var(--ce-divider);
-  border-radius: 4px;
-  background: rgba(3, 8, 18, 0.4);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   gap: 2px;
 }
 .tb-seg button {
@@ -133,8 +163,9 @@ button:hover {
   padding: 0 10px;
 }
 .tb-seg button.on {
-  color: #04121f;
-  background: linear-gradient(90deg, #36a6f0, #5fe0ff);
+  color: var(--ce-text-strong);
+  border-bottom-color: var(--ce-accent);
+  background: transparent;
   font-weight: 600;
 }
 .tb-switch {
@@ -161,7 +192,9 @@ button:hover {
   height: 8px;
   border-radius: 50%;
   background: var(--ce-text-dim);
-  transition: all 0.2s ease;
+  transition:
+    left 0.2s ease,
+    background-color 0.2s ease;
 }
 .tb-switch.on {
   color: var(--ce-text-strong);
@@ -172,28 +205,32 @@ button:hover {
 .tb-switch.on .tb-switch__knob::after {
   left: 14px;
   background: #2ed47a;
-  box-shadow: 0 0 6px #2ed47a;
 }
 .tb-btn {
   border-color: var(--ce-divider);
 }
 .tb-btn--tour {
-  color: #04121f;
+  color: #101215;
   font-weight: 600;
   border-color: transparent;
-  background: linear-gradient(90deg, #1f8fe0, #36d6f5);
-  box-shadow: 0 0 16px rgba(54, 214, 245, 0.45);
-  animation: tb-breathe 2.6s ease-in-out infinite;
+  background: #eef2f4;
+}
+.tb-btn--scenario {
+  color: var(--ce-text);
+  border-color: var(--ce-panel-border);
+  background: transparent;
+}
+.tb-actions {
+  padding-left: 8px;
+  border-left: 1px solid var(--ce-divider);
 }
 .tb-btn--tour:hover {
-  color: #04121f;
-  background: linear-gradient(90deg, #36a6f0, #6ae6ff);
+  color: #101215;
+  background: #ffffff;
 }
 .tb-btn--tour.running {
   color: #fff;
-  background: linear-gradient(90deg, #c2414b, #ff6b6b);
-  box-shadow: 0 0 16px rgba(255, 107, 107, 0.45);
-  animation: none;
+  background: #d65359;
 }
 /* 中心区域较窄时（容器查询）仅保留图标 */
 @container hud-toolbar (max-width: 860px) {
@@ -205,15 +242,6 @@ button:hover {
   }
   .tb-switch {
     padding-left: 34px;
-  }
-}
-@keyframes tb-breathe {
-  0%,
-  100% {
-    box-shadow: 0 0 10px rgba(54, 214, 245, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 22px rgba(54, 214, 245, 0.7);
   }
 }
 </style>

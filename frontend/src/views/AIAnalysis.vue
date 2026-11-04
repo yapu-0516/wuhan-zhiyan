@@ -6,6 +6,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
+import { Sunny, Van, OfficeBuilding, Umbrella, Connection } from '@element-plus/icons-vue'
 import { getSystemInfo } from '@/api/system'
 import { createTask, getTask, getTasks, uploadTask } from '@/api/task'
 import { apiState } from '@/api/http'
@@ -44,6 +45,7 @@ const center = computed<[number, number]>(() => info.value?.region?.center ?? [1
 const algorithms = computed(() => info.value?.algorithms ?? [])
 const curMeta = computed(() => typeMeta(selectedType.value)!)
 const typeAlgo = computed(() => algorithms.value.find((a) => a.type === selectedType.value))
+const typeIcons = { fire: Sunny, traffic: Van, building: OfficeBuilding, flood: Umbrella }
 
 // ---------- 任务列表（仅当前分析类型） ----------
 function upsertTask(t: AnalysisTask) {
@@ -193,7 +195,7 @@ onMounted(async () => {
     <div class="ai">
       <!-- 当前分析类型标识 -->
       <section class="ai-hero cp-panel" :style="{ '--c': curMeta.color }">
-        <span class="ai-hero__icon">{{ curMeta.icon }}</span>
+        <span class="ai-hero__icon"><el-icon><component :is="typeIcons[selectedType]" /></el-icon></span>
         <div class="ai-hero__txt">
           <b>{{ curMeta.label }}</b>
           <p>{{ curMeta.blurb }}</p>
@@ -216,7 +218,7 @@ onMounted(async () => {
       <section class="cp-panel ai__input">
         <div class="cp-panel__header">
           <h3 class="cp-panel__title">分析数据输入</h3>
-          <span class="cp-panel__sub">{{ curMeta.icon }} {{ curMeta.label }}</span>
+          <span class="cp-panel__sub">{{ curMeta.label }}</span>
         </div>
         <div class="cp-panel__body">
           <TaskInputPanel :type="selectedType" :center="center" :busy="submitting || active" @submit="submit" />
@@ -227,7 +229,7 @@ onMounted(async () => {
         <Transition name="swap" mode="out-in">
           <!-- 离线：原型任务，不展示任何结果 -->
           <div v-if="prototype" key="proto" class="proto cp-panel">
-            <div class="proto__icon">🔌</div>
+            <div class="proto__icon"><el-icon><Connection /></el-icon></div>
             <div>
               <h3>离线演示模式：请启动后端以运行真实算法</h3>
               <p>
@@ -254,6 +256,21 @@ onMounted(async () => {
               <li><b>04</b>结果后处理</li>
               <li><b>05</b>标注 · 指标 · 事件</li>
             </ol>
+            <dl class="idle__facts">
+              <div><dt>输入约束</dt><dd>{{ curMeta.rule }}</dd></div>
+              <div><dt>标准输出</dt><dd>标注影像、检测框、算法指标、事件记录</dd></div>
+              <div><dt>当前算法</dt><dd>{{ typeAlgo?.name ?? '等待后端算法信息' }}</dd></div>
+              <div><dt>判定原则</dt><dd>算法未检出时不会生成城市事件</dd></div>
+            </dl>
+            <div class="idle__output">
+              <b>任务完成后可核对</b>
+              <ul>
+                <li><span>标注影像</span><em>算法在原图上的检测结果</em></li>
+                <li><span>检测目标</span><em>位置、类别与置信度</em></li>
+                <li><span>算法指标</span><em>面积占比、数量或时序结论</em></li>
+                <li><span>城市事件</span><em>仅在实际检出时进入事件中心</em></li>
+              </ul>
+            </div>
           </div>
         </Transition>
       </section>
@@ -277,7 +294,7 @@ onMounted(async () => {
     'hero hero'
     'input result';
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 .ai-hero {
   grid-area: hero;
@@ -285,8 +302,9 @@ onMounted(async () => {
   align-items: center;
   gap: 18px;
   padding: 16px 20px;
-  border-color: color-mix(in srgb, var(--c) 45%, transparent);
-  background: linear-gradient(120deg, color-mix(in srgb, var(--c) 14%, rgba(16, 26, 48, 0.8)), rgba(16, 26, 48, 0.8) 60%);
+  border-color: var(--ce-panel-border);
+  background: var(--ce-panel-solid);
+  border-left: 2px solid var(--c);
 }
 .ai-hero__icon {
   display: grid;
@@ -294,24 +312,25 @@ onMounted(async () => {
   flex: none;
   width: 54px;
   height: 54px;
-  font-size: 28px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--c) 16%, rgba(9, 16, 34, 0.8));
-  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  font-size: 24px;
+  border-radius: 4px;
+  color: var(--c);
+  background: #1d1f22;
+  border: 1px solid var(--ce-panel-border);
 }
 .ai-hero__txt {
   flex: 1 1 auto;
   min-width: 0;
 }
 .ai-hero__txt b {
-  font-size: 17px;
-  color: #f0f6ff;
+  font-size: 18px;
+  color: var(--ce-text-strong);
 }
 .ai-hero__txt p {
   margin: 4px 0 0;
   font-size: 13px;
   line-height: 1.6;
-  color: #9db4d2;
+  color: var(--ce-text-dim);
 }
 .ai-hero__inputs {
   display: flex;
@@ -322,19 +341,19 @@ onMounted(async () => {
 .ai-hero__chip {
   padding: 0 8px;
   line-height: 20px;
-  font-size: 11.5px;
+  font-size: 12px;
   border-radius: 4px;
-  color: #a9cdf0;
-  background: rgba(79, 195, 247, 0.08);
-  border: 1px solid rgba(64, 120, 180, 0.3);
+  color: var(--ce-text-dim);
+  background: #1d1f22;
+  border: 1px solid var(--ce-panel-border);
 }
 .ai-hero__algo {
   flex: 0 1 320px;
   min-width: 0;
   padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(7, 12, 28, 0.55);
-  border: 1px dashed rgba(64, 120, 180, 0.3);
+  border-radius: 4px;
+  background: #141618;
+  border: 1px solid var(--ce-panel-border);
 }
 .ai-hero__algo .cp-label {
   margin-right: 6px;
@@ -346,14 +365,14 @@ onMounted(async () => {
 .ai-hero__algo i {
   margin-left: 6px;
   font-style: normal;
-  font-size: 11px;
-  color: #6f89aa;
+  font-size: 12px;
+  color: var(--ce-text-faint);
 }
 .ai-hero__algo p {
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #8aa3c4;
+  color: var(--ce-text-dim);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -372,6 +391,11 @@ onMounted(async () => {
 .ai__result {
   grid-area: result;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ai__result > * {
+  flex: 1;
 }
 @media (max-width: 1360px) {
   .ai {
@@ -394,23 +418,23 @@ onMounted(async () => {
   gap: 8px;
   height: 28px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: 4px;
   font-size: 12px;
-  color: #8aa3c4;
-  background: rgba(9, 16, 34, 0.6);
-  border: 1px solid rgba(64, 120, 180, 0.28);
+  color: var(--ce-text-dim);
+  background: transparent;
+  border: 1px solid var(--ce-panel-border);
 }
 .chan.is-on {
   color: #7be8aa;
-  border-color: rgba(77, 217, 132, 0.4);
+  border-color: var(--ce-success);
 }
 .proto {
   display: flex;
   align-items: center;
   gap: 20px;
   padding: 26px 30px;
-  border-color: rgba(240, 192, 80, 0.4);
-  background: linear-gradient(90deg, rgba(240, 192, 80, 0.1), var(--ce-panel, rgba(16, 26, 48, 0.72)) 60%);
+  border-color: var(--ce-panel-border);
+  background: var(--ce-panel-solid);
 }
 .proto__icon {
   display: grid;
@@ -418,21 +442,22 @@ onMounted(async () => {
   flex: none;
   width: 64px;
   height: 64px;
-  font-size: 32px;
-  border-radius: 18px;
-  background: rgba(240, 192, 80, 0.12);
-  border: 1px solid rgba(240, 192, 80, 0.45);
+  font-size: 24px;
+  border-radius: 4px;
+  color: var(--ce-warning);
+  background: #1d1f22;
+  border: 1px solid var(--ce-panel-border);
 }
 .proto h3 {
   margin: 0 0 8px;
   font-size: 17px;
-  color: #f6d78a;
+  color: var(--ce-text-strong);
 }
 .proto p {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.8;
-  color: #c9d6ea;
+  color: var(--ce-text);
 }
 .proto b {
   color: #ffd98a;
@@ -442,21 +467,19 @@ onMounted(async () => {
   min-height: 260px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
-  background:
-    radial-gradient(500px 200px at 100% 100%, rgba(79, 195, 247, 0.07), transparent 70%),
-    var(--ce-panel, rgba(16, 26, 48, 0.72));
+  background: var(--ce-panel-solid);
 }
 .idle__title {
   font-size: 18px;
-  letter-spacing: 3px;
-  color: #cfe3fb;
+  letter-spacing: 0;
+  color: var(--ce-text-strong);
 }
 .idle p {
   margin: 0 0 14px;
   font-size: 13.5px;
-  color: #8aa3c4;
+  color: var(--ce-text-dim);
 }
 .idle__flow {
   list-style: none;
@@ -473,10 +496,10 @@ onMounted(async () => {
   gap: 8px;
   padding: 8px 16px 8px 10px;
   font-size: 13px;
-  color: #b9cdec;
-  border-radius: 8px;
-  background: rgba(9, 16, 34, 0.55);
-  border: 1px solid rgba(64, 120, 180, 0.3);
+  color: var(--ce-text);
+  border-radius: 4px;
+  background: #1a1c1e;
+  border: 1px solid var(--ce-panel-border);
 }
 .idle__flow li:not(:last-child)::after {
   content: '›';
@@ -488,12 +511,76 @@ onMounted(async () => {
   color: #4a6a8f;
 }
 .idle__flow li b {
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-size: 12px;
+  letter-spacing: 0;
   padding: 1px 6px;
   border-radius: 4px;
   color: #06101f;
   background: var(--ce-accent, #4fc3f7);
+}
+.idle__facts {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-auto-rows: 80px;
+  gap: 1px;
+  margin: 14px 0;
+  background: var(--ce-divider);
+  border: 1px solid var(--ce-divider);
+}
+.idle__facts > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  padding: 9px 14px;
+  background: #1a1c1e;
+}
+.idle__facts dt {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ce-text-faint);
+}
+.idle__facts dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ce-text);
+}
+.idle__output {
+  padding: 12px 14px;
+  border: 1px solid var(--ce-panel-border);
+  background: #141618;
+}
+.idle__output > b {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--ce-text-strong);
+}
+.idle__output ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 1px;
+  list-style: none;
+  background: var(--ce-divider);
+}
+.idle__output li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: #1a1c1e;
+}
+.idle__output span {
+  font-size: 13px;
+  color: var(--ce-text);
+}
+.idle__output em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--ce-text-faint);
 }
 .swap-enter-active,
 .swap-leave-active {

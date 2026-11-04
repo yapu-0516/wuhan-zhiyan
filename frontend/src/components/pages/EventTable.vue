@@ -94,7 +94,7 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
         <el-table-column label="类型" width="108">
           <template #default="{ row }">
             <span class="etype" :style="{ '--c': EVENT_TYPE_META[(row as CityEvent).event_type].color }">
-              <span class="etype__icon">{{ EVENT_TYPE_META[(row as CityEvent).event_type].icon }}</span>
+              <span class="etype__dot" />
               {{ EVENT_TYPE_META[(row as CityEvent).event_type].label }}
             </span>
           </template>
@@ -120,13 +120,12 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
         <el-table-column v-if="showSource" label="来源" width="124">
           <template #default="{ row }">
             <span class="esrc">
-              <span>{{ SOURCE_META[(row as CityEvent).source]?.icon ?? '📌' }}</span>
               {{ SOURCE_META[(row as CityEvent).source]?.label ?? (row as CityEvent).source }}
             </span>
           </template>
         </el-table-column>
 
-        <el-table-column label="置信度" prop="confidence" width="116" sortable="custom">
+        <el-table-column label="置信度" prop="confidence" width="116" sortable="custom" align="right" header-align="right">
           <template #default="{ row }">
             <div class="conf" :style="{ '--c': confColor((row as CityEvent).confidence) }">
               <span class="conf__n">{{ pct100((row as CityEvent).confidence) }}%</span>
@@ -215,7 +214,7 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  border-top: 1px solid rgba(64, 120, 180, 0.16);
+  border-top: 1px solid var(--ce-divider);
   flex-wrap: wrap;
 }
 .etable__total {
@@ -235,7 +234,7 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
 }
 .eid {
   font-size: 12.5px;
-  color: #a9cdf0;
+  color: var(--ce-text-dim);
 }
 .etype {
   --c: #4fc3f7;
@@ -245,9 +244,11 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
   font-weight: 600;
   color: var(--c);
 }
-.etype__icon {
-  font-size: 16px;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--c) 55%, transparent));
+.etype__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 .ename {
   display: flex;
@@ -257,7 +258,7 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
   line-height: 1.35;
 }
 .ename__t {
-  color: #e6f0ff;
+  color: var(--ce-text);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -298,7 +299,7 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #b9cdec;
+  color: var(--ce-text-dim);
   font-size: 12.5px;
 }
 .conf {
@@ -307,6 +308,7 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
   flex-direction: column;
   gap: 4px;
   padding-right: 6px;
+  align-items: flex-end;
 }
 .conf__n {
   font-size: 12px;
@@ -316,15 +318,15 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
 }
 .etime {
   font-size: 12.5px;
-  color: #b9cdec;
+  color: var(--ce-text-dim);
   font-variant-numeric: tabular-nums;
 }
 .eassign {
   font-size: 12.5px;
-  color: #b9cdec;
+  color: var(--ce-text-dim);
 }
 .eassign--none {
-  color: #5d748f;
+  color: var(--ce-text-faint);
 }
 .eops {
   display: inline-flex;
@@ -342,12 +344,14 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
   color: var(--ce-accent, #4fc3f7);
   font-size: 12.5px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .eops__btn:hover {
   border-color: rgba(79, 195, 247, 0.45);
   background: rgba(79, 195, 247, 0.12);
-  box-shadow: 0 0 10px rgba(79, 195, 247, 0.25);
 }
 
 /* 实时到达 / 更新高亮 */
@@ -360,28 +364,26 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
 @keyframes row-flash-new {
   0%,
   35% {
-    background-color: #1b4568;
-    box-shadow: inset 0 1px 0 rgba(79, 195, 247, 0.9), inset 0 -1px 0 rgba(79, 195, 247, 0.9);
+    background-color: #1d272b;
   }
   100% {
-    background-color: #0e172c;
-    box-shadow: none;
+    background-color: #17181a;
   }
 }
 @keyframes row-flash-upd {
   0%,
   30% {
-    background-color: #3a3520;
+    background-color: #29251b;
   }
   100% {
-    background-color: #0e172c;
+    background-color: #17181a;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .etable__body :deep(tr.is-new > td.el-table__cell),
   .etable__body :deep(tr.is-updated > td.el-table__cell) {
     animation: none;
-    background-color: #123456;
+    background-color: #1d272b;
   }
 }
 </style>

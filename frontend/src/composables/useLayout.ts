@@ -5,9 +5,10 @@ const KEY = 'cityeye.sidebarCollapsed'
 
 function read(): boolean {
   try {
-    return localStorage.getItem(KEY) === '1'
+    // 总览以城市画面为主，首次进入使用图标导航栏；手动展开后记住用户选择。
+    return localStorage.getItem(KEY) !== '0'
   } catch {
-    return false
+    return true
   }
 }
 

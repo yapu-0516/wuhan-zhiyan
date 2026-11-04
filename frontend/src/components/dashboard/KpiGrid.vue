@@ -34,36 +34,45 @@ defineProps<{ today: number; total: number; active: number; resolveRate: number;
 .kpis {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 0;
+  margin: -12px -14px;
 }
 .kpi {
   min-width: 0;
+  padding: 12px 14px;
+  border-right: 1px solid var(--ce-divider);
+  border-bottom: 1px solid var(--ce-divider);
+}
+.kpi:nth-child(2n) {
+  border-right: 0;
+}
+.kpi:nth-child(n + 3) {
+  border-bottom: 0;
 }
 .kpi--warn .ce-kpi__value {
-  color: #ffb37a;
-  text-shadow: 0 0 12px rgba(255, 159, 67, 0.45);
+  color: var(--ce-warning);
 }
 .kpi__sub {
-  font-size: 11px;
-  color: var(--ce-text-faint);
+  font-size: 13px;
+  color: var(--ce-text-dim);
 }
 .kpi__sub b {
   color: var(--ce-text-dim);
-  font-size: 12px;
+  font-size: 13px;
 }
 .kpi__bar {
   display: block;
   height: 4px;
   margin-top: 4px;
   border-radius: 2px;
-  background: rgba(79, 195, 247, 0.12);
+  background: #2a3035;
   overflow: hidden;
 }
 .kpi__bar i {
   display: block;
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, #1f78d1, #4dd984);
+  background: var(--ce-accent);
   transition: width 0.8s var(--ce-ease);
 }
 </style>

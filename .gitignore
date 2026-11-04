@@ -37,3 +37,7 @@ data/datasets/derived/
 node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo
+frontend/vite.config.ts.timestamp-*
+
+# ---- Codex QA / design review artifacts ----
+.taste-skill/

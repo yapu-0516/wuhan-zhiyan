@@ -22,30 +22,20 @@ const option = computed(() => ({
     data: statuses.value,
     axisLine: { show: false },
     axisTick: { show: false },
-    axisLabel: { color: '#b9cdec', fontSize: 13 }
+    axisLabel: { color: '#b1b4b7', fontSize: 13 }
   },
   series: [
     {
       type: 'bar',
       barWidth: 14,
       showBackground: true,
-      backgroundStyle: { color: 'rgba(120, 160, 210, 0.1)', borderRadius: 7 },
-      label: { show: true, position: 'right', color: '#d6e4ff', fontSize: 13, fontWeight: 600 },
+      backgroundStyle: { color: '#2a2c2f', borderRadius: 4 },
+      label: { show: true, position: 'right', color: '#dddfe1', fontSize: 13, fontWeight: 600 },
       data: statuses.value.map((s) => ({
         value: props.counts[s] ?? 0,
         itemStyle: {
-          borderRadius: 7,
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 1,
-            y2: 0,
-            colorStops: [
-              { offset: 0, color: `${dataStatusMeta(s).color}55` },
-              { offset: 1, color: dataStatusMeta(s).color }
-            ]
-          }
+          borderRadius: 4,
+          color: dataStatusMeta(s).color
         }
       }))
     }
@@ -54,5 +44,5 @@ const option = computed(() => ({
 </script>
 
 <template>
-  <EChart :option="option" style="height: 210px" />
+  <EChart :option="option" style="height: 100%; min-height: 300px" />
 </template>

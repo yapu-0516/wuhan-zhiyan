@@ -141,25 +141,23 @@ onBeforeUnmount(() => {
   align-items: baseline;
   gap: 10px;
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 2px;
-  color: #a9cdf0;
+  letter-spacing: 0;
+  color: var(--ce-text);
 }
 .sec-label::before {
   align-self: center;
   content: '';
-  width: 6px;
-  height: 6px;
+  width: 3px;
+  height: 14px;
   background: var(--ce-accent, #4fc3f7);
-  box-shadow: 0 0 8px var(--ce-accent, #4fc3f7);
-  transform: rotate(45deg);
 }
 .sec-label small {
   font-size: 12px;
   font-weight: 400;
-  letter-spacing: 0.5px;
-  color: #6f89aa;
+  letter-spacing: 0;
+  color: var(--ce-text-faint);
 }
 .sources {
   display: grid;

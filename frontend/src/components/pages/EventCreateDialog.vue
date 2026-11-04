@@ -244,7 +244,9 @@ async function submit() {
   color: var(--ce-text-dim, #8aa3c4);
   font-size: 12.5px;
   cursor: pointer;
-  transition: all 0.18s;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 .types__icon {
   font-size: 22px;
@@ -259,7 +261,6 @@ async function submit() {
   border-color: var(--c);
   color: var(--c);
   background: color-mix(in srgb, var(--c) 14%, rgba(9, 16, 34, 0.6));
-  box-shadow: 0 0 16px color-mix(in srgb, var(--c) 28%, transparent);
 }
 .types__item.is-on .types__icon {
   filter: none;
