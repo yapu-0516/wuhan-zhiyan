@@ -55,7 +55,7 @@ const demoTip = computed(() =>
         <circle cx="26.4" cy="21.6" r="1.4" fill="#fff" />
       </svg>
       <div class="brand-text">
-        <h1>城市智眼</h1>
+        <h1>城市智眼城市智能监测与辅助治理平台软件</h1>
         <p>武汉城市运行指挥中心</p>
       </div>
     </div>

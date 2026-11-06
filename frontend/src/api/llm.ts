@@ -21,11 +21,6 @@ async function llmRequest<T>(path: string, body: unknown): Promise<T> {
   }
 }
 
-/** GET /api/llm/status —— 密钥是否已配置（不发起模型调用） */
-export function getLlmStatus(): Promise<{ available: boolean; reason?: string }> {
-  return request('/llm/status')
-}
-
 /** POST /api/llm/parse-task —— 自然语言 → 结构化任务 */
 export function parseTaskText(text: string): Promise<ParsedTask> {
   return llmRequest<ParsedTask>('/llm/parse-task', { text })

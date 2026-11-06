@@ -7,7 +7,8 @@ import { chatWithAssistant } from '@/api/llm'
 import { errMsg } from '@/composables/pages/format'
 import type { AssistantTurn } from '@/types/llm'
 
-const props = defineProps<{ eventId?: string | null }>()
+const props = defineProps<{ eventId?: string | null; autoQuestion?: string }>()
+const emit = defineEmits<{ (e: 'settled'): void }>()
 
 const messages = ref<AssistantTurn[]>([])
 const input = ref('')
@@ -15,6 +16,7 @@ const busy = ref(false)
 const error = ref('')
 const dataType = ref('')
 const scroller = ref<HTMLDivElement | null>(null)
+let lastAutoQuestion = ''
 
 const offline = computed(() => apiState.mode !== 'live')
 const linked = computed(() => Boolean(props.eventId))
@@ -50,7 +52,10 @@ function usePrompt(text: string) {
 
 async function send() {
   const text = input.value.trim()
-  if (!text || busy.value || offline.value) return
+  if (!text || busy.value || offline.value) {
+    emit('settled')
+    return
+  }
   error.value = ''
   messages.value.push({ role: 'user', content: text })
   input.value = ''
@@ -67,6 +72,7 @@ async function send() {
     error.value = errMsg(e, '治理助手暂时无法回答，请稍后重试')
   } finally {
     busy.value = false
+    emit('settled')
   }
 }
 
@@ -77,10 +83,33 @@ function clearChat() {
   dataType.value = ''
 }
 
+function resetAutoQuestion() {
+  lastAutoQuestion = ''
+}
+
 watch(
   () => props.eventId,
   () => clearChat()
 )
+
+watch(
+  () => props.autoQuestion,
+  async (question) => {
+    const text = question?.trim()
+    if (!text) {
+      lastAutoQuestion = ''
+      return
+    }
+    if (text === lastAutoQuestion) return
+    lastAutoQuestion = text
+    await nextTick()
+    input.value = text
+    await send()
+  },
+  { immediate: true }
+)
+
+defineExpose({ clearChat, resetAutoQuestion })
 </script>
 
 <template>

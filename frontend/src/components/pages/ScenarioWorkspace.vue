@@ -309,6 +309,24 @@ async function makeReport() {
   }
 }
 
+/** 一键演示：自动提交一句话、等待三方案生成，并短暂展示结果后切到地图。 */
+async function demoStart(prompt: string): Promise<boolean> {
+  input.value = prompt
+  await send(prompt)
+  if (!run.value) return false
+  await new Promise((resolve) => window.setTimeout(resolve, 6500))
+  emit('view-map')
+  return true
+}
+
+function demoStop(): void {
+  pause()
+  layer?.clear()
+  props.viewer?.getCrowd()?.clear()
+}
+
+defineExpose({ demoStart, demoStop })
+
 onMounted(() => {
   void ensureSession()
     .then(async (current) => {

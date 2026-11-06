@@ -25,10 +25,10 @@
 | | |
 | --- | --- |
 | 🏙️ **真实城市底座** | 汉口沿江示范区（江汉路—汉口江滩—武汉天地）**822 栋 OpenStreetMap 真实建筑**、105 条主干道（93.6 km）、84 处医院/消防/公安/学校，四个行政区真实边界，网格化编码 |
-| 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 自研着色器，以精细建筑、中性体块、窗格和檐口轮廓呈现真实城市；实时路况和事件优先级直接叠加在同一视图，不再切换“天际线 / 态势”两套画面。GPU 不支持时自动降级 |
+| 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 自研着色器，以精细建筑、中性体块、窗格和檐口轮廓呈现真实城市；卫星底图打包为本地单幅缓存，断网也可加载。GPU 不支持时自动降级 |
 | 🧠 **7 个真实可运行的算法** | 火灾识别、交通指数与短临预测、航拍车辆占有率、建筑沉降趋势、前后时相变化检测、积水水位研判、积水影像分割 —— 纯 NumPy 实现，**事件只由算法实际检出产生，绝不伪造** |
 | ⚡ **实时闭环** | WebSocket 推送事件/路况/任务进度；事件状态机（待核查→监测中→处置中→已办结）后端校验；派单、办结、处置时间线多终端同步 |
-| 🎬 **一键演示** | 7 步自动导览：飞入城市 → 环绕 CBD → 实时路况 → **触发真实火情识别** → 派单处置 → 建筑沉降预警 → 自动进入火灾疏散推演，附字幕，Esc 可退出 |
+| 🎬 **一键演示** | 10 步城市运行故事线：平静城市与流动人群 → 飞入城市 → 环绕 CBD → 实时路况 → **随机异常识别** → 派单处置 → 建筑沉降预警 → AI 追问 → 情景推演 → AI 分析 → 异常增多统一监测。附字幕，Esc 可退出 |
 | 🛟 **永不翻车** | 后端不可达时前端自动降级为「离线演示模式」（读取后端导出的真实数据快照），可直接部署到 GitHub Pages 等静态托管 |
 
 ## 📸 界面预览
@@ -48,6 +48,13 @@ docker compose up --build
 ```
 
 浏览器打开 <http://localhost:8000>。
+
+示范区卫星底图已生成在 `frontend/public/basemap/`，默认从本地加载，不再依赖外网。
+如果需要更新底图范围或清晰度，可重新下载并拼接：
+
+```bash
+python scripts/download_satellite_basemap.py
+```
 
 ### 方式二：本地运行
 
@@ -234,4 +241,5 @@ wuhan-zhiyan/
 
 - 建筑、道路、行政区、POI：© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors，ODbL 1.0。缺少高度标签的建筑按占地面积与类别估算高度，并在 `height_source=estimated` 中如实标注。
 - 底图：© Esri（World Dark Gray Canvas / World Imagery）；离线底图为 CesiumJS 自带 Natural Earth II。
+- 本地卫星缓存仅用于当前示范区演示，使用和再分发前请核对 Esri World Imagery 服务条款。
 - 三维引擎：[CesiumJS](https://cesium.com/platform/cesiumjs/)；图表：[Apache ECharts](https://echarts.apache.org/)；UI：[Element Plus](https://element-plus.org/)。

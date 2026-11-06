@@ -21,7 +21,7 @@ import { getBuildings, getFineBuildings, getPois, getRoads } from '@/api/geo'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { useRealtime } from '@/composables/useRealtime'
 import { useSystemInfo } from '@/composables/useSystemInfo'
-import { useDemoTour } from '@/composables/useDemoTour'
+import { useDemoTour, type DemoTourHooks } from '@/composables/useDemoTour'
 import type { CityEvent } from '@/types/event'
 import { EVENT_TYPE_META, SEVERITY_META } from '@/types/event'
 import type { Building, Poi } from '@/types/building'
@@ -62,21 +62,30 @@ const props = withDefaults(
     autoTrack?: boolean
     /** 事件类型过滤 */
     eventTypes?: Partial<EventTypeFilter>
+    /** 演示时只显示指定事件；为空时使用事件类型过滤 */
+    visibleEventIds?: string[]
     /** 是否显示已办结事件（灰显） */
     showResolved?: boolean
     /** 新事件弹出通知 */
     liveAlerts?: boolean
     /** 首次加载入场动画 */
     intro?: boolean
+    /** 城市总览平静基线：显示持续走动的人群与车辆 */
+    ambientCrowd?: boolean
+    /** 一键演示跨页面业务动作 */
+    demoHooks?: DemoTourHooks
   }>(),
   {
     layers: undefined,
     basemap: undefined,
     eventTypes: undefined,
+    visibleEventIds: undefined,
     autoTrack: false,
     showResolved: false,
     liveAlerts: true,
-    intro: true
+    intro: true,
+    ambientCrowd: false,
+    demoHooks: undefined
   }
 )
 
@@ -350,9 +359,7 @@ const api: SceneApi = {
 
 const tour = useDemoTour(
   () => (isReady() ? api : null),
-  async () => {
-    await router.push({ path: '/drill', query: { demo: 'fire', autoplay: '1', speed: '4' } })
-  }
+  props.demoHooks ?? {}
 )
 watch(
   () => tour.state.focus,
@@ -364,9 +371,9 @@ const eventSig = computed(() =>
   events.value.map((e) => `${e.id}|${e.status}|${e.severity}|${e.event_type}|${e.longitude}|${e.latitude}|${e.name}`).join(';')
 )
 
-function alarmBuildingIds(): Set<string> {
+function alarmBuildingIds(source: CityEvent[]): Set<string> {
   const s = new Set<string>()
-  for (const e of events.value) {
+  for (const e of source) {
     if (e.status !== 'resolved' && e.building_id && (e.event_type === 'building' || e.event_type === 'fire')) s.add(e.building_id)
   }
   return s
@@ -374,12 +381,14 @@ function alarmBuildingIds(): Set<string> {
 
 function syncEvents() {
   if (!eventLayer) return
-  eventLayer.sync(events.value, { showResolved: props.showResolved, types: typeFilter, selectedId: selectedEventId.value })
-  buildings?.setAlarms(alarmBuildingIds())
-  fineBuildings?.setAlarms(alarmBuildingIds())
+  const visibleIds = props.visibleEventIds?.length ? new Set(props.visibleEventIds) : null
+  const source = visibleIds ? events.value.filter((event) => visibleIds.has(event.id)) : events.value
+  eventLayer.sync(source, { showResolved: props.showResolved, types: typeFilter, selectedId: selectedEventId.value })
+  buildings?.setAlarms(alarmBuildingIds(source))
+  fineBuildings?.setAlarms(alarmBuildingIds(source))
 }
 
-watch([eventSig, selectedEventId, () => props.showResolved], syncEvents)
+watch([eventSig, selectedEventId, () => props.showResolved, () => props.visibleEventIds?.join('|')], syncEvents)
 watch(typeFilter, syncEvents, { deep: true })
 
 // 选中事件被删除时关闭面板
@@ -710,6 +719,7 @@ async function init() {
   if (rRes.status === 'fulfilled') {
     roads.load(rRes.value)
     crowd?.setRoads(rRes.value)
+    if (props.ambientCrowd) crowd?.startAmbient(420, 120)
   }
   else failed.push('路网')
   if (pRes.status === 'fulfilled') pois.load(pRes.value)
@@ -736,6 +746,7 @@ onMounted(() => {
 
 onActivated(() => {
   active.value = true
+  if (props.ambientCrowd && (crowd?.getStats().total ?? 0) === 0) crowd?.startAmbient(420, 120)
   if (viewer && !viewer.isDestroyed()) {
     viewer.useDefaultRenderLoop = true
     viewer.resize()
@@ -745,7 +756,6 @@ onActivated(() => {
 
 onDeactivated(() => {
   active.value = false
-  tour.stop()
   cam?.stopOrbit()
   if (viewer && !viewer.isDestroyed()) viewer.useDefaultRenderLoop = false
 })

@@ -9,7 +9,7 @@ const cache = new Map<string, HTMLCanvasElement>()
 let emojiOk: boolean | null = null
 
 /** 检测系统是否能渲染彩色 Emoji（部分 Linux 无 Emoji 字体时回退为中文单字） */
-export function emojiSupported(): boolean {
+function emojiSupported(): boolean {
   if (emojiOk !== null) return emojiOk
   try {
     const c = document.createElement('canvas')
@@ -37,7 +37,7 @@ const EVENT_GLYPH: Record<EventType, string> = { fire: '火', traffic: '堵', bu
 const POI_GLYPH: Record<Poi['kind'], string> = { hospital: '医', fire_station: '消', police: '警', school: '学' }
 const POI_EMOJI: Record<Poi['kind'], string> = { hospital: '🏥', fire_station: '🚒', police: '🚓', school: '🏫' }
 
-export const POI_COLOR: Record<Poi['kind'], string> = {
+const POI_COLOR: Record<Poi['kind'], string> = {
   hospital: '#ff6b81',
   fire_station: '#ff8a3d',
   police: '#3fa9ff',

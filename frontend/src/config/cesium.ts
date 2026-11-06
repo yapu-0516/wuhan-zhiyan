@@ -4,10 +4,10 @@
  * - CESIUM_ION_TOKEN：可选。留空即可完全脱离 Cesium Ion 运行；如需 Cesium World Terrain / 高清影像，
  *   到 https://ion.cesium.com/signup 免费注册后通过环境变量 VITE_CESIUM_ION_TOKEN 注入。
  * - BASEMAP：底图方案，可在界面图层面板中实时切换：
- *     satellite Esri World Imagery 卫星影像（默认；压成冷灰城市底稿，无需 Token）
+ *     satellite 本地示范区的 Esri World Imagery 单幅缓存（默认；缺失时回退在线瓦片）
  *     dark      Esri World Dark Gray Canvas 暗色底图（低照度备选，含中文路名，无需 Token）
  *     offline   Cesium 自带 NaturalEarthII（完全离线可用）
- *   在线底图加载失败时自动回退 offline。
+ *   本地卫星图加载失败时先尝试在线服务，在线底图仍失败时自动回退 offline。
  */
 export const CESIUM_ION_TOKEN: string = import.meta.env.VITE_CESIUM_ION_TOKEN || ''
 
@@ -15,7 +15,29 @@ export type BasemapKey = 'dark' | 'satellite' | 'offline'
 
 export const DEFAULT_BASEMAP: BasemapKey = (import.meta.env.VITE_BASEMAP as BasemapKey) || 'satellite'
 
-export const BASEMAPS: Record<BasemapKey, { label: string; url?: string; subdomains?: string[]; credit?: string; maxLevel?: number }> = {
+/** 示范区默认视角（后端 /api/system/info 的 region.center 会覆盖） */
+export const DEFAULT_REGION = {
+  name: '汉口沿江示范区',
+  center: [114.2955, 30.5895] as [number, number],
+  bbox: [114.27, 30.57, 114.312, 30.612] as [number, number, number, number]
+}
+
+export interface BasemapConfig {
+  label: string
+  url?: string
+  subdomains?: string[]
+  credit?: string
+  maxLevel?: number
+  /** 打包在 public 下的单幅本地影像 */
+  localUrl?: string
+  /** 单幅影像对应的经纬度范围 west,south,east,north */
+  localRectangle?: [number, number, number, number]
+  /** 单幅影像的像素尺寸，Cesium 创建纹理时必需 */
+  localWidth?: number
+  localHeight?: number
+}
+
+export const BASEMAPS: Record<BasemapKey, BasemapConfig> = {
   dark: {
     label: '暗色底图',
     // 注：CARTO dark_all 自 2025 年起需 API Key，未授权时返回水印瓦片，故改用 Esri 免 Token 暗色画布
@@ -26,15 +48,12 @@ export const BASEMAPS: Record<BasemapKey, { label: string; url?: string; subdoma
   satellite: {
     label: '卫星影像',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    localUrl: `${import.meta.env.BASE_URL}basemap/wuhan-satellite-z17.jpg`,
+    localRectangle: DEFAULT_REGION.bbox,
+    localWidth: 3915,
+    localHeight: 4547,
     credit: 'Esri, Maxar, Earthstar Geographics',
     maxLevel: 19
   },
   offline: { label: '离线底图' }
-}
-
-/** 示范区默认视角（后端 /api/system/info 的 region.center 会覆盖） */
-export const DEFAULT_REGION = {
-  name: '汉口沿江示范区',
-  center: [114.2955, 30.5895] as [number, number],
-  bbox: [114.27, 30.57, 114.312, 30.612] as [number, number, number, number]
 }

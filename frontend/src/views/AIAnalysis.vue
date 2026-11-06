@@ -8,7 +8,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
 import { Sunny, Van, OfficeBuilding, Umbrella, Connection } from '@element-plus/icons-vue'
 import { getSystemInfo } from '@/api/system'
-import { createTask, getTask, getTasks, uploadTask } from '@/api/task'
+import { createTask, getSamples, getTask, getTasks, uploadTask } from '@/api/task'
 import { apiState } from '@/api/http'
 import { useRealtime } from '@/composables/useRealtime'
 import { useTaskRunner } from '@/composables/pages/useTaskRunner'
@@ -146,6 +146,26 @@ async function submit(p: SubmitPayload) {
   }
 }
 
+async function runDemoAnalysis() {
+  try {
+    const samples = await getSamples(selectedType.value)
+    const sample =
+      samples.find((item) => !/(无火情|正常|未发现|误报)/.test(`${item.name}${item.description}`)) ??
+      samples[0]
+    if (!sample) return
+    await submit({
+      type: selectedType.value,
+      sampleId: sample.id,
+      files: [],
+      longitude: sample.longitude ?? center.value[0],
+      latitude: sample.latitude ?? center.value[1],
+      createEvent: true
+    })
+  } catch (e) {
+    ElMessage.warning(errMsg(e, '自动演示分析任务提交失败'))
+  }
+}
+
 const status = computed(() => current.value?.status)
 
 // 切换分析类型（路由参数变化）：清空上一个类型的结果，只保留本类型任务
@@ -180,6 +200,7 @@ onMounted(async () => {
       ElMessage.warning(errMsg(e, `任务 ${id} 不存在`))
     }
   }
+  if (route.query.demo === '1') void runDemoAnalysis()
 })
 </script>
 

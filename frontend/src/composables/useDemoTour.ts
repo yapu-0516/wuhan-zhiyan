@@ -1,14 +1,16 @@
 /**
- * 一键演示（导览）：脚本化的 7 步镜头 + 字幕，适合 5 分钟现场演示。
+ * 一键演示（导览）：脚本化的 10 步城市运行故事线，适合现场演示。
  *
  *  1 城市全域感知   太空俯冲切入示范区
  *  2 数字孪生底座   环绕 CBD 高层建筑群
  *  3 实时路网态势   聚焦最拥堵路段，高亮拥堵流光
- *  4 AI 火情识别    在线：调用 POST /api/demo/scenario 跑真实算法流水线，等待 WS event.created 后飞往新事件；
- *                   离线/失败：自动选择已有最高等级火情事件
+ *  4 随机异常发现   在线随机选择四类风险之一，真实运行算法并等待 WS event.created
  *  5 一键派单处置   在事件详情中打开派单表单并提交（状态机合法时）
  *  6 建筑沉降预警   飞往沉降预警建筑并展示监测曲线
- *  7 联动疏散推演   进入火灾演练页并自动启动演示倍速下的疏散
+ *  7 向 AI 追问      围绕当前事件打开治理助手并自动提问
+ *  8 虚拟情景推演   用一句话生成常规 / 不利 / 干预三套结果并联动三维场景
+ *  9 AI 数据分析    进入对应风险分析页，自动运行示例数据上的真实算法
+ * 10 异常增多监测   返回总览，连续触发多种风险并由指挥中心统一发现
  *
  * 可随时按 Esc 或点击"退出演示"取消；所有等待均可中断。
  */
@@ -19,16 +21,28 @@ import { apiState } from '@/api/http'
 import { useCityEvents } from './useCityEvents'
 import type { SceneApi, TourFocus, TourState } from '@/components/scene/types'
 import type { CityEvent } from '@/types/event'
-import { SEVERITY_META, STATUS_TRANSITIONS } from '@/types/event'
+import { EVENT_TYPE_META, SEVERITY_META, STATUS_TRANSITIONS } from '@/types/event'
 import { RISK_LEVEL_META, TRAFFIC_LEVEL_META } from '@/types/building'
 
 class TourCancelled extends Error {}
 
-const TOTAL = 7
+const TOTAL = 10
+
+export interface DemoTourContext {
+  event: CityEvent | null
+}
+
+export interface DemoTourHooks {
+  onAnomaly?: (event: CityEvent) => void
+  askAssistant?: (context: DemoTourContext) => Promise<void>
+  runScenario?: (context: DemoTourContext) => Promise<void>
+  runAnalysis?: (context: DemoTourContext) => Promise<void>
+  showAnomalySurge?: (context: DemoTourContext) => Promise<void>
+}
 
 export function useDemoTour(
   getApi: () => SceneApi | null,
-  enterEmergencyDrill?: () => Promise<void>
+  hooks: DemoTourHooks = {}
 ) {
   const state = reactive<TourState>({ running: false, index: 0, total: TOTAL, title: '', caption: '', focus: null })
   const { lastCreated, events, getEventById, upsert } = useCityEvents()
@@ -66,12 +80,25 @@ export function useDemoTour(
     state.focus = focus
   }
 
-  function pickFireEvent(): CityEvent | null {
-    const list = events.value.filter((e) => e.event_type === 'fire')
+  function pickActiveEvent(): CityEvent | null {
     const score = (e: CityEvent) => (e.status === 'resolved' ? 0 : 10) + (SEVERITY_META[e.severity]?.rank ?? 0)
+    const list = events.value.filter((e) => e.status !== 'resolved')
     const sorted = [...list].sort((a, b) => score(b) - score(a) || b.timestamp.localeCompare(a.timestamp))
-    if (sorted[0]) return sorted[0]
-    return events.value.find((e) => e.status !== 'resolved') ?? null
+    return sorted[0] ?? null
+  }
+
+  async function runHook(
+    hook: ((context: DemoTourContext) => Promise<void>) | undefined,
+    context: DemoTourContext,
+    fallbackMs: number,
+    timeoutMs: number,
+    id: number
+  ) {
+    if (!hook) {
+      await sleep(fallbackMs, id)
+      return
+    }
+    await Promise.race([hook(context), sleep(timeoutMs, id)])
   }
 
   async function run(api: SceneApi, id: number) {
@@ -116,18 +143,18 @@ export function useDemoTour(
     await sleep(6500, id)
     api.highlightCongestion(false)
 
-    // 4 AI 火情识别
+    // 4 随机异常发现
     let target: CityEvent | null = null
     if (apiState.mode === 'live') {
-      step(4, 'AI 火情识别', '正在调用 FlameNet-Lite 火情识别算法，分析无人机巡检影像…', 'feed')
+      step(4, '随机异常发现', '巡检系统随机抽取一类城市风险，正在运行对应算法并核验异常…', 'feed')
       const before = lastCreated.value
       try {
-        const res = await triggerScenario('fire')
+        const res = await triggerScenario('random')
         guard(id)
         target = await waitFor(
           () => {
             const e = lastCreated.value
-            if (e && e !== before && e.event_type === 'fire') return e
+            if (e && e !== before) return e
             return res.event_id ? getEventById(res.event_id) : null
           },
           6000,
@@ -143,15 +170,16 @@ export function useDemoTour(
         }
       } catch (e) {
         if (e instanceof TourCancelled) throw e
-        console.warn('[tour] 触发演示场景失败，改用已有火情事件', e)
+        console.warn('[tour] 触发随机演示场景失败，改用已有活动事件', e)
       }
     }
-    if (!target) target = pickFireEvent()
+    if (!target) target = pickActiveEvent()
     if (target) {
+      hooks.onAnomaly?.(target)
       step(
         4,
-        'AI 火情识别',
-        `识别到「${target.name}」，置信度 ${Math.round((target.confidence ?? 0) * 100)}%，${SEVERITY_META[target.severity]?.label ?? ''}，已自动生成事件并推送指挥中心。`,
+        `随机异常 · ${EVENT_TYPE_META[target.event_type]?.label ?? '城市风险'}`,
+        `算法识别到「${target.name}」，置信度 ${Math.round((target.confidence ?? 0) * 100)}%，${SEVERITY_META[target.severity]?.label ?? ''}，已自动生成事件并推送指挥中心。`,
         'feed'
       )
       await api.flyToEvent(target.id, { open: true, range: 650, pitch: -33, duration: 2.6 })
@@ -182,7 +210,7 @@ export function useDemoTour(
       }
       await sleep(5000, id)
     } else {
-      step(4, 'AI 火情识别', '当前暂无火情事件，系统持续监测中。', 'feed')
+      step(4, '随机异常发现', '当前巡检未检出异常，系统继续保持监测。', 'feed')
       await sleep(3000, id)
     }
 
@@ -203,22 +231,51 @@ export function useDemoTour(
       await sleep(2500, id)
     }
 
-    // 7 联动疏散推演
-    api.closePanels()
-    if (enterEmergencyDrill) {
-      step(
-        7,
-        '联动疏散推演',
-        '进入应急演练：烟气风险扩大后，系统沿临时道路图重新计算安全出口、通行路径和出口排队。',
-        'safety'
-      )
-      await sleep(2500, id)
-      await enterEmergencyDrill()
-      return
+    // 7 向 AI 追问
+    if (target) {
+      await api.flyToEvent(target.id, { open: true, range: 900, pitch: -34, duration: 2.2 })
+    } else {
+      const [assistantLon, assistantLat] = api.denseCenter()
+      await api.flyTo(assistantLon, assistantLat, { range: 1350, pitch: -34, duration: 2.2 })
     }
-    step(7, '感知 · 分析 · 决策 · 处置', '城市智眼：多源感知接入、AI 智能识别、三维态势研判、事件闭环处置。', 'safety')
-    await api.flyHome(3)
-    await sleep(3500, id)
+    step(
+      7,
+      '向 AI 追问',
+      target
+        ? `围绕「${target.name}」向城市治理助手询问未知信息和处置关注点，回答只使用已知事件与周边数据。`
+        : '向城市治理助手询问当前城市风险与所需信息。',
+      'feed'
+    )
+    await runHook(hooks.askAssistant, { event: target }, 5000, 45000, id)
+
+    // 8 虚拟情景推演
+    step(
+      8,
+      '虚拟情景推演',
+      '输入一句话生成三套可能结果：常规响应、不利演化、提前干预，并同步到三维风险区域和人群动画。',
+      'safety'
+    )
+    await runHook(hooks.runScenario, { event: target }, 5000, 60000, id)
+
+    // 9 AI 数据分析
+    step(
+      9,
+      'AI 数据分析',
+      '进入对应风险分析页，用示例影像或时序数据运行真实算法，展示检测框、指标和趋势曲线。',
+      'types'
+    )
+    await runHook(hooks.runAnalysis, { event: target }, 5000, 30000, id)
+
+    // 10 异常增多监测
+    step(
+      10,
+      '异常增多 · 统一监测',
+      '假设多个风险同时出现，指挥中心汇聚新增事件、优先级和处置状态，形成一张完整的城市运行监测图。',
+      'kpi'
+    )
+    await runHook(hooks.showAnomalySurge, { event: target }, 5000, 35000, id)
+    await api.flyHome(2.2)
+    await sleep(4200, id)
   }
 
   function onKey(e: KeyboardEvent) {

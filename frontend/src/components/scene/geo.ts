@@ -6,7 +6,7 @@ const RAD = Math.PI / 180
 export type LonLat = [number, number]
 
 /** 两点球面距离（米） */
-export function distance(a: LonLat, b: LonLat): number {
+function distance(a: LonLat, b: LonLat): number {
   const dLat = (b[1] - a[1]) * RAD
   const dLon = (b[0] - a[0]) * RAD
   const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * RAD) * Math.cos(b[1] * RAD) * Math.sin(dLon / 2) ** 2
@@ -42,7 +42,7 @@ export function cleanRing(ring: unknown, minAreaM2 = 1): LonLat[] | null {
 }
 
 /** 环面积（平方米，局部平面近似） */
-export function ringAreaM2(ring: LonLat[]): number {
+function ringAreaM2(ring: LonLat[]): number {
   if (ring.length < 3) return 0
   const lat0 = ring[0][1] * RAD
   const kx = EARTH_R * Math.cos(lat0) * RAD
@@ -57,7 +57,7 @@ export function ringAreaM2(ring: LonLat[]): number {
 }
 
 /** 折线总长（米） */
-export function lineLength(points: LonLat[]): number {
+function lineLength(points: LonLat[]): number {
   let len = 0
   for (let i = 1; i < points.length; i++) len += distance(points[i - 1], points[i])
   return len

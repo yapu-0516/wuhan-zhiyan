@@ -20,7 +20,7 @@ export function triggerScenario(
   return request('/demo/scenario', jsonBody({ scenario }))
 }
 
-/** 重置演示数据 POST /api/demo/reset */
+/** 恢复固定演示数据，清除人工上报、历史任务和上次演示产生的事件。 */
 export function resetDemo(): Promise<{ ok: boolean }> {
   return request('/demo/reset', { method: 'POST' })
 }

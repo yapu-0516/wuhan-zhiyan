@@ -2,7 +2,7 @@
 export const DATA_TYPES = ['遥感影像', '无人机影像', '视频流', '三维模型', '传感器数据', '矢量数据'] as const
 export const DATA_STATUSES = ['已入库', '处理中', '采集中', '待接入'] as const
 
-export const DATA_TYPE_META: Record<string, { icon: string; color: string }> = {
+const DATA_TYPE_META: Record<string, { icon: string; color: string }> = {
   遥感影像: { icon: '🛰️', color: '#4fc3f7' },
   无人机影像: { icon: '🚁', color: '#5eead4' },
   视频流: { icon: '📹', color: '#ff8a65' },
@@ -11,7 +11,7 @@ export const DATA_TYPE_META: Record<string, { icon: string; color: string }> = {
   矢量数据: { icon: '🗺️', color: '#f0c050' }
 }
 
-export const DATA_STATUS_META: Record<string, { color: string; pulse?: boolean }> = {
+const DATA_STATUS_META: Record<string, { color: string; pulse?: boolean }> = {
   已入库: { color: '#4dd984' },
   处理中: { color: '#f0c050' },
   采集中: { color: '#4fc3f7', pulse: true },

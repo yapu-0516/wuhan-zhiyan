@@ -2,13 +2,30 @@
 // 底部城市状态栏：事件统计（含内涝）、待处置数、实时通道状态、数据模式、最近更新时间
 import { computed } from 'vue'
 import { useCityEvents } from '@/composables/useCityEvents'
+import { useDemoBaseline } from '@/composables/useDemoBaseline'
 import { useRealtime } from '@/composables/useRealtime'
 import { apiState } from '@/api/http'
 import { EVENT_TYPES, EVENT_TYPE_META } from '@/types/event'
 import { isToday, shortTime } from '@/utils/format'
 
 const { stats, events, revision } = useCityEvents()
+const { calm, demoEventIds } = useDemoBaseline()
 const { connected, lastMessageAt } = useRealtime()
+const displayStats = computed(() => {
+  if (calm.value) {
+    return {
+      total: 0,
+      active: 0,
+      byType: { fire: 0, traffic: 0, building: 0, flood: 0 }
+    }
+  }
+  if (!demoEventIds.value.length) return stats.value
+  const ids = new Set(demoEventIds.value)
+  const shown = events.value.filter((event) => ids.has(event.id))
+  const byType = { fire: 0, traffic: 0, building: 0, flood: 0 }
+  for (const event of shown) byType[event.event_type]++
+  return { total: shown.length, active: shown.filter((event) => event.status !== 'resolved').length, byType }
+})
 
 const MODE_LABEL = { live: '实时数据', offline: '离线快照', mock: '演示数据' } as const
 
@@ -32,18 +49,18 @@ const lastUpdate = computed(() => {
   <footer class="status-panel">
     <div class="sp-total">
       <span class="sp-label">监测事件</span>
-      <span class="sp-value ce-num">{{ stats.total }}</span>
+      <span class="sp-value ce-num">{{ displayStats.total }}</span>
     </div>
     <div class="sp-active">
       <span class="sp-label">待处置</span>
-      <span class="sp-value sp-value--warn ce-num">{{ stats.active }}</span>
+      <span class="sp-value sp-value--warn ce-num">{{ displayStats.active }}</span>
     </div>
     <span class="sp-divider" />
     <div class="sp-types">
       <span v-for="t in EVENT_TYPES" :key="t" class="sp-type">
         <i class="sp-type-dot" :style="{ background: EVENT_TYPE_META[t].color }" />
         <span class="sp-name">{{ EVENT_TYPE_META[t].label }}</span>
-        <span class="sp-count ce-num" :style="{ color: EVENT_TYPE_META[t].color }">{{ stats.byType[t] ?? 0 }}</span>
+        <span class="sp-count ce-num" :style="{ color: EVENT_TYPE_META[t].color }">{{ displayStats.byType[t] ?? 0 }}</span>
       </span>
     </div>
     <span class="sp-spacer" />

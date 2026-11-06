@@ -58,11 +58,11 @@ const router = createRouter({
   routes
 })
 
-const APP_TITLE = '城市智眼 CityEye'
+const APP_TITLE = '城市智眼城市智能监测与辅助治理平台软件 V1.0'
 
-router.afterEach((to) => {
-  const t = typeof to.meta?.title === 'string' ? to.meta.title : ''
-  document.title = t ? `${t} · ${APP_TITLE}` : APP_TITLE
+router.afterEach(() => {
+  // 软著截图和注册名称保持一致，不在浏览器标题中拼接简称或页面前缀。
+  document.title = APP_TITLE
 })
 
 export default router

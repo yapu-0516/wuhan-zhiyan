@@ -15,7 +15,7 @@ interface ImportMetaEnv {
   readonly VITE_WS_URL?: string
   /** Cesium Ion Token（可选） */
   readonly VITE_CESIUM_ION_TOKEN?: string
-  /** 底图：dark（默认，Esri 暗色画布）| satellite（Esri 影像）| offline（Cesium 自带 NaturalEarthII） */
+  /** 底图：dark（Esri 暗色画布）| satellite（本地卫星单图，缺失时在线）| offline（NaturalEarthII） */
   readonly VITE_BASEMAP?: string
 }
 

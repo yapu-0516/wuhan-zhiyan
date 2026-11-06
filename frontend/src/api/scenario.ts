@@ -2,7 +2,6 @@ import { ApiError, jsonBody, request } from './http'
 import type {
   ScenarioComparison,
   ScenarioReport,
-  ScenarioRun,
   ScenarioSessionView,
   ScenarioVariantsResult
 } from '@/types/scenario'
@@ -35,16 +34,8 @@ export function sendScenarioMessage(sessionId: string, message: string): Promise
   })
 }
 
-export function runCurrentScenario(sessionId: string): Promise<ScenarioRun> {
-  return scenarioRequest(`/scenario/sessions/${encodeURIComponent(sessionId)}/runs`, {})
-}
-
 export function runCurrentScenarioVariants(sessionId: string): Promise<ScenarioVariantsResult> {
   return scenarioRequest(`/scenario/sessions/${encodeURIComponent(sessionId)}/runs/variants`, {})
-}
-
-export function getScenarioRun(runId: string): Promise<ScenarioRun> {
-  return scenarioRequest(`/scenario/runs/${encodeURIComponent(runId)}`)
 }
 
 export function compareScenarioRuns(

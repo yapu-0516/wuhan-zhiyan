@@ -1,13 +1,21 @@
 <script setup lang="ts">
 // 左侧导航：主页面与 AI 分析入口；桌面保留文字，平板收为图标栏，手机转为底部导航。
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Location, Monitor, FirstAidKit, Warning, Files, Sunny, Van, OfficeBuilding, Umbrella, Fold, Expand, Menu, Close } from '@element-plus/icons-vue'
 import { useCityEvents } from '@/composables/useCityEvents'
+import { useDemoBaseline } from '@/composables/useDemoBaseline'
 import { useLayout } from '@/composables/useLayout'
 
 const route = useRoute()
-const { stats } = useCityEvents()
+const { stats, events } = useCityEvents()
+const { calm, demoEventIds } = useDemoBaseline()
+const displayActive = computed(() => {
+  if (calm.value) return 0
+  if (!demoEventIds.value.length) return stats.value.active
+  const ids = new Set(demoEventIds.value)
+  return events.value.filter((event) => ids.has(event.id) && event.status !== 'resolved').length
+})
 const { sidebarCollapsed, toggleSidebar } = useLayout()
 const mobileMoreOpen = ref(false)
 
@@ -50,7 +58,7 @@ watch(
         <span class="nav-text">
           <span class="nav-label">{{ item.label }}</span>
         </span>
-        <span v-if="item.badge && stats.active > 0" class="nav-badge ce-num">{{ stats.active > 99 ? '99+' : stats.active }}</span>
+        <span v-if="item.badge && displayActive > 0" class="nav-badge ce-num">{{ displayActive > 99 ? '99+' : displayActive }}</span>
       </RouterLink>
 
       <div class="nav-group-label" title="AI 分析">

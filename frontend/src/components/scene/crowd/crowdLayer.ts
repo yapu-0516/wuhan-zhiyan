@@ -238,6 +238,7 @@ export class CrowdLayer {
   private disposed = false
   private sampleFrames = 0
   private sampleMs = 0
+  private ambientMode = false
 
   constructor(
     private readonly host: HTMLElement,
@@ -481,6 +482,13 @@ export class CrowdLayer {
     this.updateEvacuationMetrics(dt)
     const neighborCounts = this.buildNeighborCounts()
     for (const person of this.people.values()) {
+      if (
+        this.ambientMode &&
+        (person.state === 'idle' || person.state === 'walking') &&
+        person.pathIndex >= person.path.length
+      ) {
+        this.assignAmbientTarget(person)
+      }
       if (person.state === 'reacting') {
         person.reactionRemaining = Math.max(0, person.reactionRemaining - dt)
         if (person.reactionRemaining > 0) continue
@@ -496,7 +504,9 @@ export class CrowdLayer {
         if (distance < 0.8) {
           person.pathIndex++
           if (person.pathIndex >= person.path.length) {
-            if (person.state === 'evacuating' && person.exitNodeId !== null) {
+            if (this.ambientMode && (person.state === 'walking' || person.state === 'idle')) {
+              this.assignAmbientTarget(person)
+            } else if (person.state === 'evacuating' && person.exitNodeId !== null) {
               person.state = 'waiting'
               const queue = this.exitQueues.get(person.exitNodeId)
               if (queue) queue.push(person.id)
@@ -971,6 +981,21 @@ export class CrowdLayer {
     return added
   }
 
+  /** 城市总览的平静基线：居民和游客沿道路持续走动，车辆正常通行。 */
+  startAmbient(count = 420, vehicles = 120): { people: number; vehicles: number } {
+    this.clear()
+    const residents = Math.round(count * 0.68)
+    const people = this.spawn(residents, 'resident') + this.spawn(count - residents, 'tourist')
+    for (const person of this.people.values()) {
+      person.scale = 1.8
+      this.assignAmbientTarget(person)
+    }
+    this.syncInstances()
+    const vehicleCount = this.spawnVehicles(vehicles)
+    this.ambientMode = true
+    return { people, vehicles: vehicleCount }
+  }
+
   setVehicleIncident(lon: number, lat: number, radiusM: number, autoDetour = true): void {
     const center = this.lonLatToLocal(lon, lat, 0)
     this.vehicleIncident = { x: center.x, z: center.z, radius: radiusM }
@@ -1105,6 +1130,7 @@ export class CrowdLayer {
   }
 
   clear(): void {
+    this.ambientMode = false
     this.people.clear()
     for (const type of TYPE_ORDER) this.members[type] = []
     this.vehicles.splice(0)
@@ -1379,6 +1405,43 @@ export class CrowdLayer {
     const dz = pz - dangerZ
     const length = Math.max(1, Math.hypot(dx, dz))
     return [new THREE.Vector2(dangerX + (dx / length) * (radiusM + 250), dangerZ + (dz / length) * (radiusM + 250))]
+  }
+
+  private assignAmbientTarget(person: CrowdPerson): void {
+    if (!this.roadPaths.length) return
+    let bestPath: RoadPath | null = null
+    let bestDistance = Number.POSITIVE_INFINITY
+    let bestDistanceAlong = 0
+    for (const path of this.roadPaths) {
+      for (let i = 1; i < path.points.length; i++) {
+        const from = path.points[i - 1]
+        const to = path.points[i]
+        const dx = to.x - from.x
+        const dz = to.y - from.y
+        const lengthSq = dx * dx + dz * dz
+        if (lengthSq < 1e-6) continue
+        const t = Math.max(0, Math.min(1, ((person.x - from.x) * dx + (person.z - from.y) * dz) / lengthSq))
+        const nearestX = from.x + dx * t
+        const nearestZ = from.y + dz * t
+        const distance = Math.hypot(person.x - nearestX, person.z - nearestZ)
+        if (distance < bestDistance) {
+          bestDistance = distance
+          bestPath = path
+          bestDistanceAlong = path.cumulative[i - 1] + Math.sqrt(lengthSq) * t
+        }
+      }
+    }
+    if (!bestPath) return
+    const total = bestPath.cumulative[bestPath.cumulative.length - 1]
+    const stride = 24 + Math.random() * 78
+    const direction = Math.random() < 0.5 ? -1 : 1
+    const target = this.roadPointAt(
+      bestPath,
+      Math.max(0, Math.min(total, bestDistanceAlong + direction * stride))
+    )
+    person.path = [new THREE.Vector2(target.x, target.y)]
+    person.pathIndex = 0
+    person.state = 'walking'
   }
 
   private makeLine(points: THREE.Vector2[], color: string, opacity: number): THREE.Line {

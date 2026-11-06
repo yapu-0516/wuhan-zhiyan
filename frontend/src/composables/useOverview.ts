@@ -23,7 +23,7 @@ function defaultIndex(active: number, critical: number): Overview['city_index'] 
   }
 }
 
-export function deriveOverview(events: CityEvent[], base?: Overview | null): Overview {
+function deriveOverview(events: CityEvent[], base?: Overview | null): Overview {
   const byType = Object.fromEntries(EVENT_TYPES.map((t) => [t, 0])) as Record<EventType, number>
   const byStatus: Record<EventStatus, number> = { pending: 0, monitoring: 0, processing: 0, resolved: 0 }
   const bySeverity: Record<Severity, number> = { low: 0, medium: 0, high: 0, critical: 0 }

@@ -25,7 +25,7 @@ const WATCH_COLOR = Cesium.Color.fromCssColorString('#c59455')
 const WARNING_COLOR = Cesium.Color.fromCssColorString('#bd5f5d')
 const BASE_ALPHA = 1
 
-export function buildingColor(b: Pick<Building, 'height' | 'risk_level' | 'monitored'>, result = new Cesium.Color()): Cesium.Color {
+function buildingColor(b: Pick<Building, 'height' | 'risk_level' | 'monitored'>, result = new Cesium.Color()): Cesium.Color {
   const t = clamp((b.height - 6) / 140, 0, 1)
   let i = 0
   while (i < HEIGHT_STOPS.length - 2 && t > HEIGHT_STOPS[i + 1][0]) i++

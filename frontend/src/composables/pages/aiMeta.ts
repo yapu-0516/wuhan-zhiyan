@@ -21,7 +21,7 @@ export interface AnalysisTypeMeta {
 
 const IMG = '.jpg,.jpeg,.png'
 
-export const ANALYSIS_TYPES: AnalysisTypeMeta[] = [
+const ANALYSIS_TYPES: AnalysisTypeMeta[] = [
   {
     key: 'fire',
     label: '火灾识别',
@@ -96,7 +96,7 @@ export function validateFiles(type: EventType, names: string[]): string | null {
   return imgs <= 4 ? null : '最多上传 4 张影像'
 }
 
-export const TASK_STATUS_META: Record<TaskStatus, { label: string; color: string; pulse?: boolean }> = {
+const TASK_STATUS_META: Record<TaskStatus, { label: string; color: string; pulse?: boolean }> = {
   prototype: { label: '原型', color: '#8aa3c4' },
   pending: { label: '排队中', color: '#f0c050', pulse: true },
   running: { label: '分析中', color: '#4fc3f7', pulse: true },

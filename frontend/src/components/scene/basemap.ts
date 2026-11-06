@@ -1,7 +1,7 @@
-// 底图控制：暗色（Esri Dark Gray）/ 卫星（Esri）/ 离线（Cesium 自带 NaturalEarthII），运行时切换；
-// 在线瓦片连续加载失败（或探测瓦片超时）时自动回退离线底图，并通过回调通知界面。
+// 底图控制：暗色（Esri Dark Gray）/ 卫星（本地单幅缓存→在线 Esri）/ 离线（Cesium
+// 自带 NaturalEarthII），运行时切换；各级失败都会自动降级，并通过回调通知界面。
 import * as Cesium from 'cesium'
-import { BASEMAPS, type BasemapKey } from '@/config/cesium'
+import { BASEMAPS, type BasemapConfig, type BasemapKey } from '@/config/cesium'
 
 /** 各底图的色彩调校：让底图退居背景，突出三维对象与 HUD */
 const STYLE: Record<BasemapKey, Partial<Pick<Cesium.ImageryLayer, 'alpha' | 'brightness' | 'contrast' | 'saturation' | 'gamma' | 'hue'>>> = {
@@ -43,6 +43,56 @@ export class BasemapController {
       Object.assign(layer, style)
       this.viewer.imageryLayers.add(layer, 0)
       this.layer = layer
+      return
+    }
+    // 示范区卫星影像打包为单幅本地图片，避免公网瓦片逐张加载时的超时与断网问题。
+    if (key === 'satellite' && cfg.localUrl && cfg.localRectangle && cfg.localWidth && cfg.localHeight) {
+      this.addLocalSatellite(cfg, style, token, key)
+      return
+    }
+    this.addRemote(key, cfg, style, token)
+  }
+
+  private addLocalSatellite(
+    cfg: BasemapConfig,
+    style: Partial<Pick<Cesium.ImageryLayer, 'alpha' | 'brightness' | 'contrast' | 'saturation' | 'gamma' | 'hue'>>,
+    token: number,
+    key: BasemapKey
+  ) {
+    if (!cfg.localUrl || !cfg.localRectangle || !cfg.localWidth || !cfg.localHeight) return
+    const [west, south, east, north] = cfg.localRectangle
+    const provider = new Cesium.SingleTileImageryProvider({
+      url: cfg.localUrl,
+      rectangle: Cesium.Rectangle.fromDegrees(west, south, east, north),
+      tileWidth: cfg.localWidth,
+      tileHeight: cfg.localHeight,
+      credit: cfg.credit ? new Cesium.Credit(cfg.credit) : undefined
+    })
+    const layer = new Cesium.ImageryLayer(provider, {})
+    Object.assign(layer, style)
+    this.viewer.imageryLayers.add(layer, 0)
+    this.layer = layer
+    let failed = false
+    this.removeError = provider.errorEvent.addEventListener(() => {
+      if (failed || token !== this.token) return
+      failed = true
+      console.warn('[basemap] 本地卫星底图加载失败，尝试在线影像', cfg.localUrl)
+      this.removeError?.()
+      this.removeError = null
+      if (!this.viewer.isDestroyed()) this.viewer.imageryLayers.remove(layer, true)
+      if (this.layer === layer) this.layer = null
+      this.addRemote(key, cfg, style, token)
+    })
+  }
+
+  private addRemote(
+    key: BasemapKey,
+    cfg: BasemapConfig,
+    style: Partial<Pick<Cesium.ImageryLayer, 'alpha' | 'brightness' | 'contrast' | 'saturation' | 'gamma' | 'hue'>>,
+    token: number
+  ) {
+    if (!cfg.url) {
+      this.fallback(key)
       return
     }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
