@@ -11,7 +11,7 @@
 ![Cesium](https://img.shields.io/badge/CesiumJS-1.125-6caddf?logo=cesium&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.11x-009688?logo=fastapi&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776ab?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-150%20passed-4dd984)
+![Tests](https://img.shields.io/badge/tests-passing-4dd984)
 ![Data](https://img.shields.io/badge/城市底座-OpenStreetMap-7ebc6f?logo=openstreetmap&logoColor=white)
 
 <img src="docs/images/dashboard.jpg" alt="城市总览 · 三维数字孪生指挥大屏" width="100%" />
@@ -28,7 +28,7 @@
 | 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 自研着色器，以精细建筑、中性体块、窗格和檐口轮廓呈现真实城市；卫星底图打包为本地单幅缓存，断网也可加载。GPU 不支持时自动降级 |
 | 🧠 **7 个真实可运行的算法** | 火灾识别、交通指数与短临预测、航拍车辆占有率、建筑沉降趋势、前后时相变化检测、积水水位研判、积水影像分割 —— 纯 NumPy 实现，**事件只由算法实际检出产生，绝不伪造** |
 | ⚡ **实时闭环** | WebSocket 推送事件/路况/任务进度；事件状态机（待核查→监测中→处置中→已办结）后端校验；派单、办结、处置时间线多终端同步 |
-| 🎬 **一键演示** | 10 步城市运行故事线：平静城市与流动人群 → 飞入城市 → 环绕 CBD → 实时路况 → **随机异常识别** → 派单处置 → 建筑沉降预警 → AI 追问 → 情景推演 → AI 分析 → 异常增多统一监测。附字幕，Esc 可退出 |
+| 🎬 **一键演示** | 打开页面先进入无异常、人群持续流动的平静基线；点击后自动恢复演示数据并执行 10 步故事线：城市感知 → 数字孪生 → 实时路况 → **随机异常识别** → 派单处置 → 沉降预警 → AI 追问 → 情景推演 → AI 分析 → 异常增多统一监测。附字幕，Esc 可退出 |
 | 🛟 **永不翻车** | 后端不可达时前端自动降级为「离线演示模式」（读取后端导出的真实数据快照），可直接部署到 GitHub Pages 等静态托管 |
 
 ## 📸 界面预览
@@ -78,6 +78,9 @@ Windows 路演可直接双击项目根目录的 `start-demo.cmd`。脚本会检�
 .\start-demo.ps1 -Rebuild
 ```
 
+首页默认进入平静基线。每次点击“一键演示”前会恢复固定种子数据，清除人工上报、
+历史分析任务和上一轮演示产生的数据，适合连续路演。
+
 <details>
 <summary>不使用 make</summary>
 
@@ -117,6 +120,22 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 [docs/scenario-simulation.md](docs/scenario-simulation.md)。
 界面层级、色彩、响应式导航与视觉验收记录见
 [docs/interface-design.md](docs/interface-design.md)。
+
+## 🕸️ 代码图谱
+
+项目已使用 Graphify 生成持久化代码知识图谱，覆盖前端、后端、大模型、情景引擎、算法和数据处理代码：
+
+- 3091 个节点、7202 条关系边、131 个社区
+- [交互式代码图](graphify-out/graph.html)
+- [调用流程与架构图](graphify-out/CALLFLOW.html)
+- [图谱审计报告](graphify-out/GRAPH_REPORT.md)
+- [GraphRAG JSON](graphify-out/graph.json)
+
+代码更新后可增量重建，不需要调用大模型：
+
+```bash
+graphify update .
+```
 
 ## 🏗️ 系统架构
 
@@ -198,9 +217,12 @@ flowchart LR
 make test
 # algorithm/tests  53 passed   —— 每个算法的正例/反例/边界
 # backend + llm_module + scenario_engine  68 passed —— REST、任务、LLM、情景推演
-cd frontend && npm run lint    # ESLint（Vue + TypeScript）
-cd frontend && npm run test    # Vitest：格式化工具、请求超时/重试
-cd frontend && npm run build   # vue-tsc 严格类型检查 + 生产构建
+# frontend  49 passed          —— 人群、路网、事件优先级、格式化与 HTTP 层
+# scripts   3 passed           —— 卫星底图范围、裁切和 URL 生成
+cd frontend
+npm run lint                   # ESLint（Vue + TypeScript）
+npm run test                   # Vitest
+npm run build                  # vue-tsc 严格类型检查 + 生产构建
 ```
 
 GitHub Actions（`.github/workflows/ci.yml`）在每次推送时自动运行以上检查。
@@ -214,6 +236,7 @@ wuhan-zhiyan/
 │   ├── src/components/dashboard/  # 指挥大屏面板
 │   ├── src/components/pages/ #   业务页面组件
 │   ├── src/api/              #   接口层（live / offline / mock 三态）
+│   ├── public/basemap/       #   本地卫星底图缓存
 │   └── public/snapshot/      #   后端导出的离线数据快照
 ├── backend/                  # FastAPI 服务（python -m backend）
 │   └── app/{routers,services}#   路由 / 事件状态机 / 任务 / 模拟器 / 实时推送 / 统计
@@ -224,6 +247,7 @@ wuhan-zhiyan/
 │   └── scripts/              # OSM 抓取加工、样本生成、航拍渲染
 ├── database/                 # schema.sql + ER 图
 ├── docs/                     # 架构 / API 契约 / 算法 / 路演脚本
+├── graphify-out/             # 代码图 JSON / HTML / 调用流 / 审计报告
 ├── scripts/                  # dev.sh / demo.sh / export_snapshot.py
 ├── Dockerfile · docker-compose.yml · Makefile
 ```
