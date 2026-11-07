@@ -4,10 +4,10 @@
  * - CESIUM_ION_TOKEN：可选。留空即可完全脱离 Cesium Ion 运行；如需 Cesium World Terrain / 高清影像，
  *   到 https://ion.cesium.com/signup 免费注册后通过环境变量 VITE_CESIUM_ION_TOKEN 注入。
  * - BASEMAP：底图方案，可在界面图层面板中实时切换：
- *     satellite 本地示范区的 Esri World Imagery 单幅缓存（默认；缺失时回退在线瓦片）
+ *     satellite Esri World Imagery 在线瓦片（默认；失败时回退本地单幅缓存）
  *     dark      Esri World Dark Gray Canvas 暗色底图（低照度备选，含中文路名，无需 Token）
  *     offline   Cesium 自带 NaturalEarthII（完全离线可用）
- *   本地卫星图加载失败时先尝试在线服务，在线底图仍失败时自动回退 offline。
+ *   在线卫星图加载失败时自动尝试本地缓存，本地缓存仍失败时回退 offline。
  */
 export const CESIUM_ION_TOKEN: string = import.meta.env.VITE_CESIUM_ION_TOKEN || ''
 

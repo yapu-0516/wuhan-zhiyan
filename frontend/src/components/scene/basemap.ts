@@ -1,5 +1,5 @@
-// 底图控制：暗色（Esri Dark Gray）/ 卫星（本地单幅缓存→在线 Esri）/ 离线（Cesium
-// 自带 NaturalEarthII），运行时切换；各级失败都会自动降级，并通过回调通知界面。
+// 底图控制：暗色（Esri Dark Gray）/ 卫星（在线 Esri→本地单幅缓存→离线
+// NaturalEarthII），运行时切换；各级失败都会自动降级，并通过回调通知界面。
 import * as Cesium from 'cesium'
 import { BASEMAPS, type BasemapConfig, type BasemapKey } from '@/config/cesium'
 
@@ -18,15 +18,20 @@ export class BasemapController {
   private layer: Cesium.ImageryLayer | null = null
   private removeError: (() => void) | null = null
   private probeTimer: number | undefined
-  private errors = 0
   private token = 0
   current: BasemapKey = 'offline'
+
+  private readonly onOffline = () => {
+    if (this.current === 'satellite' || this.current === 'dark') this.fallback(this.current)
+  }
 
   constructor(
     private viewer: Cesium.Viewer,
     private probePoint: () => [number, number],
     private onFallback: (from: BasemapKey, to: BasemapKey) => void
-  ) {}
+  ) {
+    window.addEventListener('offline', this.onOffline)
+  }
 
   set(key: BasemapKey) {
     if (this.viewer.isDestroyed()) return
@@ -43,11 +48,6 @@ export class BasemapController {
       Object.assign(layer, style)
       this.viewer.imageryLayers.add(layer, 0)
       this.layer = layer
-      return
-    }
-    // 示范区卫星影像打包为单幅本地图片，避免公网瓦片逐张加载时的超时与断网问题。
-    if (key === 'satellite' && cfg.localUrl && cfg.localRectangle && cfg.localWidth && cfg.localHeight) {
-      this.addLocalSatellite(cfg, style, token, key)
       return
     }
     this.addRemote(key, cfg, style, token)
@@ -76,12 +76,12 @@ export class BasemapController {
     this.removeError = provider.errorEvent.addEventListener(() => {
       if (failed || token !== this.token) return
       failed = true
-      console.warn('[basemap] 本地卫星底图加载失败，尝试在线影像', cfg.localUrl)
+      console.warn('[basemap] 本地卫星底图加载失败，切换内置离线底图', cfg.localUrl)
       this.removeError?.()
       this.removeError = null
       if (!this.viewer.isDestroyed()) this.viewer.imageryLayers.remove(layer, true)
       if (this.layer === layer) this.layer = null
-      this.addRemote(key, cfg, style, token)
+      this.fallback(key, false)
     })
   }
 
@@ -109,13 +109,6 @@ export class BasemapController {
     Object.assign(layer, style)
     this.viewer.imageryLayers.add(layer, 0)
     this.layer = layer
-    this.errors = 0
-    this.removeError = provider.errorEvent.addEventListener(() => {
-      if (token !== this.token) return
-      this.errors++
-      // 连续多张瓦片失败，判定在线底图不可用
-      if (this.errors >= 10) this.fallback(key)
-    })
     this.probe(cfg.url, cfg.subdomains, token, key)
   }
 
@@ -149,8 +142,17 @@ export class BasemapController {
     img.src = url
   }
 
-  private fallback(from: BasemapKey) {
+  private fallback(from: BasemapKey, allowLocal = true) {
     if (this.current === 'offline' || this.viewer.isDestroyed()) return
+    const cfg = BASEMAPS.satellite
+    if (from === 'satellite' && allowLocal && cfg.localUrl && cfg.localRectangle && cfg.localWidth && cfg.localHeight) {
+      const token = ++this.token
+      this.clear()
+      this.current = 'satellite'
+      console.warn('[basemap] 在线卫星影像不可用，切换本地缓存')
+      this.addLocalSatellite(cfg, STYLE.satellite, token, 'satellite')
+      return
+    }
     this.set('offline')
     this.onFallback(from, 'offline')
   }
@@ -167,6 +169,7 @@ export class BasemapController {
 
   destroy() {
     this.token++
+    window.removeEventListener('offline', this.onOffline)
     window.clearTimeout(this.probeTimer)
     this.removeError?.()
     this.removeError = null

@@ -96,8 +96,8 @@ sequenceDiagram
 
 - **城市底座**：OpenStreetMap 真实建筑轮廓（汉口沿江示范区），按高度拉伸；以单个 `Primitive` +
   `GeometryInstance` 批量渲染，保证上千栋建筑 60fps。
-- **底图**：本地示范区卫星单图 / Esri 暗色画布 / Cesium NaturalEarthII 三选一；
-  本地单图缺失时尝试 Esri 在线瓦片，在线服务失败后自动回退。
+- **底图**：Esri 在线卫星 / 本地示范区卫星单图 / Esri 暗色画布 /
+  Cesium NaturalEarthII 可选；在线卫星失败后切换本地单图，本地图失败再回退内置离线底图。
 - **路况**：主干路按 TPI 五级着色并随 `traffic.updated` 实时刷新。
 - **事件**：类型图标 + 等级光环 + 脉冲涟漪；新事件强提示并可自动追踪。
 - **建筑安全**：接入沉降监测的建筑按风险等级着色，点击查看沉降曲线。
