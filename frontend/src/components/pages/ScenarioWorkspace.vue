@@ -300,6 +300,7 @@ async function compare() {
 async function makeReport() {
   if (!run.value || busy.value) return
   busy.value = true
+  error.value = ''
   try {
     report.value = await generateScenarioReport(run.value.run_id)
   } catch (e) {

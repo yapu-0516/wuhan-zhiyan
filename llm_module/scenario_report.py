@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .client import LLMError, Settings, ask
 from .task_parser import TaskParseError, _decode_json
@@ -34,6 +34,50 @@ class ScenarioReport(BaseModel):
     uncertainties: list[str]
     recommendations: list[str]
     visualization_summary: list[str]
+
+    @field_validator(
+        "data_and_methods",
+        "development_process",
+        "affected_objects",
+        "uncertainties",
+        "recommendations",
+        "visualization_summary",
+        mode="before",
+    )
+    @classmethod
+    def normalize_report_items(cls, value: Any) -> Any:
+        """兼容模型返回的结构化列表项，统一转换为前端可展示的文本。"""
+        if not isinstance(value, list):
+            return value
+        normalized: list[str] = []
+        for item in value:
+            if isinstance(item, str):
+                normalized.append(item)
+                continue
+            if isinstance(item, dict):
+                prefix = ""
+                if item.get("offset_min") is not None:
+                    prefix = f"+{item['offset_min']} 分钟："
+                description = item.get("description") or item.get("text") or item.get("summary")
+                if description:
+                    detail = str(description)
+                    if item.get("risk_level"):
+                        detail += f"（风险：{item['risk_level']}）"
+                    normalized.append(prefix + detail)
+                    continue
+                label = item.get("label") or item.get("name") or item.get("id")
+                if label:
+                    details = [str(label)]
+                    if item.get("type"):
+                        details.append(f"类型：{item['type']}")
+                    if item.get("data_classification"):
+                        details.append(f"数据性质：{item['data_classification']}")
+                    normalized.append("；".join(details))
+                    continue
+                normalized.append(json.dumps(item, ensure_ascii=False, separators=(",", ":")))
+                continue
+            normalized.append(str(item))
+        return normalized
 
 
 def generate_scenario_report(
