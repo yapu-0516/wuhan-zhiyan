@@ -424,28 +424,16 @@ export class CrowdLayer {
 
   private syncCamera(): void {
     const cesiumCamera = this.scene.camera
-    const position = Cesium.Matrix4.multiplyByPoint(
-      this.fixedToEnu,
-      cesiumCamera.positionWC,
-      new Cesium.Cartesian3()
-    )
+    const position = Cesium.Matrix4.multiplyByPoint(this.fixedToEnu, cesiumCamera.positionWC, new Cesium.Cartesian3())
     const direction = Cesium.Matrix4.multiplyByPointAsVector(
       this.fixedToEnu,
       cesiumCamera.directionWC,
       new Cesium.Cartesian3()
     )
-    const up = Cesium.Matrix4.multiplyByPointAsVector(
-      this.fixedToEnu,
-      cesiumCamera.upWC,
-      new Cesium.Cartesian3()
-    )
+    const up = Cesium.Matrix4.multiplyByPointAsVector(this.fixedToEnu, cesiumCamera.upWC, new Cesium.Cartesian3())
     this.camera.position.set(position.x, position.z, -position.y)
     this.camera.up.set(up.x, up.z, -up.y).normalize()
-    const target = new THREE.Vector3(
-      position.x + direction.x,
-      position.z + direction.z,
-      -(position.y + direction.y)
-    )
+    const target = new THREE.Vector3(position.x + direction.x, position.z + direction.z, -(position.y + direction.y))
     this.camera.lookAt(target)
     const frustum = cesiumCamera.frustum as Cesium.PerspectiveFrustum
     if (typeof frustum.fovy === 'number' && Number.isFinite(frustum.fovy)) {
@@ -764,8 +752,7 @@ export class CrowdLayer {
         if (!target) continue
         const sourcePath = this.roadPaths[vehicle.pathIndex]
         const current =
-          vehicle.detourPosition ??
-          (sourcePath ? this.roadPointAt(sourcePath, vehicle.distance) : target.clone())
+          vehicle.detourPosition ?? (sourcePath ? this.roadPointAt(sourcePath, vehicle.distance) : target.clone())
         vehicle.detourPosition = current
         const dx = target.x - current.x
         const dz = target.y - current.y
@@ -817,9 +804,7 @@ export class CrowdLayer {
       const vehicle = this.vehicles[i]
       const path = this.roadPaths[vehicle.pathIndex]
       if (!path) continue
-      const point =
-        vehicle.detourPosition ??
-        this.roadPointAt(path, vehicle.distance)
+      const point = vehicle.detourPosition ?? this.roadPointAt(path, vehicle.distance)
       const detourAhead = vehicle.detourPath?.[vehicle.detourIndex]
       const ahead =
         detourAhead ??
@@ -913,12 +898,8 @@ export class CrowdLayer {
     for (let i = 0; i < total; i++) {
       const resolvedType = this.chooseType(type)
       const roadPoint = this.randomRoadPoint()
-      const lon =
-        roadPoint?.[0] ??
-        this.region.bbox[0] + Math.random() * (this.region.bbox[2] - this.region.bbox[0])
-      const lat =
-        roadPoint?.[1] ??
-        this.region.bbox[1] + Math.random() * (this.region.bbox[3] - this.region.bbox[1])
+      const lon = roadPoint?.[0] ?? this.region.bbox[0] + Math.random() * (this.region.bbox[2] - this.region.bbox[0])
+      const lat = roadPoint?.[1] ?? this.region.bbox[1] + Math.random() * (this.region.bbox[3] - this.region.bbox[1])
       this.add(resolvedType, lon, lat)
     }
     return total
@@ -932,7 +913,10 @@ export class CrowdLayer {
       if (placement) {
         const path = this.roadPaths[placement.pathIndex]
         const point = this.roadPointAt(path, placement.distance)
-        const ahead = this.roadPointAt(path, Math.min(path.cumulative[path.cumulative.length - 1], placement.distance + 1))
+        const ahead = this.roadPointAt(
+          path,
+          Math.min(path.cumulative[path.cumulative.length - 1], placement.distance + 1)
+        )
         const dx = ahead.x - point.x
         const dz = ahead.y - point.y
         const length = Math.max(0.001, Math.hypot(dx, dz))
@@ -1241,11 +1225,7 @@ export class CrowdLayer {
     const [lon, lat] = this.localToLonLat(x / this.people.size, z / this.people.size)
     const target = new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(lon, lat, 1.2), 1)
     this.scene.camera.flyToBoundingSphere(target, {
-      offset: new Cesium.HeadingPitchRange(
-        Cesium.Math.toRadians(20),
-        Cesium.Math.toRadians(-25),
-        55
-      ),
+      offset: new Cesium.HeadingPitchRange(Cesium.Math.toRadians(20), Cesium.Math.toRadians(-25), 55),
       duration: 1.5
     })
     return true
@@ -1435,10 +1415,7 @@ export class CrowdLayer {
     const total = bestPath.cumulative[bestPath.cumulative.length - 1]
     const stride = 24 + Math.random() * 78
     const direction = Math.random() < 0.5 ? -1 : 1
-    const target = this.roadPointAt(
-      bestPath,
-      Math.max(0, Math.min(total, bestDistanceAlong + direction * stride))
-    )
+    const target = this.roadPointAt(bestPath, Math.max(0, Math.min(total, bestDistanceAlong + direction * stride)))
     person.path = [new THREE.Vector2(target.x, target.y)]
     person.pathIndex = 0
     person.state = 'walking'

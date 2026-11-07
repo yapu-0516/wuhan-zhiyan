@@ -76,7 +76,15 @@ function deriveOverview(events: CityEvent[], base?: Overview | null): Overview {
 
 /** 补齐后端/快照可能缺失的字段，避免模板访问 undefined */
 function normalize(r: Overview, events: CityEvent[]): Overview {
-  if (r.city_index && r.by_type && r.by_status && r.by_severity && Array.isArray(r.trend) && Array.isArray(r.by_district)) return r
+  if (
+    r.city_index &&
+    r.by_type &&
+    r.by_status &&
+    r.by_severity &&
+    Array.isArray(r.trend) &&
+    Array.isArray(r.by_district)
+  )
+    return r
   const d = deriveOverview(events, null)
   return {
     ...d,
@@ -130,7 +138,10 @@ export function useOverview() {
   const offTraffic = useRealtime().on('traffic.updated', (d) => {
     const r = remote.value
     if (!r || !d || typeof d.city_tpi !== 'number') return
-    remote.value = { ...r, city_index: { ...r.city_index, traffic_tpi: d.city_tpi, traffic_level: d.level ?? r.city_index.traffic_level } }
+    remote.value = {
+      ...r,
+      city_index: { ...r.city_index, traffic_tpi: d.city_tpi, traffic_level: d.level ?? r.city_index.traffic_level }
+    }
   })
 
   function resume() {

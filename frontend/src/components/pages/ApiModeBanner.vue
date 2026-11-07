@@ -37,7 +37,13 @@ async function retry() {
   <div v-if="apiState.mode !== 'live'" class="mode-banner" role="status">
     <span class="mode-banner__dot"></span>
     <span class="mode-banner__text">{{ text }}{{ props.detail ? ` ${props.detail}` : '' }}</span>
-    <button v-if="apiState.mode === 'offline'" type="button" class="mode-banner__retry" :disabled="checking" @click="retry">
+    <button
+      v-if="apiState.mode === 'offline'"
+      type="button"
+      class="mode-banner__retry"
+      :disabled="checking"
+      @click="retry"
+    >
       {{ checking ? '连接中…' : '重试连接' }}
     </button>
     <span class="mode-banner__tag">{{ apiState.mode === 'mock' ? 'MOCK' : 'OFFLINE' }}</span>

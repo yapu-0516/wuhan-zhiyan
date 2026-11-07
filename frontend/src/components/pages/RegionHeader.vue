@@ -2,7 +2,7 @@
 // 监测区域头卡：区域名称 / 范围 / 建筑·主干道·感知设备统计 / 数据更新时间
 import { computed } from 'vue'
 import { Location } from '@element-plus/icons-vue'
-import AnimatedNumber from './AnimatedNumber.vue'
+import AnimatedNumber from '../common/AnimatedNumber.vue'
 import type { SystemInfo } from '@/types/api'
 
 const props = defineProps<{
@@ -35,7 +35,9 @@ const extent = computed(() => {
 })
 
 const online = computed(() => (props.devicesTotal ? Math.round((props.devicesOnline / props.devicesTotal) * 100) : 0))
-const age = computed(() => (props.ageSec < 3 ? '刚刚' : props.ageSec < 60 ? `${props.ageSec} 秒前` : `${Math.floor(props.ageSec / 60)} 分钟前`))
+const age = computed(() =>
+  props.ageSec < 3 ? '刚刚' : props.ageSec < 60 ? `${props.ageSec} 秒前` : `${Math.floor(props.ageSec / 60)} 分钟前`
+)
 </script>
 
 <template>
@@ -68,7 +70,9 @@ const age = computed(() => (props.ageSec < 3 ? '刚刚' : props.ageSec < 60 ? `$
       </div>
       <div class="rs" style="--c: #4dd984">
         <span class="cp-label">感知设备在线</span>
-        <b><AnimatedNumber :value="devicesOnline" /><small>/ {{ devicesTotal }}</small></b>
+        <b
+          ><AnimatedNumber :value="devicesOnline" /><small>/ {{ devicesTotal }}</small></b
+        >
         <span class="cp-bar" style="--c: #4dd984"><i :style="{ width: `${online}%` }"></i></span>
       </div>
       <div class="rs rs--time" style="--c: #4fc3f7">

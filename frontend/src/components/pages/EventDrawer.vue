@@ -193,7 +193,9 @@ async function submit(status?: EventStatus) {
   submitting.value = status ?? 'note'
   try {
     const updated = await store.updateEvent(e.id, patch)
-    ElMessage.success(status ? `${e.id} 已${actionLabel(e.status, status)}（${EVENT_STATUS_LABEL[updated.status]}）` : '已记录')
+    ElMessage.success(
+      status ? `${e.id} 已${actionLabel(e.status, status)}（${EVENT_STATUS_LABEL[updated.status]}）` : '已记录'
+    )
     form.note = ''
     form.assignee = updated.assignee ?? form.assignee
     await loadLogs()
@@ -248,7 +250,8 @@ async function copyCoord() {
               <span class="cp-pill cp-pill--sm" :style="{ '--c': meta.color }">{{ meta.label }}</span>
               <span class="cp-pill cp-pill--sm" :style="{ '--c': sev.color }">{{ sev.label }}</span>
               <span class="cp-pill cp-pill--sm" :style="{ '--c': EVENT_STATUS_COLOR[event.status] }">
-                <i class="cp-dot" :class="{ 'cp-dot--pulse': event.status === 'pending' }"></i>{{ EVENT_STATUS_LABEL[event.status] }}
+                <i class="cp-dot" :class="{ 'cp-dot--pulse': event.status === 'pending' }"></i
+                >{{ EVENT_STATUS_LABEL[event.status] }}
               </span>
             </div>
           </div>
@@ -270,13 +273,20 @@ async function copyCoord() {
       <!-- 正文 -->
       <div class="dr__body">
         <el-skeleton v-if="!event && fetching" animated :rows="9" />
-        <el-empty v-else-if="!event" :image-size="90" :description="notFound ? `未找到事件 ${currentId}，可能已被删除` : '暂无数据'" />
+        <el-empty
+          v-else-if="!event"
+          :image-size="90"
+          :description="notFound ? `未找到事件 ${currentId}，可能已被删除` : '暂无数据'"
+        />
 
         <template v-else>
           <section class="sec">
             <h4 class="sec__t">基本信息</h4>
             <dl class="grid">
-              <div class="cell"><dt>事件编号</dt><dd class="cp-mono">{{ event.id }}</dd></div>
+              <div class="cell">
+                <dt>事件编号</dt>
+                <dd class="cp-mono">{{ event.id }}</dd>
+              </div>
               <div class="cell">
                 <dt>事件类型</dt>
                 <dd>{{ meta?.icon }} {{ meta?.label }}</dd>
@@ -294,9 +304,18 @@ async function copyCoord() {
                   </span>
                 </dd>
               </div>
-              <div class="cell"><dt>所属区域</dt><dd>{{ event.district || '—' }}</dd></div>
-              <div class="cell"><dt>管理网格</dt><dd class="cp-mono">{{ event.grid || '—' }}</dd></div>
-              <div class="cell cell--wide"><dt>事件地址</dt><dd>{{ event.address || '—' }}</dd></div>
+              <div class="cell">
+                <dt>所属区域</dt>
+                <dd>{{ event.district || '—' }}</dd>
+              </div>
+              <div class="cell">
+                <dt>管理网格</dt>
+                <dd class="cp-mono">{{ event.grid || '—' }}</dd>
+              </div>
+              <div class="cell cell--wide">
+                <dt>事件地址</dt>
+                <dd>{{ event.address || '—' }}</dd>
+              </div>
               <div class="cell cell--wide">
                 <dt>地理坐标</dt>
                 <dd class="coord">
@@ -306,8 +325,14 @@ async function copyCoord() {
                   </button>
                 </dd>
               </div>
-              <div class="cell"><dt>发现时间</dt><dd class="cp-mono">{{ event.timestamp }}</dd></div>
-              <div class="cell"><dt>最近更新</dt><dd class="cp-mono">{{ event.updated_at }}</dd></div>
+              <div class="cell">
+                <dt>发现时间</dt>
+                <dd class="cp-mono">{{ event.timestamp }}</dd>
+              </div>
+              <div class="cell">
+                <dt>最近更新</dt>
+                <dd class="cp-mono">{{ event.updated_at }}</dd>
+              </div>
               <div class="cell cell--wide">
                 <dt>处置单位</dt>
                 <dd>
@@ -317,12 +342,19 @@ async function copyCoord() {
               </div>
               <div v-if="event.building_id" class="cell">
                 <dt>关联建筑</dt>
-                <dd><a class="cp-link cp-mono" @click="gotoBuilding(event.building_id)">{{ event.building_id }} ↗</a></dd>
+                <dd>
+                  <a class="cp-link cp-mono" @click="gotoBuilding(event.building_id)">{{ event.building_id }} ↗</a>
+                </dd>
               </div>
-              <div v-if="event.road_id" class="cell"><dt>关联道路</dt><dd class="cp-mono">{{ event.road_id }}</dd></div>
+              <div v-if="event.road_id" class="cell">
+                <dt>关联道路</dt>
+                <dd class="cp-mono">{{ event.road_id }}</dd>
+              </div>
               <div v-if="event.task_id" class="cell">
                 <dt>关联 AI 任务</dt>
-                <dd><a class="cp-link cp-mono" @click="gotoTask(event.task_id)">{{ event.task_id }} ↗</a></dd>
+                <dd>
+                  <a class="cp-link cp-mono" @click="gotoTask(event.task_id)">{{ event.task_id }} ↗</a>
+                </dd>
               </div>
             </dl>
           </section>
@@ -343,7 +375,9 @@ async function copyCoord() {
               hide-on-click-modal
             >
               <template #error>
-                <div class="evidence__err"><el-icon><PictureIcon /></el-icon>证据图加载失败</div>
+                <div class="evidence__err">
+                  <el-icon><PictureIcon /></el-icon>证据图加载失败
+                </div>
               </template>
             </el-image>
           </section>
@@ -351,10 +385,19 @@ async function copyCoord() {
           <section v-if="metrics.length" class="sec">
             <h4 class="sec__t">算法指标</h4>
             <div class="metrics">
-              <el-tooltip v-for="m in metrics" :key="m.key" :disabled="!m.hint" :content="m.hint" placement="top" popper-class="cp-popper">
+              <el-tooltip
+                v-for="m in metrics"
+                :key="m.key"
+                :disabled="!m.hint"
+                :content="m.hint"
+                placement="top"
+                popper-class="cp-popper"
+              >
                 <div class="metric">
                   <span class="metric__l">{{ m.label }}</span>
-                  <span class="metric__v">{{ m.value }}<small>{{ m.unit }}</small></span>
+                  <span class="metric__v"
+                    >{{ m.value }}<small>{{ m.unit }}</small></span
+                  >
                 </div>
               </el-tooltip>
             </div>
@@ -368,7 +411,9 @@ async function copyCoord() {
           <section class="sec">
             <h4 class="sec__t">
               处置流程
-              <el-button class="sec__refresh" link :icon="Refresh" :loading="logsLoading" @click="loadLogs">刷新</el-button>
+              <el-button class="sec__refresh" link :icon="Refresh" :loading="logsLoading" @click="loadLogs"
+                >刷新</el-button
+              >
             </h4>
             <el-skeleton v-if="logsLoading && !logs.length" animated :rows="4" />
             <el-empty v-else-if="!logs.length" :image-size="64" description="暂无处置记录" />
@@ -390,7 +435,9 @@ async function copyCoord() {
                         {{ EVENT_STATUS_LABEL[l.from_status] }}
                       </span>
                       <span v-if="l.from_status" class="tl__arrow">→</span>
-                      <span class="tl__chip" :style="{ '--c': EVENT_STATUS_COLOR[l.to_status] }">{{ EVENT_STATUS_LABEL[l.to_status] }}</span>
+                      <span class="tl__chip" :style="{ '--c': EVENT_STATUS_COLOR[l.to_status] }">{{
+                        EVENT_STATUS_LABEL[l.to_status]
+                      }}</span>
                     </template>
                     <span class="tl__op">{{ l.operator }}</span>
                   </div>
@@ -429,7 +476,14 @@ async function copyCoord() {
           推荐单位：{{ suggestion }}
           <a class="cp-link" @click="form.assignee = suggestion">采用</a>
         </div>
-        <el-input v-model="form.note" type="textarea" :rows="2" maxlength="200" resize="none" placeholder="处置备注（选填，将写入处置日志）" />
+        <el-input
+          v-model="form.note"
+          type="textarea"
+          :rows="2"
+          maxlength="200"
+          resize="none"
+          placeholder="处置备注（选填，将写入处置日志）"
+        />
         <div class="ops__btns">
           <button
             v-for="t in transitions"

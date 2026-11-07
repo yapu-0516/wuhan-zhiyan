@@ -13,9 +13,7 @@ export function getSources(): Promise<DataSource[]> {
 }
 
 /** 触发演示场景 POST /api/demo/scenario */
-export function triggerScenario(
-  scenario: EventType | 'random'
-): Promise<{ task_id: string; event_id: string | null }> {
+export function triggerScenario(scenario: EventType | 'random'): Promise<{ task_id: string; event_id: string | null }> {
   if (apiState.mode !== 'live') return Promise.reject(new Error('离线演示模式下无法触发实时场景，请启动后端服务'))
   return request('/demo/scenario', jsonBody({ scenario }))
 }

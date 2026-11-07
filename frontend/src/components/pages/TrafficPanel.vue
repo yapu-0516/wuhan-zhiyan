@@ -2,7 +2,7 @@
 // 实时路况：城市 TPI 仪表盘 + 拥堵等级分布 + 最拥堵道路 Top10（随 traffic.updated 实时刷新）
 import { computed } from 'vue'
 import EChart from '@/components/charts/EChart.vue'
-import AnimatedNumber from './AnimatedNumber.vue'
+import AnimatedNumber from '../common/AnimatedNumber.vue'
 import { TRAFFIC_LEVEL_META } from '@/types/building'
 import type { Road } from '@/types/building'
 import { HIGHWAY_LABEL, TRAFFIC_LEVELS, cityTpiOf, groupRoads, levelOfTpi } from '@/composables/pages/traffic'
@@ -47,7 +47,11 @@ const gauge = computed(() => ({
         }
       },
       progress: { show: false },
-      pointer: { length: '62%', width: 5, itemStyle: { color: meta.value.color, shadowBlur: 10, shadowColor: meta.value.color } },
+      pointer: {
+        length: '62%',
+        width: 5,
+        itemStyle: { color: meta.value.color, shadowBlur: 10, shadowColor: meta.value.color }
+      },
       anchor: { show: true, size: 12, itemStyle: { color: '#0d1630', borderColor: meta.value.color, borderWidth: 3 } },
       axisTick: { show: false },
       splitLine: { length: 15, distance: -15, lineStyle: { color: '#0b1430', width: 3 } },
@@ -109,7 +113,9 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
                 <i></i>{{ l.label }}<b>{{ l.count }}</b>
               </li>
             </ul>
-            <p class="lv__sum">共监测 <b>{{ totalRoads }}</b> 条主干道（{{ roads.length }} 个路段）</p>
+            <p class="lv__sum">
+              共监测 <b>{{ totalRoads }}</b> 条主干道（{{ roads.length }} 个路段）
+            </p>
           </div>
         </div>
 
@@ -119,18 +125,30 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
             <span class="rk__cols"><i>车速</i><i>指数</i><i>等级</i></span>
           </div>
           <TransitionGroup name="rank" tag="ol" class="rk">
-            <li v-for="(g, i) in top10" :key="g.key" class="rk__row" :style="{ '--c': TRAFFIC_LEVEL_META[g.level].color }">
+            <li
+              v-for="(g, i) in top10"
+              :key="g.key"
+              class="rk__row"
+              :style="{ '--c': TRAFFIC_LEVEL_META[g.level].color }"
+            >
               <span class="rk__no" :class="{ 'is-top': i < 3 }">{{ i + 1 }}</span>
               <div class="rk__name">
                 <b class="cp-ellipsis" :title="g.name">{{ g.name }}</b>
-                <small>{{ hw(g.highway) }}<template v-if="g.segments > 1"> · {{ g.segments }} 段</template> · 限速 {{ g.speed_limit }}</small>
+                <small
+                  >{{ hw(g.highway) }}<template v-if="g.segments > 1"> · {{ g.segments }} 段</template> · 限速
+                  {{ g.speed_limit }}</small
+                >
               </div>
-              <span class="rk__speed"><AnimatedNumber :value="g.speed" :digits="0" :duration="500" /><small>km/h</small></span>
+              <span class="rk__speed"
+                ><AnimatedNumber :value="g.speed" :digits="0" :duration="500" /><small>km/h</small></span
+              >
               <span class="rk__tpi">
                 <b><AnimatedNumber :value="g.tpi" :digits="1" :duration="500" /></b>
                 <span class="cp-bar"><i :style="{ width: `${Math.min(100, g.tpi * 10)}%` }"></i></span>
               </span>
-              <span class="cp-pill cp-pill--sm rk__lv" :style="{ '--c': TRAFFIC_LEVEL_META[g.level].color }">{{ TRAFFIC_LEVEL_META[g.level].label }}</span>
+              <span class="cp-pill cp-pill--sm rk__lv" :style="{ '--c': TRAFFIC_LEVEL_META[g.level].color }">{{
+                TRAFFIC_LEVEL_META[g.level].label
+              }}</span>
             </li>
           </TransitionGroup>
         </div>
@@ -264,7 +282,9 @@ const hw = (h: string) => HIGHWAY_LABEL[h] ?? h
   padding: 7px 4px;
   border-radius: 7px;
   border: 1px solid transparent;
-  transition: background 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 }
 .rk__row:hover {
   background: color-mix(in srgb, var(--c) 8%, transparent);

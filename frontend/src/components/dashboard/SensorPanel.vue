@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { getSources } from '@/api/system'
 import { useRealtime } from '@/composables/useRealtime'
 import type { DataSource } from '@/types/api'
-import AnimatedNumber from './AnimatedNumber.vue'
+import AnimatedNumber from '../common/AnimatedNumber.vue'
 
 const props = defineProps<{ online: number; total: number }>()
 
@@ -63,7 +63,7 @@ const rows = computed(() =>
         />
       </svg>
       <div class="sensor__ring-inner">
-        <b><AnimatedNumber :value="rate" :decimals="1" /><small>%</small></b>
+        <b><AnimatedNumber :value="rate" :digits="1" /><small>%</small></b>
         <span class="ce-num">{{ totals.online }}/{{ totals.total }}</span>
       </div>
     </div>
@@ -71,7 +71,9 @@ const rows = computed(() =>
       <li v-for="s in rows" :key="s.id">
         <span class="sensor__name" :title="s.name">{{ s.name }}</span>
         <span class="sensor__bar"><i :style="{ width: s.pct + '%' }" /></span>
-        <span class="sensor__v ce-num">{{ s.devices_online }}<em>/{{ s.devices_total }}</em></span>
+        <span class="sensor__v ce-num"
+          >{{ s.devices_online }}<em>/{{ s.devices_total }}</em></span
+        >
       </li>
     </ul>
     <div v-else class="sensor__hint">

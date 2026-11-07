@@ -60,7 +60,9 @@ const lastUpdate = computed(() => {
       <span v-for="t in EVENT_TYPES" :key="t" class="sp-type">
         <i class="sp-type-dot" :style="{ background: EVENT_TYPE_META[t].color }" />
         <span class="sp-name">{{ EVENT_TYPE_META[t].label }}</span>
-        <span class="sp-count ce-num" :style="{ color: EVENT_TYPE_META[t].color }">{{ displayStats.byType[t] ?? 0 }}</span>
+        <span class="sp-count ce-num" :style="{ color: EVENT_TYPE_META[t].color }">{{
+          displayStats.byType[t] ?? 0
+        }}</span>
       </span>
     </div>
     <span class="sp-spacer" />
@@ -68,8 +70,12 @@ const lastUpdate = computed(() => {
       <span class="sp-chip" :class="connected ? 'ok' : 'off'">
         <i class="ce-dot" :class="{ 'ce-dot--pulse': connected }" />WS {{ connected ? '已连接' : '未连接' }}
       </span>
-      <span class="sp-chip" :class="apiState.mode === 'live' ? 'ok' : 'warn'">数据：{{ MODE_LABEL[apiState.mode] }}</span>
-      <span class="sp-chip">最近更新 <b class="ce-num">{{ lastUpdate }}</b></span>
+      <span class="sp-chip" :class="apiState.mode === 'live' ? 'ok' : 'warn'"
+        >数据：{{ MODE_LABEL[apiState.mode] }}</span
+      >
+      <span class="sp-chip"
+        >最近更新 <b class="ce-num">{{ lastUpdate }}</b></span
+      >
     </div>
   </footer>
 </template>

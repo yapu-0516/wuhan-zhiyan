@@ -73,10 +73,7 @@ describe('event district clusters', () => {
 
   it('uses a priority-weighted centroid and reports the dominant type', () => {
     const clusters = aggregateEventsByDistrict(
-      [
-        event('E1', '江岸区', 114.3, 30.6, 'critical'),
-        event('E2', '江岸区', 114.4, 30.7, 'low')
-      ],
+      [event('E1', '江岸区', 114.3, 30.6, 'critical'), event('E2', '江岸区', 114.4, 30.7, 'low')],
       now
     )
     expect(clusters[0].longitude).toBeLessThan(114.4)

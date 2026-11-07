@@ -52,13 +52,21 @@ function onRowClick(row: AnalysisTask) {
       </div>
     </div>
 
-    <el-table v-loading="loading && !tasks.length" :data="rows" row-key="id" :row-class-name="rowClass" @row-click="onRowClick">
+    <el-table
+      v-loading="loading && !tasks.length"
+      :data="rows"
+      row-key="id"
+      :row-class-name="rowClass"
+      @row-click="onRowClick"
+    >
       <template #empty>
         <el-empty :image-size="72" description="还没有分析任务，选择示例数据后点击「开始分析」试试" />
       </template>
 
       <el-table-column label="任务编号" width="110">
-        <template #default="{ row }"><span class="cp-mono hist__id">{{ (row as AnalysisTask).id }}</span></template>
+        <template #default="{ row }"
+          ><span class="cp-mono hist__id">{{ (row as AnalysisTask).id }}</span></template
+        >
       </el-table-column>
       <el-table-column label="类型" width="150">
         <template #default="{ row }">
@@ -91,14 +99,24 @@ function onRowClick(row: AnalysisTask) {
         <template #default="{ row }">
           <div class="hist__prog">
             <span class="cp-bar" :style="{ '--c': (row as AnalysisTask).status === 'failed' ? '#ff6b6b' : '#4fc3f7' }">
-              <i :style="{ width: `${(row as AnalysisTask).status === 'done' ? 100 : (row as AnalysisTask).progress ?? 0}%` }"></i>
+              <i
+                :style="{
+                  width: `${(row as AnalysisTask).status === 'done' ? 100 : ((row as AnalysisTask).progress ?? 0)}%`
+                }"
+              ></i>
             </span>
-            <em>{{ (row as AnalysisTask).status === 'done' ? 100 : Math.round((row as AnalysisTask).progress ?? 0) }}%</em>
+            <em
+              >{{
+                (row as AnalysisTask).status === 'done' ? 100 : Math.round((row as AnalysisTask).progress ?? 0)
+              }}%</em
+            >
           </div>
         </template>
       </el-table-column>
       <el-table-column label="创建时间" width="140">
-        <template #default="{ row }"><span class="hist__time">{{ shortTime((row as AnalysisTask).createdAt) }}</span></template>
+        <template #default="{ row }"
+          ><span class="hist__time">{{ shortTime((row as AnalysisTask).createdAt) }}</span></template
+        >
       </el-table-column>
       <el-table-column label="结论" min-width="260" show-overflow-tooltip>
         <template #default="{ row }">
@@ -106,10 +124,13 @@ function onRowClick(row: AnalysisTask) {
             <span
               class="cp-pill cp-pill--sm"
               :style="{ '--c': (row as AnalysisTask).result!.detected ? '#ff6b6b' : '#4dd984' }"
-            >{{ (row as AnalysisTask).result!.detected ? '检测到异常' : '未发现异常' }}</span>
+              >{{ (row as AnalysisTask).result!.detected ? '检测到异常' : '未发现异常' }}</span
+            >
             <span class="hist__sum">{{ (row as AnalysisTask).result!.summary }}</span>
           </template>
-          <span v-else-if="(row as AnalysisTask).status === 'failed'" class="hist__err">{{ (row as AnalysisTask).error || '分析失败' }}</span>
+          <span v-else-if="(row as AnalysisTask).status === 'failed'" class="hist__err">{{
+            (row as AnalysisTask).error || '分析失败'
+          }}</span>
           <span v-else class="hist__na">—</span>
         </template>
       </el-table-column>

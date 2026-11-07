@@ -38,7 +38,9 @@ export async function getEvent(id: string): Promise<CityEvent | undefined> {
 /** 事件处置日志 GET /api/events/{id}/logs */
 export async function getEventLogs(id: string): Promise<EventLog[]> {
   return request<EventLog[]>(`/events/${encodeURIComponent(id)}/logs`, undefined, async () => {
-    const all = await loadSnapshot<Record<string, EventLog[]>>('event_logs.json').catch(() => ({}) as Record<string, EventLog[]>)
+    const all = await loadSnapshot<Record<string, EventLog[]>>('event_logs.json').catch(
+      () => ({}) as Record<string, EventLog[]>
+    )
     return all[id] ?? []
   })
 }

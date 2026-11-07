@@ -88,7 +88,11 @@ const filtered = computed(() => {
   return list.value.filter((d) => {
     if (typeFilter.value && d.type !== typeFilter.value) return false
     if (statusFilter.value && d.status !== statusFilter.value) return false
-    if (q && !`${d.name} ${d.description ?? ''} ${d.source ?? ''} ${d.format ?? ''} ${d.id ?? ''}`.toLowerCase().includes(q)) return false
+    if (
+      q &&
+      !`${d.name} ${d.description ?? ''} ${d.source ?? ''} ${d.format ?? ''} ${d.id ?? ''}`.toLowerCase().includes(q)
+    )
+      return false
     return true
   })
 })
@@ -164,9 +168,21 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
 
     <!-- KPI -->
     <section class="kpis">
-      <KpiCard label="数据资产总数" :value="totalCount" unit="项" color="#67c6df" :hint="`涵盖 ${byType.length} 个数据类别`" />
+      <KpiCard
+        label="数据资产总数"
+        :value="totalCount"
+        unit="项"
+        color="#67c6df"
+        :hint="`涵盖 ${byType.length} 个数据类别`"
+      />
       <KpiCard label="总存储容量" :value="totalSize" color="#9ab0ba" hint="含上传与采集数据" />
-      <KpiCard label="数据类型数" :value="byType.length" unit="类" color="#72c39a" hint="遥感 / 无人机 / 视频 / 三维 / 传感 / 矢量" />
+      <KpiCard
+        label="数据类型数"
+        :value="byType.length"
+        unit="类"
+        color="#72c39a"
+        hint="遥感 / 无人机 / 视频 / 三维 / 传感 / 矢量"
+      />
       <KpiCard
         label="入库率"
         :value="storedRate"
@@ -185,7 +201,12 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
         </div>
         <div class="cp-panel__body">
           <el-skeleton v-if="loading" animated :rows="5" />
-          <DataTypeDistribution v-else :items="byType" :selected="typeFilter" @select="(t: string) => (typeFilter = t)" />
+          <DataTypeDistribution
+            v-else
+            :items="byType"
+            :selected="typeFilter"
+            @select="(t: string) => (typeFilter = t)"
+          />
         </div>
       </div>
       <div class="cp-panel">
@@ -203,7 +224,9 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
     <!-- 工具栏 -->
     <section class="cp-panel toolbar">
       <div class="chips">
-        <button type="button" class="chip" :class="{ 'is-on': !typeFilter }" @click="typeFilter = ''">全部<em>{{ list.length }}</em></button>
+        <button type="button" class="chip" :class="{ 'is-on': !typeFilter }" @click="typeFilter = ''">
+          全部<em>{{ list.length }}</em>
+        </button>
         <button
           v-for="t in byType"
           :key="t.type"
@@ -217,13 +240,38 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
         </button>
       </div>
       <div class="toolbar__right">
-        <el-select v-model="statusFilter" clearable placeholder="全部状态" style="width: 124px" popper-class="cp-popper">
+        <el-select
+          v-model="statusFilter"
+          clearable
+          placeholder="全部状态"
+          style="width: 124px"
+          popper-class="cp-popper"
+        >
           <el-option v-for="s in statusOptions" :key="s" :value="s" :label="s">
-            <span class="opt"><i class="cp-dot" :class="{ 'cp-dot--pulse': dataStatusMeta(s).pulse }" :style="{ '--c': dataStatusMeta(s).color }"></i>{{ s }}</span>
+            <span class="opt"
+              ><i
+                class="cp-dot"
+                :class="{ 'cp-dot--pulse': dataStatusMeta(s).pulse }"
+                :style="{ '--c': dataStatusMeta(s).color }"
+              ></i
+              >{{ s }}</span
+            >
           </el-option>
         </el-select>
-        <el-input v-model="keyword" clearable placeholder="搜索名称 / 来源 / 格式" :prefix-icon="Search" style="width: 240px" />
-        <el-select v-model="uploadType" clearable placeholder="入库类型：自动识别" style="width: 170px" popper-class="cp-popper">
+        <el-input
+          v-model="keyword"
+          clearable
+          placeholder="搜索名称 / 来源 / 格式"
+          :prefix-icon="Search"
+          style="width: 240px"
+        />
+        <el-select
+          v-model="uploadType"
+          clearable
+          placeholder="入库类型：自动识别"
+          style="width: 170px"
+          popper-class="cp-popper"
+        >
           <el-option v-for="t in DATA_TYPES" :key="t" :value="t" :label="t" />
         </el-select>
         <el-upload
@@ -250,7 +298,10 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
         @sort-change="onSortChange"
       >
         <template #empty>
-          <el-empty :image-size="84" :description="list.length ? '没有符合条件的数据资产' : '暂无数据资产，点击右上方「上传数据」入库'" />
+          <el-empty
+            :image-size="84"
+            :description="list.length ? '没有符合条件的数据资产' : '暂无数据资产，点击右上方「上传数据」入库'"
+          />
         </template>
 
         <el-table-column label="数据名称" min-width="260">
@@ -285,17 +336,25 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
         </el-table-column>
 
         <el-table-column label="大小" prop="size_bytes" width="110" sortable="custom" align="right">
-          <template #default="{ row }"><span class="num">{{ (row as DataItem).size && (row as DataItem).size !== '0 B' ? (row as DataItem).size : '—' }}</span></template>
+          <template #default="{ row }"
+            ><span class="num">{{
+              (row as DataItem).size && (row as DataItem).size !== '0 B' ? (row as DataItem).size : '—'
+            }}</span></template
+          >
         </el-table-column>
 
         <el-table-column v-if="showMore" label="记录数" width="96" align="right">
           <template #default="{ row }">
-            <span class="num">{{ (row as DataItem).records !== undefined ? (row as DataItem).records!.toLocaleString('zh-CN') : '—' }}</span>
+            <span class="num">{{
+              (row as DataItem).records !== undefined ? (row as DataItem).records!.toLocaleString('zh-CN') : '—'
+            }}</span>
           </template>
         </el-table-column>
 
         <el-table-column label="获取时间" prop="time" width="150" sortable="custom">
-          <template #default="{ row }"><span class="num">{{ (row as DataItem).time }}</span></template>
+          <template #default="{ row }"
+            ><span class="num">{{ (row as DataItem).time }}</span></template
+          >
         </el-table-column>
 
         <el-table-column label="状态" width="106">
@@ -310,14 +369,28 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
         <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
             <div class="ops">
-              <el-tooltip :disabled="!!(row as DataItem).url" content="该资产暂无可预览的文件" placement="top" popper-class="cp-popper">
+              <el-tooltip
+                :disabled="!!(row as DataItem).url"
+                content="该资产暂无可预览的文件"
+                placement="top"
+                popper-class="cp-popper"
+              >
                 <span>
-                  <el-button link type="primary" :icon="View" :disabled="!(row as DataItem).url" @click="preview(row)">预览</el-button>
+                  <el-button link type="primary" :icon="View" :disabled="!(row as DataItem).url" @click="preview(row)"
+                    >预览</el-button
+                  >
                 </span>
               </el-tooltip>
-              <el-tooltip :disabled="!!(row as DataItem).url" content="该资产暂无可下载的文件" placement="top" popper-class="cp-popper">
+              <el-tooltip
+                :disabled="!!(row as DataItem).url"
+                content="该资产暂无可下载的文件"
+                placement="top"
+                popper-class="cp-popper"
+              >
                 <span>
-                  <el-button v-if="!(row as DataItem).url" link type="primary" :icon="Download" disabled>下载</el-button>
+                  <el-button v-if="!(row as DataItem).url" link type="primary" :icon="Download" disabled
+                    >下载</el-button
+                  >
                   <el-button
                     v-else
                     link
@@ -328,7 +401,8 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
                     :download="(row as DataItem).name"
                     target="_blank"
                     rel="noopener"
-                  >下载</el-button>
+                    >下载</el-button
+                  >
                 </span>
               </el-tooltip>
             </div>
@@ -337,7 +411,9 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
       </el-table>
 
       <div class="foot">
-        <span class="foot__total">共 <b>{{ sorted.length }}</b> 项</span>
+        <span class="foot__total"
+          >共 <b>{{ sorted.length }}</b> 项</span
+        >
         <el-pagination
           background
           layout="sizes, prev, pager, next"
@@ -352,7 +428,13 @@ onBeforeUnmount(() => window.clearTimeout(reloadTimer))
       </div>
     </section>
 
-    <el-image-viewer v-if="previewList.length" :url-list="previewList" teleported hide-on-click-modal @close="previewList = []" />
+    <el-image-viewer
+      v-if="previewList.length"
+      :url-list="previewList"
+      teleported
+      hide-on-click-modal
+      @close="previewList = []"
+    />
   </PageShell>
 </template>
 

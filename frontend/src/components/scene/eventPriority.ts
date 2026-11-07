@@ -36,8 +36,16 @@ export function rankEventsByPriority(events: CityEvent[], now = Date.now()): Cit
   )
 }
 
-export function prominentEventIds(events: CityEvent[], limit: number, selectedId: string | null, now = Date.now()): Set<string> {
-  const ranked = rankEventsByPriority(events.filter((event) => event.status !== 'resolved'), now)
+export function prominentEventIds(
+  events: CityEvent[],
+  limit: number,
+  selectedId: string | null,
+  now = Date.now()
+): Set<string> {
+  const ranked = rankEventsByPriority(
+    events.filter((event) => event.status !== 'resolved'),
+    now
+  )
   const ids = new Set(ranked.slice(0, limit).map((event) => event.id))
   if (selectedId) ids.add(selectedId)
   return ids

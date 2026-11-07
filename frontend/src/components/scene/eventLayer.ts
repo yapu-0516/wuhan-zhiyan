@@ -183,17 +183,13 @@ export class EventLayer {
         ? ICON_SCALE_SELECTED
         : quiet
           ? QUIET_SCALE
-          : OPERATIONS_SCALE[e.severity] ?? ICON_SCALE
-      item.bb.color = quiet
-        ? Cesium.Color.WHITE.withAlpha(0.62)
-        : Cesium.Color.WHITE
+          : (OPERATIONS_SCALE[e.severity] ?? ICON_SCALE)
+      item.bb.color = quiet ? Cesium.Color.WHITE.withAlpha(0.62) : Cesium.Color.WHITE
       const text = shortName(e.name)
       if (item.label.text !== text) item.label.text = text
       item.label.show = selected || (show && rankedEmphasis && !resolved)
       item.label.fillColor = resolved ? LABEL_FG_DIM : LABEL_FG
-      item.label.distanceDisplayCondition = selected
-        ? ALWAYS
-        : (LABEL_DDC[e.severity] ?? LABEL_DDC.medium)
+      item.label.distanceDisplayCondition = selected ? ALWAYS : (LABEL_DDC[e.severity] ?? LABEL_DDC.medium)
       if (show && !resolved) active.push(e)
     }
     // 删除已不存在的事件
@@ -205,10 +201,10 @@ export class EventLayer {
       }
     }
     this.lastActive = active
-    const sig = active
-      .map((e) => `${e.id}:${e.severity}:${e.event_type}:${e.longitude.toFixed(5)},${e.latitude.toFixed(5)}`)
-      .join('|')
-      + `|selected:${opts.selectedId ?? ''}|effects:${[...this.effectIds].sort().join(',')}`
+    const sig =
+      active
+        .map((e) => `${e.id}:${e.severity}:${e.event_type}:${e.longitude.toFixed(5)},${e.latitude.toFixed(5)}`)
+        .join('|') + `|selected:${opts.selectedId ?? ''}|effects:${[...this.effectIds].sort().join(',')}`
     if (sig !== this.geoSig) {
       this.geoSig = sig
       this.rebuildEffects()
@@ -221,12 +217,13 @@ export class EventLayer {
     const clusters = aggregateEventsByDistrict(events, now)
       .filter((cluster) => cluster.count >= 2)
       .slice(0, MAX_CLUSTER_ZONES)
-    const sig = clusters
-      .map(
-        (cluster) =>
-          `${cluster.district}:${cluster.count}:${cluster.urgentCount}:${cluster.maxSeverity}:${cluster.longitude.toFixed(5)},${cluster.latitude.toFixed(5)}`
-      )
-      .join('|') + `|selected:${selectedId ?? ''}`
+    const sig =
+      clusters
+        .map(
+          (cluster) =>
+            `${cluster.district}:${cluster.count}:${cluster.urgentCount}:${cluster.maxSeverity}:${cluster.longitude.toFixed(5)},${cluster.latitude.toFixed(5)}`
+        )
+        .join('|') + `|selected:${selectedId ?? ''}`
     if (sig === this.clusterSig) return
     this.clusterSig = sig
     this.removePrim(this.clusterFillPrim)
@@ -262,15 +259,17 @@ export class EventLayer {
         color.withAlpha(selected ? 0.86 : 0.48)
       )
       if (outline) outlines.push(outline)
-      this.clusterBadges.push(this.billboards.add({
-        position: Cesium.Cartesian3.fromDegrees(cluster.longitude, cluster.latitude, 24),
-        image: clusterBadge(clusterColor(cluster.maxSeverity), `${cluster.district} · ${cluster.count}`),
-        scale: selected ? 0.92 : 0.8,
-        scaleByDistance: new Cesium.NearFarScalar(800, 1.08, 14000, 0.64),
-        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
-      }))
+      this.clusterBadges.push(
+        this.billboards.add({
+          position: Cesium.Cartesian3.fromDegrees(cluster.longitude, cluster.latitude, 24),
+          image: clusterBadge(clusterColor(cluster.maxSeverity), `${cluster.district} · ${cluster.count}`),
+          scale: selected ? 0.92 : 0.8,
+          scaleByDistance: new Cesium.NearFarScalar(800, 1.08, 14000, 0.64),
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        })
+      )
     }
     this.clusterFillPrim = this.addFlatPrimitive(fills)
     this.clusterOutlinePrim = this.addOutlinePrimitive(outlines)
@@ -290,7 +289,12 @@ export class EventLayer {
       const s = SEV[e.severity] ?? SEV.medium
       const color = Cesium.Color.fromCssColorString(EVENT_TYPE_META[e.event_type]?.color ?? '#4fc3f7')
       const seed = hashByte(e.id)
-      const ring = ellipseInstance(`ring:${e.id}`, e.longitude, e.latitude, s.radius, color.withAlpha(0.9), [0, s.speed * 100, seed, 0])
+      const ring = ellipseInstance(`ring:${e.id}`, e.longitude, e.latitude, s.radius, color.withAlpha(0.9), [
+        0,
+        s.speed * 100,
+        seed,
+        0
+      ])
       if (ring) rings.push(ring)
       const beam = beamInstance(`beam:${e.id}`, e.longitude, e.latitude, s.beam, s.width, color.withAlpha(0.95), seed)
       if (beam) beams.push(beam)
@@ -476,7 +480,14 @@ function clusterBadge(color: Cesium.Color, text: string): HTMLCanvasElement {
   return canvas
 }
 
-function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
   ctx.beginPath()
   ctx.moveTo(x + radius, y)
   ctx.arcTo(x + width, y, x + width, y + height, radius)

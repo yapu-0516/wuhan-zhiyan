@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 指标卡：左侧色条 + 大数字 + 说明；可点击（用作筛选器）
-import AnimatedNumber from './AnimatedNumber.vue'
+import AnimatedNumber from '../common/AnimatedNumber.vue'
 
 withDefaults(
   defineProps<{

@@ -44,12 +44,7 @@ function projectOnSegment(point: GraphPoint, a: GraphPoint, b: GraphPoint): Grap
   return { x: a.x + dx * t, z: a.z + dz * t }
 }
 
-export function hazardPenalizedCost(
-  length: number,
-  midpoint: GraphPoint,
-  danger: GraphPoint,
-  radius: number
-): number {
+export function hazardPenalizedCost(length: number, midpoint: GraphPoint, danger: GraphPoint, radius: number): number {
   const distance = pointDistance(midpoint, danger)
   if (distance >= radius) return length
   const exposure = 1 - distance / Math.max(1, radius)
@@ -145,9 +140,7 @@ export class RoadGraph {
       }
       const pickedIds = new Set(picked.map((item) => item.index))
       candidates.sort((a, b) => a.distance - b.distance)
-      selected = picked
-        .concat(candidates.filter((item) => !pickedIds.has(item.index)))
-        .slice(0, exitLimit)
+      selected = picked.concat(candidates.filter((item) => !pickedIds.has(item.index))).slice(0, exitLimit)
     }
     for (const item of selected) {
       const index = item.index

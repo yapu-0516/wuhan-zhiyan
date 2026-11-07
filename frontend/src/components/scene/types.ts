@@ -3,13 +3,7 @@ import type { BasemapKey } from '@/config/cesium'
 import type { Building, TrafficLevel } from '@/types/building'
 import type { CityEvent, EventType } from '@/types/event'
 
-export type LayerKey =
-  | 'buildings'
-  | 'buildingsFine'
-  | 'roads'
-  | 'events'
-  | 'pois'
-  | 'effects'
+export type LayerKey = 'buildings' | 'buildingsFine' | 'roads' | 'events' | 'pois' | 'effects'
 
 export type LayerVisibility = Record<LayerKey, boolean>
 

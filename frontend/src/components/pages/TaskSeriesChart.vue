@@ -47,8 +47,17 @@ const option = computed(() => {
   const mainName = MAIN_NAME[props.type] ?? '监测值'
   return {
     color: [main, ...EXTRA_COLORS],
-    tooltip: { trigger: 'axis', axisPointer: { type: 'cross', lineStyle: { color: 'rgba(79,195,247,0.4)' }, crossStyle: { color: 'rgba(79,195,247,0.4)' } } },
-    legend: hasExtra ? { top: 0, right: 8, textStyle: { color: '#b9cdec' }, itemWidth: 14, itemHeight: 3 } : { show: false },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross',
+        lineStyle: { color: 'rgba(79,195,247,0.4)' },
+        crossStyle: { color: 'rgba(79,195,247,0.4)' }
+      }
+    },
+    legend: hasExtra
+      ? { top: 0, right: 8, textStyle: { color: '#b9cdec' }, itemWidth: 14, itemHeight: 3 }
+      : { show: false },
     grid: { left: 8, right: hasExtra ? 8 : 20, top: hasExtra ? 34 : 26, bottom: 6, containLabel: true },
     xAxis: {
       type: 'category',

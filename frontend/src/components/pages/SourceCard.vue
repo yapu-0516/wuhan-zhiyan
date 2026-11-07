@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 监测数据源卡片：状态 / 设备在线率 / 实时吞吐 + 迷你折线 / 覆盖范围 / 最近活跃
 import { computed } from 'vue'
-import AnimatedNumber from './AnimatedNumber.vue'
+import AnimatedNumber from '../common/AnimatedNumber.vue'
 import Sparkline from './Sparkline.vue'
 import { relativeTime } from '@/composables/pages/format'
 import type { DataSource } from '@/types/api'
@@ -20,8 +20,18 @@ const STATUS: Record<DataSource['status'], { color: string; pulse?: boolean }> =
   待接入: { color: '#7f8ea6' }
 }
 const st = computed(() => STATUS[props.source.status] ?? { color: '#8aa3c4' })
-const ratio = computed(() => (props.source.devices_total ? props.source.devices_online / props.source.devices_total : 0))
-const ratioColor = computed(() => (props.source.devices_total === 0 ? '#7f8ea6' : ratio.value >= 0.9 ? '#4dd984' : ratio.value >= 0.6 ? '#f0c050' : '#ff6b6b'))
+const ratio = computed(() =>
+  props.source.devices_total ? props.source.devices_online / props.source.devices_total : 0
+)
+const ratioColor = computed(() =>
+  props.source.devices_total === 0
+    ? '#7f8ea6'
+    : ratio.value >= 0.9
+      ? '#4dd984'
+      : ratio.value >= 0.6
+        ? '#f0c050'
+        : '#ff6b6b'
+)
 const idle = computed(() => props.source.status === '待接入' || props.source.status === '离线')
 const sourceCode = computed(() => {
   const codes: Record<string, string> = {
@@ -54,7 +64,9 @@ const sourceCode = computed(() => {
     <div class="sc__dev">
       <div class="sc__devtxt">
         <span class="cp-label">设备在线</span>
-        <b>{{ source.devices_online }}<small> / {{ source.devices_total }}</small></b>
+        <b
+          >{{ source.devices_online }}<small> / {{ source.devices_total }}</small></b
+        >
       </div>
       <span class="cp-bar" :style="{ '--c': ratioColor }"><i :style="{ width: `${ratio * 100}%` }"></i></span>
     </div>
@@ -62,7 +74,9 @@ const sourceCode = computed(() => {
     <div class="sc__tp">
       <div class="sc__tpnum">
         <span class="cp-label">实时吞吐</span>
-        <b><AnimatedNumber :value="source.throughput" :duration="500" /><small>{{ source.unit }}</small></b>
+        <b
+          ><AnimatedNumber :value="source.throughput" :duration="500" /><small>{{ source.unit }}</small></b
+        >
       </div>
       <div class="sc__spark">
         <Sparkline :values="history" :color="st.color" :height="38" />

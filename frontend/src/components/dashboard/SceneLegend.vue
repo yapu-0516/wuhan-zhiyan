@@ -40,7 +40,9 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
         <div class="lg-title">实时路况</div>
         <div class="lg-row">
           <span v-for="l in LEVELS" :key="l" class="lg-traffic">
-            <i :style="{ background: TRAFFIC_LEVEL_META[l].color, boxShadow: `0 0 6px ${TRAFFIC_LEVEL_META[l].color}` }" />{{ TRAFFIC_LEVEL_META[l].label }}
+            <i
+              :style="{ background: TRAFFIC_LEVEL_META[l].color, boxShadow: `0 0 6px ${TRAFFIC_LEVEL_META[l].color}` }"
+            />{{ TRAFFIC_LEVEL_META[l].label }}
           </span>
         </div>
       </div>
@@ -70,9 +72,7 @@ const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low']
             <i :style="{ borderColor: SEVERITY_META[s].color }" />{{ SEVERITY_META[s].label }}
           </span>
         </div>
-        <p class="lg-note">
-          强提示用于当前选中项、优先级前三项和最多六个高等级事件；其余保留小尺寸静态点位。
-        </p>
+        <p class="lg-note">强提示用于当前选中项、优先级前三项和最多六个高等级事件；其余保留小尺寸静态点位。</p>
         <div class="lg-row lg-row--zone">
           <span class="lg-zone"><i />片区待办聚合</span>
           <span class="lg-note-inline">圆环面积显示待办密度，暖色表示片区内有高等级事件</span>

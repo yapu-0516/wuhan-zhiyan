@@ -112,7 +112,8 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
         <el-table-column label="等级" prop="severity" width="120" sortable="custom">
           <template #default="{ row }">
             <span class="sev" :style="{ '--c': SEVERITY_META[(row as CityEvent).severity].color }">
-              <b>{{ SEVERITY_META[(row as CityEvent).severity].short }}</b>{{ sevText(row) }}
+              <b>{{ SEVERITY_META[(row as CityEvent).severity].short }}</b
+              >{{ sevText(row) }}
             </span>
           </template>
         </el-table-column>
@@ -125,7 +126,14 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
           </template>
         </el-table-column>
 
-        <el-table-column label="置信度" prop="confidence" width="116" sortable="custom" align="right" header-align="right">
+        <el-table-column
+          label="置信度"
+          prop="confidence"
+          width="116"
+          sortable="custom"
+          align="right"
+          header-align="right"
+        >
           <template #default="{ row }">
             <div class="conf" :style="{ '--c': confColor((row as CityEvent).confidence) }">
               <span class="conf__n">{{ pct100((row as CityEvent).confidence) }}%</span>
@@ -172,7 +180,9 @@ const confColor = (c: number) => (c >= 0.85 ? '#4dd984' : c >= 0.6 ? '#4fc3f7' :
     </div>
 
     <div class="etable__foot">
-      <span class="etable__total">共 <b>{{ total }}</b> 条事件</span>
+      <span class="etable__total"
+        >共 <b>{{ total }}</b> 条事件</span
+      >
       <el-pagination
         background
         layout="sizes, prev, pager, next"

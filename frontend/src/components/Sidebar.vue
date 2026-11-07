@@ -2,7 +2,21 @@
 // 左侧导航：主页面与 AI 分析入口；桌面保留文字，平板收为图标栏，手机转为底部导航。
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Location, Monitor, FirstAidKit, Warning, Files, Sunny, Van, OfficeBuilding, Umbrella, Fold, Expand, Menu, Close } from '@element-plus/icons-vue'
+import {
+  Location,
+  Monitor,
+  FirstAidKit,
+  Warning,
+  Files,
+  Sunny,
+  Van,
+  OfficeBuilding,
+  Umbrella,
+  Fold,
+  Expand,
+  Menu,
+  Close
+} from '@element-plus/icons-vue'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { useDemoBaseline } from '@/composables/useDemoBaseline'
 import { useLayout } from '@/composables/useLayout'
@@ -58,7 +72,9 @@ watch(
         <span class="nav-text">
           <span class="nav-label">{{ item.label }}</span>
         </span>
-        <span v-if="item.badge && displayActive > 0" class="nav-badge ce-num">{{ displayActive > 99 ? '99+' : displayActive }}</span>
+        <span v-if="item.badge && displayActive > 0" class="nav-badge ce-num">{{
+          displayActive > 99 ? '99+' : displayActive
+        }}</span>
       </RouterLink>
 
       <div class="nav-group-label" title="AI 分析">

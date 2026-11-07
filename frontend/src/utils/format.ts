@@ -16,7 +16,8 @@ export function hhmm(s?: string | null): string {
   const d = parseTime(s)
   if (!d) return '--:--'
   const now = new Date()
-  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  const sameDay =
+    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
   return sameDay ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : shortTime(s)
 }
 
@@ -41,7 +42,9 @@ export function relativeTime(s?: string | null, now = Date.now()): string {
 /** 是否为今天 */
 export function isToday(s?: string | null, now = new Date()): boolean {
   const d = parseTime(s)
-  return !!d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  return (
+    !!d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  )
 }
 
 export function fixed(n: number | null | undefined, digits = 1): string {

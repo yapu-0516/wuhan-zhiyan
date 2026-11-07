@@ -43,10 +43,12 @@
   --ce-type-flood: #71acd2;
 
   /* ---- 字体 ---- */
-  --ce-font: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC',
+  --ce-font:
+    'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC',
     'Source Han Sans SC', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --ce-font-num: 'Bahnschrift', 'DIN Alternate', 'DIN Condensed', 'Roboto Condensed', 'Helvetica Neue', 'Arial Narrow',
-    Arial, sans-serif;
+  --ce-font-num:
+    'Bahnschrift', 'DIN Alternate', 'DIN Condensed', 'Roboto Condensed', 'Helvetica Neue', 'Arial Narrow', Arial,
+    sans-serif;
 
   /* ---- 布局 ---- */
   --header-h: 56px;

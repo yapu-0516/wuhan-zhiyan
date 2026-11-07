@@ -11,7 +11,18 @@
  * 交互：拾取建筑/道路/事件/资源点；路由 ?eventId= / ?buildingId= 定位；新事件通知 + 自动追踪；一键演示导览。
  * KeepAlive：失活时暂停渲染循环，激活时恢复；卸载时销毁全部图层、监听与 Viewer。
  */
-import { computed, h, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, shallowRef, watch } from 'vue'
+import {
+  computed,
+  h,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  onMounted,
+  reactive,
+  ref,
+  shallowRef,
+  watch
+} from 'vue'
 import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useRoute, useRouter } from 'vue-router'
@@ -132,13 +143,21 @@ const status = reactive({
   fatal: ''
 })
 const layerState = reactive<LayerVisibility>({ ...DEFAULT_LAYERS, ...(props.layers ?? {}) })
-const typeFilter = reactive<EventTypeFilter>({ fire: true, traffic: true, building: true, flood: true, ...(props.eventTypes ?? {}) })
+const typeFilter = reactive<EventTypeFilter>({
+  fire: true,
+  traffic: true,
+  building: true,
+  flood: true,
+  ...(props.eventTypes ?? {})
+})
 const currentBasemap = ref<BasemapKey>(props.basemap ?? DEFAULT_BASEMAP)
 const active = ref(true)
 
 const selectedEventId = ref<string | null>(null)
 const selectedBuilding = shallowRef<Building | null>(null)
-const selectedEvent = computed<CityEvent | null>(() => (selectedEventId.value ? getEventById(selectedEventId.value) ?? null : null))
+const selectedEvent = computed<CityEvent | null>(() =>
+  selectedEventId.value ? (getEventById(selectedEventId.value) ?? null) : null
+)
 const eventDetailRef = ref<InstanceType<typeof EventDetail> | null>(null)
 
 const roadTip = shallowRef<{ id: string; x: number; y: number } | null>(null)
@@ -146,7 +165,7 @@ const poiTip = shallowRef<{ poi: Poi; x: number; y: number } | null>(null)
 const roadVersion = ref(0)
 const tipRoad = computed(() => {
   void roadVersion.value
-  return roadTip.value && roads ? roads.get(roadTip.value.id) ?? null : null
+  return roadTip.value && roads ? (roads.get(roadTip.value.id) ?? null) : null
 })
 
 let pendingTarget: { kind: 'event' | 'building'; id: string } | null = null
@@ -284,7 +303,9 @@ function findRiskBuilding(): Building | null {
   const list = layers.flatMap((layer) => layer.all())
   const pick = (risk: Building['risk_level']) =>
     list.filter((b) => b.monitored && b.risk_level === risk).sort((a, b) => b.height - a.height)[0]
-  return pick('warning') ?? pick('watch') ?? list.filter((b) => b.monitored).sort((a, b) => b.height - a.height)[0] ?? null
+  return (
+    pick('warning') ?? pick('watch') ?? list.filter((b) => b.monitored).sort((a, b) => b.height - a.height)[0] ?? null
+  )
 }
 
 async function demoDispatch(assignee?: string): Promise<CityEvent | null> {
@@ -350,17 +371,15 @@ const api: SceneApi = {
   cityTraffic: () => roads?.cityTraffic() ?? null,
   findRiskBuilding,
   sceneStats: () => ({
-    buildings: layerState.buildingsFine && (fineBuildings?.count ?? 0) > 0 ? fineBuildings!.count : (buildings?.count ?? 0),
+    buildings:
+      layerState.buildingsFine && (fineBuildings?.count ?? 0) > 0 ? fineBuildings!.count : (buildings?.count ?? 0),
     roads: roads?.count ?? 0,
     pois: pois?.count ?? 0,
     monitored: (buildings?.monitoredCount ?? 0) + (layerState.buildingsFine ? (fineBuildings?.monitoredCount ?? 0) : 0)
   })
 }
 
-const tour = useDemoTour(
-  () => (isReady() ? api : null),
-  props.demoHooks ?? {}
-)
+const tour = useDemoTour(() => (isReady() ? api : null), props.demoHooks ?? {})
 watch(
   () => tour.state.focus,
   (f) => emit('tour-focus', f)
@@ -368,13 +387,16 @@ watch(
 
 // ------------------------------------------------------------------ 事件同步
 const eventSig = computed(() =>
-  events.value.map((e) => `${e.id}|${e.status}|${e.severity}|${e.event_type}|${e.longitude}|${e.latitude}|${e.name}`).join(';')
+  events.value
+    .map((e) => `${e.id}|${e.status}|${e.severity}|${e.event_type}|${e.longitude}|${e.latitude}|${e.name}`)
+    .join(';')
 )
 
 function alarmBuildingIds(source: CityEvent[]): Set<string> {
   const s = new Set<string>()
   for (const e of source) {
-    if (e.status !== 'resolved' && e.building_id && (e.event_type === 'building' || e.event_type === 'fire')) s.add(e.building_id)
+    if (e.status !== 'resolved' && e.building_id && (e.event_type === 'building' || e.event_type === 'fire'))
+      s.add(e.building_id)
   }
   return s
 }
@@ -421,7 +443,11 @@ function notify(e: CityEvent) {
           h('span', { class: 'ce-notify__sev', style: { background: sev.color } }, sev.short + '级')
         ]),
         h('div', { class: 'ce-notify__name', title: e.name }, e.name),
-        h('div', { class: 'ce-notify__meta' }, `${e.district || '—'} · ${hhmm(e.timestamp)} · 置信度 ${Math.round((e.confidence ?? 0) * 100)}%`)
+        h(
+          'div',
+          { class: 'ce-notify__meta' },
+          `${e.district || '—'} · ${hhmm(e.timestamp)} · 置信度 ${Math.round((e.confidence ?? 0) * 100)}%`
+        )
       ]),
       h('button', { class: 'ce-notify__btn', onClick: locate }, '定位')
     ])
@@ -720,8 +746,7 @@ async function init() {
     roads.load(rRes.value)
     crowd?.setRoads(rRes.value)
     if (props.ambientCrowd) crowd?.startAmbient(420, 120)
-  }
-  else failed.push('路网')
+  } else failed.push('路网')
   if (pRes.status === 'fulfilled') pois.load(pRes.value)
   else failed.push('应急资源')
   if (bRes.status === 'fulfilled') {
@@ -849,13 +874,27 @@ defineExpose({
       <div class="cv-tip__head">
         <i class="cv-tip__bar" :style="{ background: TRAFFIC_LEVEL_META[tipRoad.level].color }" />
         <b>{{ tipRoad.name }}</b>
-        <span class="ce-tag" :style="{ color: TRAFFIC_LEVEL_META[tipRoad.level].color }">{{ TRAFFIC_LEVEL_META[tipRoad.level].label }}</span>
+        <span class="ce-tag" :style="{ color: TRAFFIC_LEVEL_META[tipRoad.level].color }">{{
+          TRAFFIC_LEVEL_META[tipRoad.level].label
+        }}</span>
       </div>
       <div class="cv-tip__grid">
-        <div><span class="ce-num">{{ tipRoad.speed.toFixed(1) }}</span><small>km/h</small><em>实时车速</em></div>
-        <div><span class="ce-num">{{ tipRoad.tpi.toFixed(1) }}</span><em>拥堵指数 TPI</em></div>
-        <div v-if="tipRoad.speed_limit"><span class="ce-num">{{ tipRoad.speed_limit }}</span><small>km/h</small><em>限速</em></div>
-        <div v-if="tipRoad.length_m"><span class="ce-num">{{ (tipRoad.length_m / 1000).toFixed(2) }}</span><small>km</small><em>路段长度</em></div>
+        <div>
+          <span class="ce-num">{{ tipRoad.speed.toFixed(1) }}</span
+          ><small>km/h</small><em>实时车速</em>
+        </div>
+        <div>
+          <span class="ce-num">{{ tipRoad.tpi.toFixed(1) }}</span
+          ><em>拥堵指数 TPI</em>
+        </div>
+        <div v-if="tipRoad.speed_limit">
+          <span class="ce-num">{{ tipRoad.speed_limit }}</span
+          ><small>km/h</small><em>限速</em>
+        </div>
+        <div v-if="tipRoad.length_m">
+          <span class="ce-num">{{ (tipRoad.length_m / 1000).toFixed(2) }}</span
+          ><small>km</small><em>路段长度</em>
+        </div>
       </div>
       <button class="cv-tip__close" @click="closeRoadTip">×</button>
     </div>
@@ -877,7 +916,9 @@ defineExpose({
       </div>
     </transition>
 
-    <span v-if="status.safeMode && !status.fatal" class="cv-safe" title="自定义着色器不受当前显卡支持，已使用内置外观">兼容渲染模式</span>
+    <span v-if="status.safeMode && !status.fatal" class="cv-safe" title="自定义着色器不受当前显卡支持，已使用内置外观"
+      >兼容渲染模式</span
+    >
 
     <div v-if="status.fatal" class="cv-fatal">
       <div class="cv-fatal__card ce-panel">

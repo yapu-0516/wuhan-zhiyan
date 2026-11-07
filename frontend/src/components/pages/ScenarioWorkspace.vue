@@ -76,9 +76,7 @@ const extractedItems = computed(() => {
     p.duration_min ? `${p.duration_min} 分钟` : '',
     p.rainfall_mm_h ? `降雨 ${p.rainfall_mm_h} mm/h` : '',
     p.people_count ? `人口 ${p.people_count} 人` : '',
-    p.response_delay_min !== undefined && p.response_delay_min !== null
-      ? `响应 ${p.response_delay_min} 分钟`
-      : ''
+    p.response_delay_min !== undefined && p.response_delay_min !== null ? `响应 ${p.response_delay_min} 分钟` : ''
   ].filter(Boolean)
 })
 const prompts = [
@@ -109,10 +107,7 @@ function metricLabel(key: string): string {
 function metricValue(key: string, value: unknown): string {
   if (value === null || value === undefined) return '—'
   const unit = METRIC_META[key]?.unit
-  const shown =
-    typeof value === 'number' && !Number.isInteger(value)
-      ? Math.round(value * 10) / 10
-      : value
+  const shown = typeof value === 'number' && !Number.isInteger(value) ? Math.round(value * 10) / 10 : value
   return unit ? `${shown} ${unit}` : String(shown)
 }
 
@@ -141,7 +136,15 @@ function variantSecondary(item: ScenarioRun): string {
 }
 
 function classLabel(value: string): string {
-  return { real: '真实数据', professional_analysis: '专业分析', simulated: '模拟数据', llm_inference: '大模型推断', unknown: '未知' }[value] ?? value
+  return (
+    {
+      real: '真实数据',
+      professional_analysis: '专业分析',
+      simulated: '模拟数据',
+      llm_inference: '大模型推断',
+      unknown: '未知'
+    }[value] ?? value
+  )
 }
 
 async function ensureSession() {
@@ -194,10 +197,7 @@ async function runAgain() {
       ...session.value,
       latest_run: result.latest_run,
       variant_runs: result.variant_runs,
-      run_ids: [
-        ...result.variant_runs.map((item) => item.run_id),
-        ...session.value.run_ids
-      ]
+      run_ids: [...result.variant_runs.map((item) => item.run_id), ...session.value.run_ids]
     }
   } catch (e) {
     error.value = errMsg(e, '情景推演失败')
@@ -232,11 +232,7 @@ async function showFrame(index: number) {
   frameIndex.value = index
   const frame = run.value.frames[index]
   const map = await ensureLayer()
-  map?.render(
-    frame,
-    run.value.scenario_type,
-    previous.offset_min < frame.offset_min ? previous : undefined
-  )
+  map?.render(frame, run.value.scenario_type, previous.offset_min < frame.offset_min ? previous : undefined)
   await applyPeople(frame)
 }
 
@@ -424,7 +420,9 @@ onBeforeUnmount(() => {
           @update:model-value="(value: number | number[]) => showFrame(Number(value))"
         />
         <div class="sw__controls">
-          <el-button :icon="playing ? VideoPause : VideoPlay" @click="togglePlay">{{ playing ? '暂停' : '播放' }}</el-button>
+          <el-button :icon="playing ? VideoPause : VideoPlay" @click="togglePlay">{{
+            playing ? '暂停' : '播放'
+          }}</el-button>
           <el-button :icon="RefreshLeft" @click="reset">重置</el-button>
           <el-switch
             v-model="mapVisible"
@@ -435,7 +433,8 @@ onBeforeUnmount(() => {
         </div>
         <dl v-if="currentFrame" class="sw__metrics">
           <template v-for="(value, key) in currentFrame.metrics" :key="key">
-            <dt>{{ metricLabel(key) }}</dt><dd>{{ metricValue(key, value) }}</dd>
+            <dt>{{ metricLabel(key) }}</dt>
+            <dd>{{ metricValue(key, value) }}</dd>
           </template>
         </dl>
         <p class="sw__limits">{{ currentFrame?.limitations.join('；') }}</p>
@@ -458,14 +457,23 @@ onBeforeUnmount(() => {
         <p>{{ message.content }}</p>
       </div>
     </div>
-    <div v-if="busy" class="sw__message is-assistant"><span>Agent</span><p>正在理解情景并组织推演…</p></div>
+    <div v-if="busy" class="sw__message is-assistant">
+      <span>Agent</span>
+      <p>正在理解情景并组织推演…</p>
+    </div>
 
     <div v-if="!run" class="sw__quick">
       <button v-for="(prompt, i) in prompts" :key="i" @click="send(prompt)">{{ prompt }}</button>
     </div>
 
     <div class="sw__input">
-      <el-input v-model="input" type="textarea" :rows="run ? 1 : 2" placeholder="描述事件，或要求修改/运行/比较情景" @keydown.ctrl.enter.prevent="send()" />
+      <el-input
+        v-model="input"
+        type="textarea"
+        :rows="run ? 1 : 2"
+        placeholder="描述事件，或要求修改/运行/比较情景"
+        @keydown.ctrl.enter.prevent="send()"
+      />
       <el-button type="primary" :icon="ChatDotRound" :loading="busy" @click="send()">发送</el-button>
     </div>
     <p v-if="error" class="sw__error">{{ error }}</p>
@@ -485,86 +493,358 @@ onBeforeUnmount(() => {
       <p class="sw__tag">{{ report.data_classification }}</p>
       <p>{{ report.event_summary }}</p>
       <h5>数据与方法</h5>
-      <ul><li v-for="item in report.data_and_methods" :key="item">{{ item }}</li></ul>
+      <ul>
+        <li v-for="item in report.data_and_methods" :key="item">{{ item }}</li>
+      </ul>
       <h5>发展过程</h5>
-      <ul><li v-for="item in report.development_process" :key="item">{{ item }}</li></ul>
-      <h5>风险判断</h5><p>{{ report.risk_assessment }}</p>
+      <ul>
+        <li v-for="item in report.development_process" :key="item">{{ item }}</li>
+      </ul>
+      <h5>风险判断</h5>
+      <p>{{ report.risk_assessment }}</p>
       <h5>建议</h5>
-      <ul><li v-for="item in report.recommendations" :key="item">{{ item }}</li></ul>
+      <ul>
+        <li v-for="item in report.recommendations" :key="item">{{ item }}</li>
+      </ul>
       <h5>不确定性</h5>
-      <ul><li v-for="item in report.uncertainties" :key="item">{{ item }}</li></ul>
+      <ul>
+        <li v-for="item in report.uncertainties" :key="item">{{ item }}</li>
+      </ul>
     </div>
   </section>
 </template>
 
 <style scoped>
-.sw { display: flex; flex-direction: column; gap: 14px; }
-.sw__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.sw__head h2 { margin: 0; font-size: 19px; font-weight: 600; color: var(--ce-text-strong); }
-.sw__head button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid var(--ce-panel-border); border-radius: 4px; background: transparent; color: var(--ce-text-dim); font-size: 19px; line-height: 1; cursor: pointer; }
-.sw__head button:hover { color: var(--ce-text-strong); }
-.sw__head button:focus-visible { outline: 2px solid var(--ce-accent); outline-offset: 2px; }
-.sw__intro { padding: 14px; border-top: 2px solid var(--ce-accent); background: var(--ce-panel-solid); }
-.sw__intro h3 { margin: 0 0 6px; font-size: 18px; color: var(--ce-text-strong); }
-.sw__intro p { margin: 0; font-size: 13px; line-height: 1.65; color: var(--ce-text-dim); }
-.sw__messages { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow: auto; }
-.sw__message { max-width: 94%; padding: 8px 10px; border-radius: 4px; font-size: 13px; line-height: 1.6; }
-.sw__message > span { display: block; margin-bottom: 3px; font-size: 12px; color: var(--ce-text-faint); }
-.sw__message p { margin: 0; white-space: pre-wrap; }
-.sw__message.is-user { align-self: flex-end; background: #1c2225; color: var(--ce-text-strong); }
-.sw__message.is-assistant { background: #1a1c1e; color: var(--ce-text); }
-.sw__quick { display: flex; flex-direction: column; gap: 5px; }
-.sw__quick button { padding: 8px 10px; text-align: left; font-size: 13px; color: var(--ce-text-dim); border: 1px solid var(--ce-panel-border); background: transparent; cursor: pointer; }
-.sw__quick button:hover { color: var(--ce-text-strong); border-color: var(--ce-accent); }
-.sw__input { display: flex; align-items: flex-end; gap: 8px; }
-.sw__error { margin: 0; font-size: 12px; color: #ff9a7a; }
-.sw__run-head { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--ce-divider); }
-.sw__spec { display: flex; flex-wrap: wrap; gap: 5px; }
-.sw__spec span { padding: 2px 7px; border: 1px solid var(--ce-panel-border); border-radius: 3px; font-size: 12px; color: var(--ce-text-dim); }
-.sw__variants-wrap { display: grid; gap: 6px; }
-.sw__variants-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.sw__variants-head b { font-size: 13px; color: var(--ce-text-strong); }
-.sw__variants-head span { font-size: 12px; color: var(--ce-text-faint); }
-.sw__variants { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.sw__variants button { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 9px 10px; text-align: left; border: 1px solid var(--ce-panel-border); border-left: 2px solid transparent; background: transparent; color: var(--ce-text-dim); cursor: pointer; }
-.sw__variants button.is-active { border-left-color: var(--ce-accent); color: var(--ce-text-strong); background: var(--ce-active); }
-.sw__variants button:focus-visible { outline: 2px solid var(--ce-accent); outline-offset: 2px; }
-.sw__variants b { overflow: hidden; font-size: 13px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
-.sw__variants span, .sw__variants small { overflow: hidden; font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.sw__variants small { color: var(--ce-text-faint); }
-.sw__run-head > div { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.sw__run-actions { justify-content: flex-end; }
-.sw__run-actions > :deep(.el-button + .el-button) { margin-left: 0; }
-.sw__tag { display: inline-block; padding: 1px 7px; font-size: 12px; color: var(--ce-text-dim); border: 1px solid var(--ce-panel-border); border-radius: 4px; }
+.sw {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sw__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sw__head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ce-text-strong);
+}
+.sw__head button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--ce-panel-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ce-text-dim);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sw__head button:hover {
+  color: var(--ce-text-strong);
+}
+.sw__head button:focus-visible {
+  outline: 2px solid var(--ce-accent);
+  outline-offset: 2px;
+}
+.sw__intro {
+  padding: 14px;
+  border-top: 2px solid var(--ce-accent);
+  background: var(--ce-panel-solid);
+}
+.sw__intro h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: var(--ce-text-strong);
+}
+.sw__intro p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ce-text-dim);
+}
+.sw__messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow: auto;
+}
+.sw__message {
+  max-width: 94%;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sw__message > span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 12px;
+  color: var(--ce-text-faint);
+}
+.sw__message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.sw__message.is-user {
+  align-self: flex-end;
+  background: #1c2225;
+  color: var(--ce-text-strong);
+}
+.sw__message.is-assistant {
+  background: #1a1c1e;
+  color: var(--ce-text);
+}
+.sw__quick {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sw__quick button {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--ce-text-dim);
+  border: 1px solid var(--ce-panel-border);
+  background: transparent;
+  cursor: pointer;
+}
+.sw__quick button:hover {
+  color: var(--ce-text-strong);
+  border-color: var(--ce-accent);
+}
+.sw__input {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.sw__error {
+  margin: 0;
+  font-size: 12px;
+  color: #ff9a7a;
+}
+.sw__run-head {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ce-divider);
+}
+.sw__spec {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.sw__spec span {
+  padding: 2px 7px;
+  border: 1px solid var(--ce-panel-border);
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--ce-text-dim);
+}
+.sw__variants-wrap {
+  display: grid;
+  gap: 6px;
+}
+.sw__variants-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sw__variants-head b {
+  font-size: 13px;
+  color: var(--ce-text-strong);
+}
+.sw__variants-head span {
+  font-size: 12px;
+  color: var(--ce-text-faint);
+}
+.sw__variants {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.sw__variants button {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 10px;
+  text-align: left;
+  border: 1px solid var(--ce-panel-border);
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--ce-text-dim);
+  cursor: pointer;
+}
+.sw__variants button.is-active {
+  border-left-color: var(--ce-accent);
+  color: var(--ce-text-strong);
+  background: var(--ce-active);
+}
+.sw__variants button:focus-visible {
+  outline: 2px solid var(--ce-accent);
+  outline-offset: 2px;
+}
+.sw__variants b {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sw__variants span,
+.sw__variants small {
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sw__variants small {
+  color: var(--ce-text-faint);
+}
+.sw__run-head > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sw__run-actions {
+  justify-content: flex-end;
+}
+.sw__run-actions > :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+.sw__tag {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: 12px;
+  color: var(--ce-text-dim);
+  border: 1px solid var(--ce-panel-border);
+  border-radius: 4px;
+}
 .sw__impact {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   background: var(--ce-panel-solid);
   border-left: 2px solid var(--ce-accent);
 }
-.sw__impact > div { min-width: 0; padding: 9px 10px; }
-.sw__impact > div + div { border-left: 1px solid var(--ce-divider); }
-.sw__impact span { display: block; overflow: hidden; font-size: 12px; color: var(--ce-text-dim); white-space: nowrap; text-overflow: ellipsis; }
-.sw__impact strong { display: block; margin-top: 3px; overflow: hidden; font-size: 15px; color: var(--ce-text-strong); white-space: nowrap; text-overflow: ellipsis; }
-.sw__timeline, .sw__block { padding: 12px; border: 1px solid var(--ce-panel-border); background: var(--ce-panel-solid); }
-.sw__timeline-head, .sw__controls { display: flex; align-items: center; justify-content: space-between; }
-.sw__timeline-head span, .sw__controls span { font-size: 12px; color: var(--ce-text-dim); }
-.sw__metrics { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 4px 8px; font-size: 13px; }
-.sw__metrics dt { color: var(--ce-text-dim); }
-.sw__metrics dd { margin: 0; color: var(--ce-text); }
-.sw__limits { margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: var(--ce-warning); }
-.sw__block h4 { margin: 0 0 8px; color: var(--ce-text-strong); }
-.sw__block h5 { margin: 10px 0 4px; font-size: 12px; color: var(--ce-text-dim); }
-.sw__block p, .sw__block li { font-size: 13px; line-height: 1.65; color: var(--ce-text); }
-.sw__block ul { margin: 0; padding-left: 18px; }
-.sw__transcript { border: 1px solid var(--ce-panel-border); background: #141618; }
-.sw__transcript summary { padding: 8px 10px; font-size: 12px; color: var(--ce-text-dim); cursor: pointer; }
-.sw__transcript[open] summary { border-bottom: 1px solid var(--ce-divider); }
-.sw__transcript .sw__messages { max-height: 210px; padding: 8px; }
+.sw__impact > div {
+  min-width: 0;
+  padding: 9px 10px;
+}
+.sw__impact > div + div {
+  border-left: 1px solid var(--ce-divider);
+}
+.sw__impact span {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--ce-text-dim);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sw__impact strong {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 15px;
+  color: var(--ce-text-strong);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sw__timeline,
+.sw__block {
+  padding: 12px;
+  border: 1px solid var(--ce-panel-border);
+  background: var(--ce-panel-solid);
+}
+.sw__timeline-head,
+.sw__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sw__timeline-head span,
+.sw__controls span {
+  font-size: 12px;
+  color: var(--ce-text-dim);
+}
+.sw__metrics {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  gap: 4px 8px;
+  font-size: 13px;
+}
+.sw__metrics dt {
+  color: var(--ce-text-dim);
+}
+.sw__metrics dd {
+  margin: 0;
+  color: var(--ce-text);
+}
+.sw__limits {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ce-warning);
+}
+.sw__block h4 {
+  margin: 0 0 8px;
+  color: var(--ce-text-strong);
+}
+.sw__block h5 {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  color: var(--ce-text-dim);
+}
+.sw__block p,
+.sw__block li {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ce-text);
+}
+.sw__block ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.sw__transcript {
+  border: 1px solid var(--ce-panel-border);
+  background: #141618;
+}
+.sw__transcript summary {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--ce-text-dim);
+  cursor: pointer;
+}
+.sw__transcript[open] summary {
+  border-bottom: 1px solid var(--ce-divider);
+}
+.sw__transcript .sw__messages {
+  max-height: 210px;
+  padding: 8px;
+}
 @media (max-width: 520px) {
-  .sw__impact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sw__impact > div:nth-child(3) { border-left: none; border-top: 1px solid rgba(94, 154, 205, .2); }
-  .sw__impact > div:nth-child(4) { border-top: 1px solid rgba(94, 154, 205, .2); }
-  .sw__variants { grid-template-columns: 1fr; }
+  .sw__impact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sw__impact > div:nth-child(3) {
+    border-left: none;
+    border-top: 1px solid rgba(94, 154, 205, 0.2);
+  }
+  .sw__impact > div:nth-child(4) {
+    border-top: 1px solid rgba(94, 154, 205, 0.2);
+  }
+  .sw__variants {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

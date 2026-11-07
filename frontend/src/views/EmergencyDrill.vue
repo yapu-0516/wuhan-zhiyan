@@ -7,10 +7,7 @@ import CesiumViewer from '@/components/CesiumViewer.vue'
 import { DRILL_SEEDS, type DrillSeed } from '@/data/drillSeeds'
 import type { CrowdLayer } from '@/components/scene/crowd/crowdLayer'
 import type { CrowdStats, VehicleStats } from '@/components/scene/crowd/types'
-import {
-  hazardProfile,
-  requiresPedestrianEvacuation
-} from '@/components/scene/crowd/hazard'
+import { hazardProfile, requiresPedestrianEvacuation } from '@/components/scene/crowd/hazard'
 import type { LayerVisibility } from '@/components/scene/types'
 
 type DrillPhase = 'calm' | 'detected' | 'evacuating' | 'responding'
@@ -93,9 +90,7 @@ const phaseHint = computed(() => {
 })
 const accent = computed(() => seed.value?.color ?? '#72c39a')
 const evacuationProgress = computed(() =>
-  evacuated.value
-    ? Math.max(0, Math.min(100, (safePeople.value / evacuated.value) * 100))
-    : 0
+  evacuated.value ? Math.max(0, Math.min(100, (safePeople.value / evacuated.value) * 100)) : 0
 )
 const selectedSeed = computed(() => DRILL_SEEDS.find((item) => item.key === selectedSeedKey.value) ?? DRILL_SEEDS[0])
 const visibleTimeline = computed(() => timelineEvents.value.slice(-2))
@@ -233,10 +228,7 @@ function renderIncident(item: DrillSeed) {
       disableDepthTestDistance: Number.POSITIVE_INFINITY
     },
     label: {
-      text: new Cesium.CallbackProperty(
-        () => `${item.name}\n${profile.label} ${Math.round(radiusAt())} 米`,
-        false
-      ),
+      text: new Cesium.CallbackProperty(() => `${item.name}\n${profile.label} ${Math.round(radiusAt())} 米`, false),
       font: '600 14px "Microsoft YaHei UI","Microsoft YaHei",sans-serif',
       fillColor: Cesium.Color.WHITE,
       showBackground: true,
@@ -296,12 +288,7 @@ async function triggerIncident() {
   replans.value = 0
   layer.setHazardScenario(item.eventType, item.riskRadiusM)
   layer.setSimulationSpeed(simulationSpeed.value)
-  layer.setVehicleIncident(
-    item.longitude,
-    item.latitude,
-    item.riskRadiusM,
-    item.eventType !== 'traffic'
-  )
+  layer.setVehicleIncident(item.longitude, item.latitude, item.riskRadiusM, item.eventType !== 'traffic')
   refreshStats()
   renderIncident(item)
   await nextTick()
@@ -434,9 +421,15 @@ onBeforeUnmount(() => {
       </div>
       <span class="drill-status__state"><i />{{ phaseText }}</span>
       <div class="drill-status__counts">
-        <span>人员 <b class="ce-num">{{ crowdStats.total }}</b></span>
-        <span>车辆 <b class="ce-num">{{ vehicleStats.total }}</b></span>
-        <span>异常 <b class="ce-num">{{ active ? 1 : 0 }}</b></span>
+        <span
+          >人员 <b class="ce-num">{{ crowdStats.total }}</b></span
+        >
+        <span
+          >车辆 <b class="ce-num">{{ vehicleStats.total }}</b></span
+        >
+        <span
+          >异常 <b class="ce-num">{{ active ? 1 : 0 }}</b></span
+        >
       </div>
       <div class="drill-speed" role="group" aria-label="演示倍速">
         <button
@@ -452,9 +445,7 @@ onBeforeUnmount(() => {
       <button v-if="!active" class="drill-primary" :disabled="!ready" @click="triggerIncident">
         <VideoPlay />启动当前场景
       </button>
-      <button v-else class="drill-reset" @click="resetDrill">
-        <SwitchButton />结束并复位
-      </button>
+      <button v-else class="drill-reset" @click="resetDrill"><SwitchButton />结束并复位</button>
     </section>
 
     <section v-if="!active" class="calm-card">
@@ -476,9 +467,18 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <dl>
-        <div><dt>模拟人员</dt><dd class="ce-num">{{ crowdStats.total }}</dd></div>
-        <div><dt>动态车辆</dt><dd class="ce-num">{{ vehicleStats.total }}</dd></div>
-        <div><dt>开放道路</dt><dd class="ce-num">105</dd></div>
+        <div>
+          <dt>模拟人员</dt>
+          <dd class="ce-num">{{ crowdStats.total }}</dd>
+        </div>
+        <div>
+          <dt>动态车辆</dt>
+          <dd class="ce-num">{{ vehicleStats.total }}</dd>
+        </div>
+        <div>
+          <dt>开放道路</dt>
+          <dd class="ce-num">105</dd>
+        </div>
       </dl>
       <button class="calm-card__view" @click="resetView"><RefreshLeft />回到全城视角</button>
     </section>
@@ -576,16 +576,32 @@ onBeforeUnmount(() => {
 
         <div class="incident-card__controls">
           <div v-if="active && seed.eventType === 'traffic'" class="mobile-traffic-summary">
-            <span><small>平均车速</small><b class="ce-num">{{ vehicleStats.averageSpeedKmh }}</b></span>
-            <span><small>排队车辆</small><b class="ce-num">{{ vehicleStats.stopped }}</b></span>
-            <span><small>受影响</small><b class="ce-num">{{ vehicleStats.affected }}</b></span>
-            <span><small>累计绕行</small><b class="ce-num">{{ vehicleStats.rerouted }}</b></span>
+            <span
+              ><small>平均车速</small><b class="ce-num">{{ vehicleStats.averageSpeedKmh }}</b></span
+            >
+            <span
+              ><small>排队车辆</small><b class="ce-num">{{ vehicleStats.stopped }}</b></span
+            >
+            <span
+              ><small>受影响</small><b class="ce-num">{{ vehicleStats.affected }}</b></span
+            >
+            <span
+              ><small>累计绕行</small><b class="ce-num">{{ vehicleStats.rerouted }}</b></span
+            >
           </div>
           <div v-if="active && seed.eventType !== 'traffic'" class="mobile-impact-summary">
-            <span><small>风险人员</small><b class="ce-num">{{ currentInRisk }}</b></span>
-            <span><small>受影响车辆</small><b class="ce-num">{{ vehicleStats.affected }}</b></span>
-            <span><small>关联建筑</small><b class="ce-num">{{ seed.affectedBuildings }}</b></span>
-            <span><small>纳入疏散</small><b class="ce-num">{{ evacuated }}</b></span>
+            <span
+              ><small>风险人员</small><b class="ce-num">{{ currentInRisk }}</b></span
+            >
+            <span
+              ><small>受影响车辆</small><b class="ce-num">{{ vehicleStats.affected }}</b></span
+            >
+            <span
+              ><small>关联建筑</small><b class="ce-num">{{ seed.affectedBuildings }}</b></span
+            >
+            <span
+              ><small>纳入疏散</small><b class="ce-num">{{ evacuated }}</b></span
+            >
           </div>
           <div v-if="evacuated" class="mobile-progress">
             <span>疏散进度</span>
@@ -599,10 +615,18 @@ onBeforeUnmount(() => {
             </li>
           </ol>
           <div v-if="evacuated" class="motion-state" role="group" aria-label="人员疏散状态">
-            <span>等待反应 <b class="ce-num">{{ reactingPeople }}</b></span>
-            <span>移动中 <b class="ce-num">{{ movingPeople }}</b></span>
-            <span>出口排队 <b class="ce-num">{{ waitingPeople }}</b></span>
-            <span>已到达 <b class="ce-num">{{ safePeople }}</b></span>
+            <span
+              >等待反应 <b class="ce-num">{{ reactingPeople }}</b></span
+            >
+            <span
+              >移动中 <b class="ce-num">{{ movingPeople }}</b></span
+            >
+            <span
+              >出口排队 <b class="ce-num">{{ waitingPeople }}</b></span
+            >
+            <span
+              >已到达 <b class="ce-num">{{ safePeople }}</b></span
+            >
           </div>
           <div v-if="evacuated" class="dynamic-state">
             <span>当前风险 {{ Math.round(hazardRadiusM) }} m</span>

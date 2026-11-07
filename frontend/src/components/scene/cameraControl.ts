@@ -31,10 +31,7 @@ export class CameraController {
   /** 默认视角参数：斜视 -32°，朝东南方向看向长江，覆盖整个示范区 */
   homeParams() {
     const [w, s, e, n] = this.region.bbox
-    const diag = Cesium.Cartesian3.distance(
-      Cesium.Cartesian3.fromDegrees(w, s),
-      Cesium.Cartesian3.fromDegrees(e, n)
-    )
+    const diag = Cesium.Cartesian3.distance(Cesium.Cartesian3.fromDegrees(w, s), Cesium.Cartesian3.fromDegrees(e, n))
     const range = Cesium.Math.clamp(diag * 0.72, 2200, 9000)
     // 视点略向西北偏移，使沿江密集街区与江面同时入画
     const lon = this.region.center[0] + (e - w) * 0.04

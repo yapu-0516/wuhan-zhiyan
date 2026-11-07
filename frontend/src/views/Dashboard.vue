@@ -52,13 +52,7 @@ const assistantOpen = ref(false)
 const crowdOpen = ref(false)
 const scenarioOpen = ref(false)
 const scenarioMapReview = ref(false)
-const {
-  calm: calmBaseline,
-  demoEventIds,
-  enterCalmBaseline,
-  revealAnomalies,
-  setDemoEventIds
-} = useDemoBaseline()
+const { calm: calmBaseline, demoEventIds, enterCalmBaseline, revealAnomalies, setDemoEventIds } = useDemoBaseline()
 const assistantDemoQuestion = ref('')
 let assistantSettled: (() => void) | null = null
 let assistantTimer = 0
@@ -178,7 +172,8 @@ async function retryEvents() {
 }
 
 const criticalActive = computed(
-  () => events.value.filter((e) => e.status !== 'resolved' && (e.severity === 'critical' || e.severity === 'high')).length
+  () =>
+    events.value.filter((e) => e.status !== 'resolved' && (e.severity === 'critical' || e.severity === 'high')).length
 )
 const updatedText = computed(() => {
   void lastRefresh.value
@@ -329,10 +324,7 @@ async function runScenarioDemo(context: { event: CityEvent | null }) {
     scenarioOpen.value = false
     return
   }
-  const completed = await Promise.race([
-    scenarioRef.value.demoStart(scenario),
-    sleep(45000).then(() => false)
-  ])
+  const completed = await Promise.race([scenarioRef.value.demoStart(scenario), sleep(45000).then(() => false)])
   if (!completed) {
     ElMessage.warning('情景推演未在演示时限内完成，继续后续环节')
     scenarioRef.value?.demoStop()
@@ -369,9 +361,7 @@ async function showAnomalySurge(context: { event: CityEvent | null }) {
   const surgeIds = results.flatMap((result) =>
     result.status === 'fulfilled' && result.value.event_id ? [result.value.event_id] : []
   )
-  setDemoEventIds([
-    ...new Set([...(context.event ? [context.event.id] : []), ...surgeIds])
-  ])
+  setDemoEventIds([...new Set([...(context.event ? [context.event.id] : []), ...surgeIds])])
   monitored.value = viewerRef.value?.sceneStats().monitored
   await sleep(4200)
 }
@@ -449,7 +439,9 @@ onBeforeUnmount(() => {
     <!-- 左列：城市态势 -->
     <aside class="hud-col hud-col--left" :class="{ hidden: !leftOpen }">
       <HudPanel title="城市安全指数" sub="SAFETY" class="p-safety" :focus="focus === 'safety' || focus === 'traffic'">
-        <template #extra><span class="ce-num">更新 {{ updatedText }}</span></template>
+        <template #extra
+          ><span class="ce-num">更新 {{ updatedText }}</span></template
+        >
         <SafetyPanel
           :score="displayOverview.city_index.safety_score"
           :tpi="displayOverview.city_index.traffic_tpi"
@@ -496,10 +488,20 @@ onBeforeUnmount(() => {
     </aside>
 
     <!-- 折叠把手 -->
-    <button class="hud-toggle hud-toggle--left" :class="{ closed: !leftOpen }" :title="leftOpen ? '收起左侧面板' : '展开左侧面板'" @click="leftOpen = !leftOpen">
+    <button
+      class="hud-toggle hud-toggle--left"
+      :class="{ closed: !leftOpen }"
+      :title="leftOpen ? '收起左侧面板' : '展开左侧面板'"
+      @click="leftOpen = !leftOpen"
+    >
       <i />
     </button>
-    <button class="hud-toggle hud-toggle--right" :class="{ closed: !rightOpen }" :title="rightOpen ? '收起右侧面板' : '展开右侧面板'" @click="rightOpen = !rightOpen">
+    <button
+      class="hud-toggle hud-toggle--right"
+      :class="{ closed: !rightOpen }"
+      :title="rightOpen ? '收起右侧面板' : '展开右侧面板'"
+      @click="rightOpen = !rightOpen"
+    >
       <i />
     </button>
 
@@ -562,9 +564,7 @@ onBeforeUnmount(() => {
       />
     </el-drawer>
 
-    <button v-if="scenarioMapReview" class="scenario-review-return" @click="reopenScenario">
-      返回情景推演
-    </button>
+    <button v-if="scenarioMapReview" class="scenario-review-return" @click="reopenScenario">返回情景推演</button>
 
     <!-- 左下图例 -->
     <transition name="hud-fade">

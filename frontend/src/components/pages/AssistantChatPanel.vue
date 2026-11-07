@@ -130,12 +130,7 @@ defineExpose({ clearChat, resetAutoQuestion })
           <button v-for="p in promptExamples" :key="p" type="button" @click="usePrompt(p)">{{ p }}</button>
         </div>
       </div>
-      <article
-        v-for="(message, index) in messages"
-        :key="index"
-        class="ac__message"
-        :class="`is-${message.role}`"
-      >
+      <article v-for="(message, index) in messages" :key="index" class="ac__message" :class="`is-${message.role}`">
         <span class="ac__role">{{ message.role === 'user' ? '你' : 'CityEye' }}</span>
         <p v-if="message.role === 'user'">{{ message.content }}</p>
         <div v-else class="ac__answer">

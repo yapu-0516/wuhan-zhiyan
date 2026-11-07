@@ -95,7 +95,8 @@ watch(
 function openDispatch(target: EventStatus = 'processing', prefill?: string) {
   dispatchTarget.value = target
   assignee.value = prefill ?? props.event.assignee ?? assigneeOptions.value[0] ?? ''
-  note.value = target === 'processing' && props.event.status === 'resolved' ? '事件复发，重新打开处置' : '请立即赶赴现场核查处置'
+  note.value =
+    target === 'processing' && props.event.status === 'resolved' ? '事件复发，重新打开处置' : '请立即赶赴现场核查处置'
   dispatchOpen.value = true
 }
 
@@ -169,8 +170,8 @@ defineExpose({ openDispatch, submitDispatch, demoDispatch })
         <h3 :title="event.name">{{ event.name }}</h3>
         <p>
           <span class="ce-num">{{ event.id }}</span>
-          <span class="sep">·</span>{{ typeMeta.label }}
-          <span class="sep">·</span>{{ sourceMeta.icon }} {{ sourceMeta.label }}
+          <span class="sep">·</span>{{ typeMeta.label }} <span class="sep">·</span>{{ sourceMeta.icon }}
+          {{ sourceMeta.label }}
         </p>
       </div>
       <button class="ed-close" title="关闭" @click="emit('close')">×</button>
@@ -179,7 +180,11 @@ defineExpose({ openDispatch, submitDispatch, demoDispatch })
     <div class="ed-body">
       <div class="ed-badges">
         <span class="ed-sev">{{ sevMeta.label }}</span>
-        <span class="ce-tag" :style="{ color: statusColor }"><i class="ce-dot" :class="{ 'ce-dot--pulse': event.status !== 'resolved' }" />{{ EVENT_STATUS_LABEL[event.status] }}</span>
+        <span class="ce-tag" :style="{ color: statusColor }"
+          ><i class="ce-dot" :class="{ 'ce-dot--pulse': event.status !== 'resolved' }" />{{
+            EVENT_STATUS_LABEL[event.status]
+          }}</span
+        >
         <span v-if="event.task_id" class="ce-tag ed-task">AI 任务 {{ event.task_id }}</span>
       </div>
 
@@ -206,19 +211,41 @@ defineExpose({ openDispatch, submitDispatch, demoDispatch })
       </div>
 
       <dl class="ed-grid">
-        <div><dt>发现时间</dt><dd class="ce-num">{{ shortTime(event.timestamp) }}</dd></div>
-        <div><dt>最近更新</dt><dd class="ce-num">{{ shortTime(event.updated_at) }}</dd></div>
-        <div><dt>行政区</dt><dd>{{ event.district || '—' }}</dd></div>
-        <div><dt>网格编号</dt><dd class="ce-num">{{ event.grid || '—' }}</dd></div>
-        <div class="span2"><dt>地址</dt><dd>{{ event.address || '—' }}</dd></div>
-        <div><dt>坐标</dt><dd class="ce-num">{{ event.longitude.toFixed(4) }}, {{ event.latitude.toFixed(4) }}</dd></div>
+        <div>
+          <dt>发现时间</dt>
+          <dd class="ce-num">{{ shortTime(event.timestamp) }}</dd>
+        </div>
+        <div>
+          <dt>最近更新</dt>
+          <dd class="ce-num">{{ shortTime(event.updated_at) }}</dd>
+        </div>
+        <div>
+          <dt>行政区</dt>
+          <dd>{{ event.district || '—' }}</dd>
+        </div>
+        <div>
+          <dt>网格编号</dt>
+          <dd class="ce-num">{{ event.grid || '—' }}</dd>
+        </div>
+        <div class="span2">
+          <dt>地址</dt>
+          <dd>{{ event.address || '—' }}</dd>
+        </div>
+        <div>
+          <dt>坐标</dt>
+          <dd class="ce-num">{{ event.longitude.toFixed(4) }}, {{ event.latitude.toFixed(4) }}</dd>
+        </div>
         <div>
           <dt>处置单位</dt>
           <dd :class="{ dim: !event.assignee }">{{ event.assignee || '未指派' }}</dd>
         </div>
         <div v-if="event.building_id" class="span2">
           <dt>关联建筑</dt>
-          <dd><a class="ed-link" @click="emit('open-building', event.building_id!)">{{ event.building_id }} · 查看建筑与沉降监测 →</a></dd>
+          <dd>
+            <a class="ed-link" @click="emit('open-building', event.building_id!)"
+              >{{ event.building_id }} · 查看建筑与沉降监测 →</a
+            >
+          </dd>
         </div>
       </dl>
 
@@ -244,8 +271,18 @@ defineExpose({ openDispatch, submitDispatch, demoDispatch })
 
       <transition name="ed-fold">
         <div v-if="dispatchOpen" class="ed-dispatch" :class="{ 'is-demo': highlight }">
-          <div class="ed-sub">{{ dispatchTarget === 'processing' && event.status === 'resolved' ? '重新打开并派单' : '派单处置' }}</div>
-          <el-select v-model="assignee" filterable allow-create default-first-option placeholder="选择处置单位" size="small" teleported>
+          <div class="ed-sub">
+            {{ dispatchTarget === 'processing' && event.status === 'resolved' ? '重新打开并派单' : '派单处置' }}
+          </div>
+          <el-select
+            v-model="assignee"
+            filterable
+            allow-create
+            default-first-option
+            placeholder="选择处置单位"
+            size="small"
+            teleported
+          >
             <el-option v-for="o in assigneeOptions" :key="o" :label="o" :value="o" />
           </el-select>
           <el-input v-model="note" size="small" placeholder="派单说明（可选）" maxlength="60" />
@@ -313,7 +350,11 @@ defineExpose({ openDispatch, submitDispatch, demoDispatch })
   border-radius: 50%;
   font-size: 19px;
   background: var(--type-color);
-  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--type-color) 75%, #fff), color-mix(in srgb, var(--type-color) 35%, #050a17));
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--type-color) 75%, #fff),
+    color-mix(in srgb, var(--type-color) 35%, #050a17)
+  );
   box-shadow:
     0 0 0 2px var(--sev-color),
     0 0 16px color-mix(in srgb, var(--type-color) 60%, transparent);

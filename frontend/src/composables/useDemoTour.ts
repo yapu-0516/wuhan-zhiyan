@@ -40,10 +40,7 @@ export interface DemoTourHooks {
   showAnomalySurge?: (context: DemoTourContext) => Promise<void>
 }
 
-export function useDemoTour(
-  getApi: () => SceneApi | null,
-  hooks: DemoTourHooks = {}
-) {
+export function useDemoTour(getApi: () => SceneApi | null, hooks: DemoTourHooks = {}) {
   const state = reactive<TourState>({ running: false, index: 0, total: TOTAL, title: '', caption: '', focus: null })
   const { lastCreated, events, getEventById, upsert } = useCityEvents()
   let runId = 0
@@ -130,7 +127,9 @@ export function useDemoTour(
     api.highlightCongestion(true)
     const traffic = api.cityTraffic()
     const spot = api.congestedSpot()
-    const tpiText = traffic ? `全路网 TPI ${traffic.tpi.toFixed(1)}（${TRAFFIC_LEVEL_META[traffic.level].label}）` : '路网实时路况'
+    const tpiText = traffic
+      ? `全路网 TPI ${traffic.tpi.toFixed(1)}（${TRAFFIC_LEVEL_META[traffic.level].label}）`
+      : '路网实时路况'
     step(
       3,
       '实时路网态势',

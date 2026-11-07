@@ -56,7 +56,9 @@ export class AmbientEffects {
           geometry,
           id: 'radar',
           attributes: {
-            color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString('#36e4ff').withAlpha(0.85)),
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+              Cesium.Color.fromCssColorString('#36e4ff').withAlpha(0.85)
+            ),
             fx: fxAttribute(0, 0, 0, 0)
           }
         }),

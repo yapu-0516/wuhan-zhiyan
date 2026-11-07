@@ -52,9 +52,27 @@ const gid = `spk-${Math.random().toString(36).slice(2, 8)}`
     </defs>
     <template v-if="geometry">
       <path :d="geometry.area" :fill="`url(#${gid})`" />
-      <path :d="geometry.line" fill="none" :stroke="color" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+      <path
+        :d="geometry.line"
+        fill="none"
+        :stroke="color"
+        stroke-width="1.6"
+        stroke-linejoin="round"
+        vector-effect="non-scaling-stroke"
+      />
     </template>
-    <line v-else x1="0" :y1="height / 2" :x2="W" :y2="height / 2" :stroke="color" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="3 4" vector-effect="non-scaling-stroke" />
+    <line
+      v-else
+      x1="0"
+      :y1="height / 2"
+      :x2="W"
+      :y2="height / 2"
+      :stroke="color"
+      stroke-opacity="0.4"
+      stroke-width="1"
+      stroke-dasharray="3 4"
+      vector-effect="non-scaling-stroke"
+    />
   </svg>
 </template>
 

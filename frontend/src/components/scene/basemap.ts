@@ -4,7 +4,10 @@ import * as Cesium from 'cesium'
 import { BASEMAPS, type BasemapConfig, type BasemapKey } from '@/config/cesium'
 
 /** 各底图的色彩调校：让底图退居背景，突出三维对象与 HUD */
-const STYLE: Record<BasemapKey, Partial<Pick<Cesium.ImageryLayer, 'alpha' | 'brightness' | 'contrast' | 'saturation' | 'gamma' | 'hue'>>> = {
+const STYLE: Record<
+  BasemapKey,
+  Partial<Pick<Cesium.ImageryLayer, 'alpha' | 'brightness' | 'contrast' | 'saturation' | 'gamma' | 'hue'>>
+> = {
   dark: { alpha: 1, brightness: 0.94, contrast: 1.18, saturation: 0.45 },
   // 卫星影像是“真实武汉”的底稿。只做轻微校正，不再压暗成背景纹理。
   satellite: { alpha: 1, brightness: 0.86, contrast: 1.08, saturation: 0.55, gamma: 0.99 },

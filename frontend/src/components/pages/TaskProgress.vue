@@ -18,7 +18,9 @@ const status = computed(() => taskStatusMeta(props.task.status))
 const active = computed(() => stepActive(props.task))
 const failed = computed(() => props.task.status === 'failed')
 const running = computed(() => props.task.status === 'running' || props.task.status === 'pending')
-const percent = computed(() => (props.task.status === 'done' ? 100 : Math.max(0, Math.min(100, Math.round(props.task.progress ?? 0)))))
+const percent = computed(() =>
+  props.task.status === 'done' ? 100 : Math.max(0, Math.min(100, Math.round(props.task.progress ?? 0)))
+)
 
 const STEP_DESC = ['任务已提交，等待调度', '读取并规范化输入数据', '算法推理中', '生成标注与指标', '分析完成']
 const tip = computed(() => {
@@ -46,7 +48,13 @@ const tip = computed(() => {
       <span class="prog__time cp-mono">⏱ {{ fmtDuration(elapsedMs) }}</span>
     </header>
 
-    <el-steps :active="active" align-center :process-status="failed ? 'error' : 'process'" finish-status="success" class="prog__steps">
+    <el-steps
+      :active="active"
+      align-center
+      :process-status="failed ? 'error' : 'process'"
+      finish-status="success"
+      class="prog__steps"
+    >
       <el-step v-for="s in STEP_TITLES" :key="s" :title="s" />
     </el-steps>
 
@@ -61,7 +69,13 @@ const tip = computed(() => {
     />
     <p class="prog__tip" :class="{ 'is-bad': failed }">{{ tip }}</p>
 
-    <el-alert v-if="failed" type="error" :closable="false" show-icon :title="task.error || '算法执行失败，请检查输入数据格式后重试'" />
+    <el-alert
+      v-if="failed"
+      type="error"
+      :closable="false"
+      show-icon
+      :title="task.error || '算法执行失败，请检查输入数据格式后重试'"
+    />
     <el-alert
       v-else-if="stalled"
       type="warning"

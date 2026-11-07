@@ -85,9 +85,7 @@ const { current, active, elapsedMs, stalled } = runner
 async function loadTasks(manual = false) {
   tasksLoading.value = true
   try {
-    tasks.value = (await getTasks()).filter(
-      (t) => t.status !== 'prototype' && t.type === selectedType.value
-    )
+    tasks.value = (await getTasks()).filter((t) => t.status !== 'prototype' && t.type === selectedType.value)
     if (manual) ElMessage.success('任务历史已刷新')
   } catch (e) {
     ElMessage.error(errMsg(e, '任务历史加载失败'))
@@ -150,8 +148,7 @@ async function runDemoAnalysis() {
   try {
     const samples = await getSamples(selectedType.value)
     const sample =
-      samples.find((item) => !/(无火情|正常|未发现|误报)/.test(`${item.name}${item.description}`)) ??
-      samples[0]
+      samples.find((item) => !/(无火情|正常|未发现|误报)/.test(`${item.name}${item.description}`)) ?? samples[0]
     if (!sample) return
     await submit({
       type: selectedType.value,
@@ -205,10 +202,18 @@ onMounted(async () => {
 </script>
 
 <template>
-  <PageShell :title="curMeta.label" hint="选择分析场景与数据 → 配置参数并运行 → 查看结果与历史记录" banner-detail="AI 分析需要后端算法服务。">
+  <PageShell
+    :title="curMeta.label"
+    hint="选择分析场景与数据 → 配置参数并运行 → 查看结果与历史记录"
+    banner-detail="AI 分析需要后端算法服务。"
+  >
     <template #actions>
       <span class="chan" :class="{ 'is-on': connected }">
-        <i class="cp-dot" :class="{ 'cp-dot--pulse': connected }" :style="{ '--c': connected ? '#4dd984' : '#8aa3c4' }"></i>
+        <i
+          class="cp-dot"
+          :class="{ 'cp-dot--pulse': connected }"
+          :style="{ '--c': connected ? '#4dd984' : '#8aa3c4' }"
+        ></i>
         {{ connected ? '实时通道已连接' : apiState.mode === 'live' ? '实时通道重连中 · 轮询兜底' : '实时通道未启用' }}
       </span>
     </template>
@@ -216,7 +221,9 @@ onMounted(async () => {
     <div class="ai">
       <!-- 当前分析类型标识 -->
       <section class="ai-hero cp-panel" :style="{ '--c': curMeta.color }">
-        <span class="ai-hero__icon"><el-icon><component :is="typeIcons[selectedType]" /></el-icon></span>
+        <span class="ai-hero__icon"
+          ><el-icon><component :is="typeIcons[selectedType]" /></el-icon
+        ></span>
         <div class="ai-hero__txt">
           <b>{{ curMeta.label }}</b>
           <p>{{ curMeta.blurb }}</p>
@@ -250,11 +257,15 @@ onMounted(async () => {
         <Transition name="swap" mode="out-in">
           <!-- 离线：原型任务，不展示任何结果 -->
           <div v-if="prototype" key="proto" class="proto cp-panel">
-            <div class="proto__icon"><el-icon><Connection /></el-icon></div>
+            <div class="proto__icon">
+              <el-icon><Connection /></el-icon>
+            </div>
             <div>
               <h3>离线演示模式：请启动后端以运行真实算法</h3>
               <p>
-                AI 分析（{{ typeMeta(prototype.type)?.label }}）由后端算法服务执行。当前未连接后端，平台<b>不会</b>生成任何模拟或虚构的分析结果。
+                AI 分析（{{
+                  typeMeta(prototype.type)?.label
+                }}）由后端算法服务执行。当前未连接后端，平台<b>不会</b>生成任何模拟或虚构的分析结果。
                 启动后端服务后刷新本页即可使用示例数据与文件上传分析。
               </p>
             </div>
@@ -278,10 +289,22 @@ onMounted(async () => {
               <li><b>05</b>标注 · 指标 · 事件</li>
             </ol>
             <dl class="idle__facts">
-              <div><dt>输入约束</dt><dd>{{ curMeta.rule }}</dd></div>
-              <div><dt>标准输出</dt><dd>标注影像、检测框、算法指标、事件记录</dd></div>
-              <div><dt>当前算法</dt><dd>{{ typeAlgo?.name ?? '等待后端算法信息' }}</dd></div>
-              <div><dt>判定原则</dt><dd>算法未检出时不会生成城市事件</dd></div>
+              <div>
+                <dt>输入约束</dt>
+                <dd>{{ curMeta.rule }}</dd>
+              </div>
+              <div>
+                <dt>标准输出</dt>
+                <dd>标注影像、检测框、算法指标、事件记录</dd>
+              </div>
+              <div>
+                <dt>当前算法</dt>
+                <dd>{{ typeAlgo?.name ?? '等待后端算法信息' }}</dd>
+              </div>
+              <div>
+                <dt>判定原则</dt>
+                <dd>算法未检出时不会生成城市事件</dd>
+              </div>
             </dl>
             <div class="idle__output">
               <b>任务完成后可核对</b>

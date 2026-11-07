@@ -267,7 +267,8 @@ export class RoadLayer {
     })
     if (!sw) return null
     const tpi = s / sw
-    const level: TrafficLevel = tpi < 2 ? 'smooth' : tpi < 4 ? 'basic' : tpi < 6 ? 'light' : tpi < 8 ? 'moderate' : 'heavy'
+    const level: TrafficLevel =
+      tpi < 2 ? 'smooth' : tpi < 4 ? 'basic' : tpi < 6 ? 'light' : tpi < 8 ? 'moderate' : 'heavy'
     return { tpi, level }
   }
 

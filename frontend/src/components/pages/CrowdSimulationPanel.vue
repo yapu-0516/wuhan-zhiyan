@@ -130,10 +130,17 @@ onBeforeUnmount(() => window.clearInterval(timer))
 <template>
   <section class="crowd-panel">
     <div class="cp-summary">
-      <div><b>{{ stats.total }}</b><span>总人数</span></div>
-      <div><b>{{ stats.moving }}</b><span>移动中</span></div>
+      <div>
+        <b>{{ stats.total }}</b
+        ><span>总人数</span>
+      </div>
+      <div>
+        <b>{{ stats.moving }}</b
+        ><span>移动中</span>
+      </div>
       <div v-for="(meta, key) in PERSON_META" :key="key">
-        <b :style="{ color: meta.color }">{{ stats.byType[key] }}</b><span>{{ meta.label }}</span>
+        <b :style="{ color: meta.color }">{{ stats.byType[key] }}</b
+        ><span>{{ meta.label }}</span>
       </div>
     </div>
 
@@ -156,23 +163,24 @@ onBeforeUnmount(() => window.clearInterval(timer))
       <el-button :disabled="!ready || busy || stats.total === 0" @click="scaleFirstPerson">首人缩放</el-button>
       <el-button :disabled="!ready || busy || stats.total === 0" @click="rotateFirstPerson">首人旋转</el-button>
       <el-button :disabled="!ready || busy || stats.total === 0" @click="focusPeople">定位人群</el-button>
-      <el-button :icon="Delete" :disabled="!ready || busy || stats.total === 0" @click="clearPeople">
-        清空
-      </el-button>
+      <el-button :icon="Delete" :disabled="!ready || busy || stats.total === 0" @click="clearPeople"> 清空 </el-button>
     </div>
 
-    <p class="cp-message">{{ message || (ready ? '人群图层已就绪，点击生成才会创建对象。' : '正在初始化 Three.js 人群图层…') }}</p>
+    <p class="cp-message">
+      {{ message || (ready ? '人群图层已就绪，点击生成才会创建对象。' : '正在初始化 Three.js 人群图层…') }}
+    </p>
     <p v-if="evacuation.total" class="cp-evacuation">
-      疏散状态：反应 {{ evacuation.reacting }} · 移动 {{ evacuation.moving }} · 出口排队
-      {{ evacuation.waiting }} · 安全 {{ evacuation.safe }} · 风险半径
-      {{ Math.round(evacuation.hazardRadiusM) }} m · 动态重规划 {{ evacuation.replans }} 次 ·
-      出口 {{ evacuation.activeExits }} · 封路 {{ evacuation.closedRoads }}
+      疏散状态：反应 {{ evacuation.reacting }} · 移动 {{ evacuation.moving }} · 出口排队 {{ evacuation.waiting }} · 安全
+      {{ evacuation.safe }} · 风险半径 {{ Math.round(evacuation.hazardRadiusM) }} m · 动态重规划
+      {{ evacuation.replans }} 次 · 出口 {{ evacuation.activeExits }} · 封路 {{ evacuation.closedRoads }}
     </p>
 
     <div v-if="Object.keys(stats.byArea).length" class="cp-areas">
       <span class="cp-subtitle">区域人数</span>
       <div class="cp-area-list">
-        <span v-for="(value, key) in stats.byArea" :key="key">{{ key }} <b>{{ value }}</b></span>
+        <span v-for="(value, key) in stats.byArea" :key="key"
+          >{{ key }} <b>{{ value }}</b></span
+        >
       </div>
     </div>
 

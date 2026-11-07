@@ -44,7 +44,9 @@ watch(() => props.building.id, load, { immediate: true })
 
 const b = computed<Building>(() => ({ ...props.building, ...(detail.value?.properties ?? {}) }))
 const monitoring = computed(() => detail.value?.monitoring ?? null)
-const risk = computed(() => RISK_LEVEL_META[monitoring.value?.risk_level ?? b.value.risk_level ?? 'normal'] ?? RISK_LEVEL_META.normal)
+const risk = computed(
+  () => RISK_LEVEL_META[monitoring.value?.risk_level ?? b.value.risk_level ?? 'normal'] ?? RISK_LEVEL_META.normal
+)
 const relatedEvents = computed(() => (detail.value?.events ?? []).slice(0, 4))
 
 const chartOption = computed(() => {
@@ -133,18 +135,32 @@ const chartOption = computed(() => {
           <span class="bp-hero__k">楼层数</span>
         </div>
         <div class="bp-hero__item">
-          <span class="bp-hero__v ce-num">{{ b.area_m2 ? thousands(Math.round(b.area_m2)) : '—' }}<small v-if="b.area_m2">m²</small></span>
+          <span class="bp-hero__v ce-num"
+            >{{ b.area_m2 ? thousands(Math.round(b.area_m2)) : '—' }}<small v-if="b.area_m2">m²</small></span
+          >
           <span class="bp-hero__k">占地面积</span>
         </div>
       </div>
 
       <dl class="bp-grid">
-        <div><dt>高度来源</dt><dd>{{ HEIGHT_SOURCE[b.height_source ?? 'estimated'] ?? '—' }}</dd></div>
-        <div><dt>网格编号</dt><dd class="ce-num">{{ b.grid || '—' }}</dd></div>
-        <div><dt>建筑类别</dt><dd>{{ CATEGORY[b.category ?? 'other'] ?? '其他' }}</dd></div>
+        <div>
+          <dt>高度来源</dt>
+          <dd>{{ HEIGHT_SOURCE[b.height_source ?? 'estimated'] ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>网格编号</dt>
+          <dd class="ce-num">{{ b.grid || '—' }}</dd>
+        </div>
+        <div>
+          <dt>建筑类别</dt>
+          <dd>{{ CATEGORY[b.category ?? 'other'] ?? '其他' }}</dd>
+        </div>
         <div>
           <dt>坐标</dt>
-          <dd class="ce-num">{{ Number.isFinite(b.longitude) ? b.longitude.toFixed(4) : '—' }}, {{ Number.isFinite(b.latitude) ? b.latitude.toFixed(4) : '—' }}</dd>
+          <dd class="ce-num">
+            {{ Number.isFinite(b.longitude) ? b.longitude.toFixed(4) : '—' }},
+            {{ Number.isFinite(b.latitude) ? b.latitude.toFixed(4) : '—' }}
+          </dd>
         </div>
       </dl>
 
@@ -156,17 +172,17 @@ const chartOption = computed(() => {
           </span>
           <span v-else class="ce-tag bp-off">未接入</span>
         </div>
-        <div v-if="loading" class="bp-skeleton">
-          <i /><i /><i />
-        </div>
+        <div v-if="loading" class="bp-skeleton"><i /><i /><i /></div>
         <template v-else-if="monitoring">
           <div class="bp-stats">
             <div>
-              <b class="ce-num">{{ fixed(monitoring.cumulative_mm, 1) }}</b><small>mm</small>
+              <b class="ce-num">{{ fixed(monitoring.cumulative_mm, 1) }}</b
+              ><small>mm</small>
               <span>累计沉降</span>
             </div>
             <div>
-              <b class="ce-num">{{ fixed(monitoring.rate_mm_per_month, 2) }}</b><small>mm/月</small>
+              <b class="ce-num">{{ fixed(monitoring.rate_mm_per_month, 2) }}</b
+              ><small>mm/月</small>
               <span>沉降速率</span>
             </div>
             <div>
@@ -184,7 +200,9 @@ const chartOption = computed(() => {
       <div v-if="relatedEvents.length" class="bp-events">
         <div class="bp-sub"><span>关联事件</span></div>
         <button v-for="e in relatedEvents" :key="e.id" class="bp-event" @click="emit('open-event', e.id)">
-          <span class="bp-event__icon" :style="{ color: EVENT_TYPE_META[e.event_type]?.color }">{{ EVENT_TYPE_META[e.event_type]?.icon }}</span>
+          <span class="bp-event__icon" :style="{ color: EVENT_TYPE_META[e.event_type]?.color }">{{
+            EVENT_TYPE_META[e.event_type]?.icon
+          }}</span>
           <span class="bp-event__name">{{ e.name }}</span>
           <span class="bp-event__status">{{ EVENT_STATUS_LABEL[e.status] }}</span>
         </button>

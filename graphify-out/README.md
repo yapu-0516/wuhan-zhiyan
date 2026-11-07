@@ -5,9 +5,9 @@
 
 ## 图谱规模
 
-- 3093 个节点
-- 7205 条边（6769 条 EXTRACTED，436 条 INFERRED）
-- 131 个社区
+- 3092 个节点
+- 7201 条边（6765 条 EXTRACTED，436 条 INFERRED）
+- 136 个社区
 - 267 个代码文件
 - 0 个外部模型 Token
 
@@ -17,7 +17,7 @@
 - `CALLFLOW.html`：按模块生成的调用流程与 Mermaid 架构图
 - `GRAPH_REPORT.md`：图谱审计、核心枢纽、跨社区连接与建议问题
 - `graph.json`：可供后续查询或 GraphRAG 使用的持久化图谱
-- `community_labels.json`：131 个社区的中文标签
+- `community_labels.json`：136 个社区的中文标签
 - `obsidian/`：Obsidian Vault 和 `graph.canvas`
 
 ## 查询

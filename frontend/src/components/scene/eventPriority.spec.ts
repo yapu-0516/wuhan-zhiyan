@@ -4,7 +4,12 @@ import { eventPriorityScore, prominentEventIds, rankEventsByPriority } from './e
 
 const now = new Date('2026-10-31T12:00:00+08:00').getTime()
 
-function event(id: string, severity: CityEvent['severity'], status: CityEvent['status'], minutesAgo: number): CityEvent {
+function event(
+  id: string,
+  severity: CityEvent['severity'],
+  status: CityEvent['status'],
+  minutesAgo: number
+): CityEvent {
   return {
     id,
     event_type: 'flood',

@@ -11,7 +11,10 @@ export const apiState = reactive<{ mode: ApiMode; lastError: string }>({
 })
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string
+  ) {
     super(message)
   }
 }
@@ -68,11 +71,7 @@ function markOffline(message: string) {
  * @param init      fetch 选项
  * @param fallback  后端不可达时的降级数据提供者；不提供则直接抛错
  */
-export async function request<T>(
-  path: string,
-  init?: RequestInit,
-  fallback?: () => Promise<T> | T
-): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit, fallback?: () => Promise<T> | T): Promise<T> {
   if (apiState.mode === 'mock' && fallback) return fallback()
   const method = (init?.method ?? 'GET').toUpperCase()
   const retries = method === 'GET' ? RETRY_DELAYS.length : 0

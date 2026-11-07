@@ -2,7 +2,7 @@
 // 城市安全指数仪表 + 实时路网 TPI
 import { computed } from 'vue'
 import EChart from '@/components/charts/EChart.vue'
-import AnimatedNumber from './AnimatedNumber.vue'
+import AnimatedNumber from '../common/AnimatedNumber.vue'
 import type { TrafficLevel } from '@/types/building'
 import { TRAFFIC_LEVEL_META } from '@/types/building'
 
@@ -90,14 +90,21 @@ const option = computed(() => {
     <div class="safety__tpi">
       <div class="tpi-label">实时路网 TPI</div>
       <div class="tpi-value" :style="{ color: levelMeta.color }">
-        <AnimatedNumber :value="tpi || 0" :decimals="1" />
+        <AnimatedNumber :value="tpi || 0" :digits="1" />
         <span class="ce-tag" :style="{ color: levelMeta.color }">{{ levelMeta.label }}</span>
       </div>
       <div class="tpi-scale">
-        <i v-for="l in LEVELS" :key="l" :style="{ background: TRAFFIC_LEVEL_META[l].color, color: TRAFFIC_LEVEL_META[l].color }" :class="{ on: l === level }" />
+        <i
+          v-for="l in LEVELS"
+          :key="l"
+          :style="{ background: TRAFFIC_LEVEL_META[l].color, color: TRAFFIC_LEVEL_META[l].color }"
+          :class="{ on: l === level }"
+        />
         <b class="tpi-marker" :style="{ left: marker }" />
       </div>
-      <div class="tpi-ticks ce-num"><span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span></div>
+      <div class="tpi-ticks ce-num">
+        <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span>
+      </div>
       <div v-if="monitored !== undefined" class="tpi-foot">
         沉降监测建筑 <b class="ce-num">{{ monitored }}</b> 栋
       </div>

@@ -64,31 +64,30 @@ export class ScenarioLayer {
       const isFlood = scenarioType === 'flood'
       const depthM = Math.max(0, Number(frame.metrics.water_depth_cm ?? 0) / 100)
       const waterTop = WATER_BASE_HEIGHT + Math.max(0.08, depthM * WATER_DEPTH_VISUAL_SCALE)
-      const entity = zone.polygon && zone.polygon.length >= 3
-        ? {
-            polygon: {
-              hierarchy: new Cesium.PolygonHierarchy(
-                Cesium.Cartesian3.fromDegreesArray(zone.polygon.flat())
-              ),
-              height: isFlood ? WATER_BASE_HEIGHT : 3,
-              extrudedHeight: isFlood ? waterTop : undefined,
-              material: isFlood ? WATER_BODY : color.withAlpha(0.18),
-              outline: true,
-              outlineColor: isFlood ? WATER_EDGE.withAlpha(0.95) : color.withAlpha(0.9)
+      const entity =
+        zone.polygon && zone.polygon.length >= 3
+          ? {
+              polygon: {
+                hierarchy: new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(zone.polygon.flat())),
+                height: isFlood ? WATER_BASE_HEIGHT : 3,
+                extrudedHeight: isFlood ? waterTop : undefined,
+                material: isFlood ? WATER_BODY : color.withAlpha(0.18),
+                outline: true,
+                outlineColor: isFlood ? WATER_EDGE.withAlpha(0.95) : color.withAlpha(0.9)
+              }
             }
-          }
-        : {
-            position: Cesium.Cartesian3.fromDegrees(zone.longitude, zone.latitude, 3),
-            ellipse: {
-              semiMajorAxis: zone.radius_m ?? 100,
-              semiMinorAxis: zone.radius_m ?? 100,
-              height: isFlood ? WATER_BASE_HEIGHT : 3,
-              extrudedHeight: isFlood ? waterTop : undefined,
-              material: isFlood ? WATER_BODY : color.withAlpha(0.18),
-              outline: true,
-              outlineColor: isFlood ? WATER_EDGE.withAlpha(0.95) : color.withAlpha(0.9)
+          : {
+              position: Cesium.Cartesian3.fromDegrees(zone.longitude, zone.latitude, 3),
+              ellipse: {
+                semiMajorAxis: zone.radius_m ?? 100,
+                semiMinorAxis: zone.radius_m ?? 100,
+                height: isFlood ? WATER_BASE_HEIGHT : 3,
+                extrudedHeight: isFlood ? waterTop : undefined,
+                material: isFlood ? WATER_BODY : color.withAlpha(0.18),
+                outline: true,
+                outlineColor: isFlood ? WATER_EDGE.withAlpha(0.95) : color.withAlpha(0.9)
+              }
             }
-          }
       this.zoneIds.push(this.viewer.entities.add(entity).id)
       if (isFlood) {
         this.addWaterSurface(zone, waterTop)

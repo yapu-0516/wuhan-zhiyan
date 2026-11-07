@@ -102,9 +102,19 @@ export function describeMetric(key: string, value: number | string): MetricView 
   const num = typeof value === 'number' ? value : Number(value)
   const isNum = typeof value === 'number' || (value !== '' && Number.isFinite(num))
   if (def) {
-    if (!isNum) return { key, label: def.label, value: METRIC_VALUE_LABEL[String(value)] ?? String(value), unit: '', known: true, hint: def.hint, raw: value }
+    if (!isNum)
+      return {
+        key,
+        label: def.label,
+        value: METRIC_VALUE_LABEL[String(value)] ?? String(value),
+        unit: '',
+        known: true,
+        hint: def.hint,
+        raw: value
+      }
     const shown = def.ratio ? num * 100 : num
-    const digits = def.ratio && Math.abs(shown) > 0 && Math.abs(shown) < 1 ? Math.max(def.digits ?? 1, 2) : (def.digits ?? 1)
+    const digits =
+      def.ratio && Math.abs(shown) > 0 && Math.abs(shown) < 1 ? Math.max(def.digits ?? 1, 2) : (def.digits ?? 1)
     return {
       key,
       label: def.label,
@@ -119,7 +129,14 @@ export function describeMetric(key: string, value: number | string): MetricView 
     if (re.test(key)) {
       if (!isNum) break
       const shown = s.ratio ? num * 100 : num
-      return { key, label: key, value: fmt(shown, s.digits ?? 1), unit: s.ratio ? '%' : s.unit, known: false, raw: value }
+      return {
+        key,
+        label: key,
+        value: fmt(shown, s.digits ?? 1),
+        unit: s.ratio ? '%' : s.unit,
+        known: false,
+        raw: value
+      }
     }
   }
   return { key, label: key, value: isNum ? fmt(num, 2) : String(value), unit: '', known: false, raw: value }

@@ -52,7 +52,9 @@ watch(
       <el-button type="primary" plain :icon="MagicStick" :loading="busy" :disabled="offline" @click="run">
         {{ busy ? '生成中…（约 5–20 秒）' : '生成研判报告' }}
       </el-button>
-      <span class="er__hint">{{ offline ? '离线模式：大模型服务需要后端在线' : 'DeepSeek 大模型 · 点击才触发 · 付费 API' }}</span>
+      <span class="er__hint">{{
+        offline ? '离线模式：大模型服务需要后端在线' : 'DeepSeek 大模型 · 点击才触发 · 付费 API'
+      }}</span>
       <p v-if="error" class="er__err">{{ error }}</p>
     </div>
 
@@ -60,7 +62,9 @@ watch(
       <div class="er__head">
         <b class="er__title">{{ report.report_title }}</b>
         <span v-if="risk" class="er__risk" :style="{ '--c': risk.color }">{{ risk.label }}</span>
-        <el-button class="er__again" link :icon="MagicStick" :loading="busy" :disabled="offline" @click="run">重新生成</el-button>
+        <el-button class="er__again" link :icon="MagicStick" :loading="busy" :disabled="offline" @click="run"
+          >重新生成</el-button
+        >
       </div>
       <p class="er__class">{{ report.data_classification }}</p>
       <p class="er__risk-stmt">{{ report.risk_assessment.statement }}</p>

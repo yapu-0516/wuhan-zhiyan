@@ -50,8 +50,12 @@ const rules: FormRules<FormState> = {
     { required: true, message: '请填写事件名称', trigger: 'blur' },
     { min: 2, max: 40, message: '名称长度应为 2~40 个字', trigger: 'blur' }
   ],
-  longitude: [{ type: 'number', required: true, min: -180, max: 180, message: '经度应在 -180 ~ 180 之间', trigger: 'change' }],
-  latitude: [{ type: 'number', required: true, min: -90, max: 90, message: '纬度应在 -90 ~ 90 之间', trigger: 'change' }]
+  longitude: [
+    { type: 'number', required: true, min: -180, max: 180, message: '经度应在 -180 ~ 180 之间', trigger: 'change' }
+  ],
+  latitude: [
+    { type: 'number', required: true, min: -90, max: 90, message: '纬度应在 -90 ~ 90 之间', trigger: 'change' }
+  ]
 }
 
 const severityOptions = (Object.keys(SEVERITY_META) as Severity[]).map((k) => ({
@@ -180,7 +184,13 @@ async function submit() {
 
       <div class="row2">
         <el-form-item label="经度" prop="longitude">
-          <el-input-number v-model="form.longitude" :precision="6" :step="0.001" :controls="false" style="width: 100%" />
+          <el-input-number
+            v-model="form.longitude"
+            :precision="6"
+            :step="0.001"
+            :controls="false"
+            style="width: 100%"
+          />
         </el-form-item>
         <el-form-item label="纬度" prop="latitude">
           <el-input-number v-model="form.latitude" :precision="6" :step="0.001" :controls="false" style="width: 100%" />

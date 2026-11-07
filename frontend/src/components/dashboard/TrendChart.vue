@@ -37,7 +37,9 @@ const option = computed(() => {
         symbol: 'none',
         lineStyle: { width: 2, color: '#6dc7e7' },
         itemStyle: { color: '#6dc7e7' },
-        data: list.map((p) => (Number(p.fire) || 0) + (Number(p.traffic) || 0) + (Number(p.building) || 0) + (Number(p.flood) || 0))
+        data: list.map(
+          (p) => (Number(p.fire) || 0) + (Number(p.traffic) || 0) + (Number(p.building) || 0) + (Number(p.flood) || 0)
+        )
       }
     ]
   }

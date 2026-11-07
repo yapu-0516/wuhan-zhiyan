@@ -15,13 +15,7 @@ import EventDrawer from '@/components/pages/EventDrawer.vue'
 import EventCreateDialog from '@/components/pages/EventCreateDialog.vue'
 import DataErrorNotice from '@/components/pages/DataErrorNotice.vue'
 import type { CityEvent, EventStatus, EventType, Severity } from '@/types/event'
-import {
-  EVENT_STATUS_COLOR,
-  EVENT_STATUS_LABEL,
-  EVENT_TYPES,
-  EVENT_TYPE_META,
-  SEVERITY_META
-} from '@/types/event'
+import { EVENT_STATUS_COLOR, EVENT_STATUS_LABEL, EVENT_TYPES, EVENT_TYPE_META, SEVERITY_META } from '@/types/event'
 
 const route = useRoute()
 const router = useRouter()
@@ -206,11 +200,41 @@ function resetFilters() {
 
 // ---------- KPI ----------
 const kpis = computed(() => [
-  { key: 'all', label: '全部事件', value: stats.value.total, color: '#67c6df', hint: `活跃 ${stats.value.active} · 已办结 ${stats.value.byStatus.resolved}` },
-  { key: 'pending', label: EVENT_STATUS_LABEL.pending, value: stats.value.byStatus.pending, color: EVENT_STATUS_COLOR.pending, hint: '等待人工核查确认' },
-  { key: 'monitoring', label: EVENT_STATUS_LABEL.monitoring, value: stats.value.byStatus.monitoring, color: EVENT_STATUS_COLOR.monitoring, hint: '持续观察中' },
-  { key: 'processing', label: EVENT_STATUS_LABEL.processing, value: stats.value.byStatus.processing, color: EVENT_STATUS_COLOR.processing, hint: '已派单处置' },
-  { key: 'resolved', label: EVENT_STATUS_LABEL.resolved, value: stats.value.byStatus.resolved, color: EVENT_STATUS_COLOR.resolved, hint: '已闭环办结' },
+  {
+    key: 'all',
+    label: '全部事件',
+    value: stats.value.total,
+    color: '#67c6df',
+    hint: `活跃 ${stats.value.active} · 已办结 ${stats.value.byStatus.resolved}`
+  },
+  {
+    key: 'pending',
+    label: EVENT_STATUS_LABEL.pending,
+    value: stats.value.byStatus.pending,
+    color: EVENT_STATUS_COLOR.pending,
+    hint: '等待人工核查确认'
+  },
+  {
+    key: 'monitoring',
+    label: EVENT_STATUS_LABEL.monitoring,
+    value: stats.value.byStatus.monitoring,
+    color: EVENT_STATUS_COLOR.monitoring,
+    hint: '持续观察中'
+  },
+  {
+    key: 'processing',
+    label: EVENT_STATUS_LABEL.processing,
+    value: stats.value.byStatus.processing,
+    color: EVENT_STATUS_COLOR.processing,
+    hint: '已派单处置'
+  },
+  {
+    key: 'resolved',
+    label: EVENT_STATUS_LABEL.resolved,
+    value: stats.value.byStatus.resolved,
+    color: EVENT_STATUS_COLOR.resolved,
+    hint: '已闭环办结'
+  },
   { key: 'today', label: '今日新增', value: todayCount.value, color: '#9ab0ba', hint: todayPrefix() }
 ])
 
@@ -327,7 +351,11 @@ function onCreated(ev: CityEvent) {
 </script>
 
 <template>
-  <PageShell title="事件中心" hint="汇聚火灾、交通拥堵、建筑异常、内涝积水四类城市事件，支持核查、派单、办结全流程闭环处置" banner-detail="处置操作仅在本地生效。">
+  <PageShell
+    title="事件中心"
+    hint="汇聚火灾、交通拥堵、建筑异常、内涝积水四类城市事件，支持核查、派单、办结全流程闭环处置"
+    banner-detail="处置操作仅在本地生效。"
+  >
     <template #actions>
       <el-button :icon="Refresh" :loading="refreshing" @click="refresh">刷新</el-button>
       <el-button type="primary" :icon="Plus" @click="createVisible = true">上报事件</el-button>
@@ -355,7 +383,9 @@ function onCreated(ev: CityEvent) {
     <!-- 过滤工具栏 -->
     <section class="cp-panel toolbar">
       <el-select v-model="typeFilter" clearable placeholder="全部类型" class="toolbar__type" popper-class="cp-popper">
-        <template #prefix><el-icon><component :is="typeFilter ? typeIcons[typeFilter] : List" /></el-icon></template>
+        <template #prefix
+          ><el-icon><component :is="typeFilter ? typeIcons[typeFilter] : List" /></el-icon
+        ></template>
         <el-option v-for="t in EVENT_TYPES" :key="t" :value="t" :label="EVENT_TYPE_META[t].label">
           <span class="opt">
             <el-icon :style="{ color: EVENT_TYPE_META[t].color }"><component :is="typeIcons[t]" /></el-icon>
@@ -367,7 +397,9 @@ function onCreated(ev: CityEvent) {
 
       <el-segmented v-model="statusFilter" :options="statusOptions" class="toolbar__status">
         <template #default="{ item }">
-          <span class="seg">{{ item.label }}<em>{{ item.count }}</em></span>
+          <span class="seg"
+            >{{ item.label }}<em>{{ item.count }}</em></span
+          >
         </template>
       </el-segmented>
 
@@ -375,13 +407,25 @@ function onCreated(ev: CityEvent) {
         <el-option v-for="s in statusOptions" :key="s.value" :value="s.value" :label="`${s.label} ${s.count}`" />
       </el-select>
 
-      <el-select v-model="severityFilter" clearable placeholder="全部等级" class="toolbar__sev" popper-class="cp-popper">
+      <el-select
+        v-model="severityFilter"
+        clearable
+        placeholder="全部等级"
+        class="toolbar__sev"
+        popper-class="cp-popper"
+      >
         <el-option v-for="s in severityOptions" :key="s.value" :value="s.value" :label="s.label">
           <span class="opt"><i class="cp-dot" :style="{ '--c': s.color }"></i>{{ s.label }}</span>
         </el-option>
       </el-select>
 
-      <el-input v-model="keyword" clearable placeholder="搜索编号 / 名称 / 地址 / 网格 / 处置单位" :prefix-icon="Search" class="toolbar__kw" />
+      <el-input
+        v-model="keyword"
+        clearable
+        placeholder="搜索编号 / 名称 / 地址 / 网格 / 处置单位"
+        :prefix-icon="Search"
+        class="toolbar__kw"
+      />
 
       <el-switch
         v-model="activeOnly"
@@ -393,7 +437,9 @@ function onCreated(ev: CityEvent) {
       />
 
       <el-button v-if="hasFilter" link type="primary" :icon="RefreshLeft" @click="resetFilters">重置筛选</el-button>
-      <span class="toolbar__count">命中 <b>{{ filtered.length }}</b> / {{ stats.total }}</span>
+      <span class="toolbar__count"
+        >命中 <b>{{ filtered.length }}</b> / {{ stats.total }}</span
+      >
     </section>
 
     <!-- 事件表格 -->

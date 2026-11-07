@@ -18,8 +18,12 @@ onBeforeUnmount(() => window.clearInterval(timer))
 
 const pad = (n: number) => String(n).padStart(2, '0') // taste-skill-ignore numbering: clock/date formatting
 const WEEK = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-const time = computed(() => `${pad(now.value.getHours())}:${pad(now.value.getMinutes())}:${pad(now.value.getSeconds())}`)
-const date = computed(() => `${now.value.getFullYear()}年${pad(now.value.getMonth() + 1)}月${pad(now.value.getDate())}日`)
+const time = computed(
+  () => `${pad(now.value.getHours())}:${pad(now.value.getMinutes())}:${pad(now.value.getSeconds())}`
+)
+const date = computed(
+  () => `${now.value.getFullYear()}年${pad(now.value.getMonth() + 1)}月${pad(now.value.getDate())}日`
+)
 const week = computed(() => WEEK[now.value.getDay()])
 
 const everConnected = ref(false)
@@ -31,7 +35,10 @@ const conn = computed(() => {
     return {
       label: '离线演示',
       cls: 'offline',
-      tip: apiState.mode === 'mock' ? '静态演示数据模式（VITE_USE_MOCK）' : `后端不可达，已切换为离线快照数据${apiState.lastError ? `（${apiState.lastError}）` : ''}`
+      tip:
+        apiState.mode === 'mock'
+          ? '静态演示数据模式（VITE_USE_MOCK）'
+          : `后端不可达，已切换为离线快照数据${apiState.lastError ? `（${apiState.lastError}）` : ''}`
     }
   return { label: everConnected.value ? '重连中' : '连接中', cls: 'retry', tip: '正在建立实时通道…' }
 })
@@ -70,9 +77,7 @@ const demoTip = computed(() =>
 
     <div class="header-right">
       <span v-if="demoMode" class="demo-badge" :title="demoTip">演示</span>
-      <span class="conn" :class="conn.cls" :title="conn.tip">
-        <i class="conn__dot" />{{ conn.label }}
-      </span>
+      <span class="conn" :class="conn.cls" :title="conn.tip"> <i class="conn__dot" />{{ conn.label }} </span>
       <div class="clock">
         <span class="clock__time ce-num">{{ time }}</span>
         <span class="clock__date">

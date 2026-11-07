@@ -26,11 +26,8 @@ export function useSystemInfo() {
 
   const region = computed(() => {
     const r = info.value?.region
-    const valid =
-      r && Array.isArray(r.center) && r.center.length === 2 && Array.isArray(r.bbox) && r.bbox.length === 4
-    return valid
-      ? { name: r.name || DEFAULT_REGION.name, center: r.center, bbox: r.bbox }
-      : { ...DEFAULT_REGION }
+    const valid = r && Array.isArray(r.center) && r.center.length === 2 && Array.isArray(r.bbox) && r.bbox.length === 4
+    return valid ? { name: r.name || DEFAULT_REGION.name, center: r.center, bbox: r.bbox } : { ...DEFAULT_REGION }
   })
 
   const demoMode = computed(() => !!info.value?.demo_mode)

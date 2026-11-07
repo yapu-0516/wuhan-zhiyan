@@ -13,7 +13,6 @@ const rows = computed(() =>
     return { t, n, pct: total.value ? Math.round((n / total.value) * 100) : 0, ...EVENT_TYPE_META[t] }
   })
 )
-
 </script>
 
 <template>

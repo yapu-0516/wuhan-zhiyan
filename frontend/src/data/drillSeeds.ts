@@ -81,9 +81,7 @@ export const DRILL_SEEDS: DrillSeed[] = [
     riskRadiusM: 190,
     affectedBuildings: 4,
     responseLabel: '交通疏导',
-    responseMix: [
-      { type: 'rescuer', count: 12 }
-    ],
+    responseMix: [{ type: 'rescuer', count: 12 }],
     metrics: [
       { label: '当前 TPI', value: '9.1' },
       { label: '当前车速', value: '8.8 km/h' },
@@ -109,9 +107,7 @@ export const DRILL_SEEDS: DrillSeed[] = [
     riskRadiusM: 260,
     affectedBuildings: 8,
     responseLabel: '排水与道路管控',
-    responseMix: [
-      { type: 'rescuer', count: 20 }
-    ],
+    responseMix: [{ type: 'rescuer', count: 20 }],
     metrics: [
       { label: '积水占比', value: '18.2%' },
       { label: '识别区域', value: '1 处' },

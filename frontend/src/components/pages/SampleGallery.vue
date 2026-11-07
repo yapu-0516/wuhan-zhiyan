@@ -42,7 +42,9 @@ const KIND: Record<Sample['kind'], string> = { image: '影像', csv: 'CSV 时序
             <span>{{ s.kind === 'csv' ? 'CSV 时序数据' : '影像预览不可用' }}</span>
           </div>
           <span class="sc__kind">{{ KIND[s.kind] ?? s.kind }}</span>
-          <span class="sc__check"><el-icon v-if="selectedId === s.id"><Check /></el-icon></span>
+          <span class="sc__check"
+            ><el-icon v-if="selectedId === s.id"><Check /></el-icon
+          ></span>
         </div>
         <div class="sc__txt">
           <b>{{ s.name }}</b>

@@ -118,9 +118,13 @@ onBeforeUnmount(() => {
     />
 
     <section>
-      <h3 class="sec-label">数据来源 <small>{{ sources.length }} 类感知源</small></h3>
+      <h3 class="sec-label">
+        数据来源 <small>{{ sources.length }} 类感知源</small>
+      </h3>
       <div v-if="loading && !sources.length" class="sources">
-        <el-skeleton v-for="i in 4" :key="i" animated class="cp-panel sk"><template #template><el-skeleton-item variant="rect" style="height: 168px" /></template></el-skeleton>
+        <el-skeleton v-for="i in 4" :key="i" animated class="cp-panel sk"
+          ><template #template><el-skeleton-item variant="rect" style="height: 168px" /></template
+        ></el-skeleton>
       </div>
       <el-empty v-else-if="!sources.length" class="cp-panel" :image-size="72" description="暂无数据源信息" />
       <div v-else class="sources">

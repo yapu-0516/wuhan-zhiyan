@@ -1,6 +1,20 @@
 <script setup lang="ts">
 // 场景浮动工具条：图层开关 / 底图切换 / 自动追踪 / 复位视角 / 一键演示
-import { OfficeBuilding, Guide, Location, FirstAidKit, Aim, RefreshLeft, VideoPlay, SwitchButton, MagicStick, Grid, User, DataAnalysis, ChatDotRound } from '@element-plus/icons-vue'
+import {
+  OfficeBuilding,
+  Guide,
+  Location,
+  FirstAidKit,
+  Aim,
+  RefreshLeft,
+  VideoPlay,
+  SwitchButton,
+  MagicStick,
+  Grid,
+  User,
+  DataAnalysis,
+  ChatDotRound
+} from '@element-plus/icons-vue'
 import type { LayerKey, LayerVisibility } from '@/components/scene/types'
 import type { BasemapKey } from '@/config/cesium'
 
@@ -65,7 +79,12 @@ const BASEMAP_OPTIONS: { key: BasemapKey; label: string }[] = [
     </div>
     <span class="tb-sep" />
     <div class="tb-actions">
-      <button class="tb-switch" :class="{ on: autoTrack }" title="新事件到达时相机自动飞往" @click="emit('auto-track', !autoTrack)">
+      <button
+        class="tb-switch"
+        :class="{ on: autoTrack }"
+        title="新事件到达时相机自动飞往"
+        @click="emit('auto-track', !autoTrack)"
+      >
         <i class="tb-switch__knob" />
         <el-icon><Aim /></el-icon><span class="tb-label">自动追踪</span>
       </button>

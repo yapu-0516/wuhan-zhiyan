@@ -85,6 +85,7 @@ export function aggregateEventsByDistrict(events: CityEvent[], now = Date.now())
   }
 
   return clusters.sort(
-    (a, b) => b.score - a.score || b.urgentCount - a.urgentCount || b.count - a.count || a.district.localeCompare(b.district)
+    (a, b) =>
+      b.score - a.score || b.urgentCount - a.urgentCount || b.count - a.count || a.district.localeCompare(b.district)
   )
 }

@@ -22,7 +22,10 @@ const activeCount = computed(() => sorted.value.filter((e) => e.status !== 'reso
 const activeEvents = computed(() => sorted.value.filter((e) => e.status !== 'resolved'))
 const priorityEvents = computed(() => rankEventsByPriority(activeEvents.value, now.value))
 const list = computed(() =>
-  (tab.value === 'priority' ? priorityEvents.value : tab.value === 'active' ? activeEvents.value : sorted.value).slice(0, 40)
+  (tab.value === 'priority' ? priorityEvents.value : tab.value === 'active' ? activeEvents.value : sorted.value).slice(
+    0,
+    40
+  )
 )
 
 // 新到达的事件高亮 6 秒
@@ -54,18 +57,10 @@ watch(
 <template>
   <div class="feed">
     <div class="feed__tabs">
-      <button
-        :class="{ on: tab === 'priority' }"
-        :aria-pressed="tab === 'priority'"
-        @click="tab = 'priority'"
-      >
+      <button :class="{ on: tab === 'priority' }" :aria-pressed="tab === 'priority'" @click="tab = 'priority'">
         优先
       </button>
-      <button
-        :class="{ on: tab === 'active' }"
-        :aria-pressed="tab === 'active'"
-        @click="tab = 'active'"
-      >
+      <button :class="{ on: tab === 'active' }" :aria-pressed="tab === 'active'" @click="tab = 'active'">
         未办结 <b class="ce-num">{{ activeCount }}</b>
       </button>
       <button :class="{ on: tab === 'all' }" :aria-pressed="tab === 'all'" @click="tab = 'all'">
@@ -96,7 +91,9 @@ watch(
             <span class="feed__sev">{{ SEVERITY_META[e.severity]?.short }}级</span>
           </div>
         </div>
-        <span class="feed__status" :style="{ color: EVENT_STATUS_COLOR[e.status] }">{{ EVENT_STATUS_LABEL[e.status] }}</span>
+        <span class="feed__status" :style="{ color: EVENT_STATUS_COLOR[e.status] }">{{
+          EVENT_STATUS_LABEL[e.status]
+        }}</span>
       </li>
     </TransitionGroup>
     <div v-else class="feed__empty">暂无{{ tab === 'priority' || tab === 'active' ? '未办结' : '' }}事件</div>

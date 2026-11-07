@@ -1,10 +1,5 @@
 import { ApiError, jsonBody, request } from './http'
-import type {
-  ScenarioComparison,
-  ScenarioReport,
-  ScenarioSessionView,
-  ScenarioVariantsResult
-} from '@/types/scenario'
+import type { ScenarioComparison, ScenarioReport, ScenarioSessionView, ScenarioVariantsResult } from '@/types/scenario'
 
 const LLM_TIMEOUT_MS = 90_000
 
@@ -12,7 +7,10 @@ async function scenarioRequest<T>(path: string, body?: unknown): Promise<T> {
   const ctrl = new AbortController()
   const timer = window.setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS)
   try {
-    return await request<T>(path, body === undefined ? { signal: ctrl.signal } : { ...jsonBody(body), signal: ctrl.signal })
+    return await request<T>(
+      path,
+      body === undefined ? { signal: ctrl.signal } : { ...jsonBody(body), signal: ctrl.signal }
+    )
   } catch (error) {
     if (error instanceof ApiError && error.status === 0) {
       throw new ApiError(0, '情景 Agent 响应超时或后端不可达')

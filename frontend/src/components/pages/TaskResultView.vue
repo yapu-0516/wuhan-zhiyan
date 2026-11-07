@@ -35,7 +35,9 @@ const annotated = computed(() =>
 const originals = computed(() =>
   (props.task.inputs ?? []).filter((i) => isImageUrl(i.url)).map((i) => ({ name: i.name, url: fileUrl(i.url) }))
 )
-const jsonArtifacts = computed(() => (result.value?.artifacts ?? []).filter((a) => a.kind === 'json' || !isImageUrl(a.url)))
+const jsonArtifacts = computed(() =>
+  (result.value?.artifacts ?? []).filter((a) => a.kind === 'json' || !isImageUrl(a.url))
+)
 const activeAnn = ref(0)
 watch(
   () => props.task.id,
@@ -45,7 +47,9 @@ const previewList = computed(() => [...annotated.value.map((a) => a.url), ...ori
 const mainAnnotated = computed(() => annotated.value[Math.min(activeAnn.value, annotated.value.length - 1)])
 
 // 无算法标注图时，在原图上叠加检测框（来自 result.detections.bbox）
-const overlayOnOriginal = computed(() => !annotated.value.length && originals.value.length > 0 && detections.value.length > 0)
+const overlayOnOriginal = computed(
+  () => !annotated.value.length && originals.value.length > 0 && detections.value.length > 0
+)
 const natural = ref<{ w: number; h: number } | null>(null)
 function onOriginalLoad(ev: Event) {
   const img = ev.target as HTMLImageElement
@@ -67,9 +71,7 @@ const timeCost = computed(() => {
   return a && b ? fmtDuration(b.getTime() - a.getTime()) : '—'
 })
 
-const eventCards = computed(() =>
-  (result.value?.event_ids ?? []).map((id) => ({ id, event: getEventById(id) }))
-)
+const eventCards = computed(() => (result.value?.event_ids ?? []).map((id) => ({ id, event: getEventById(id) })))
 
 function gotoScene(id: string) {
   void router.push({ path: '/dashboard', query: { eventId: id } })
@@ -85,14 +87,18 @@ function gotoEvent(id: string) {
     <header class="verdict">
       <div class="verdict__icon">{{ detected ? '检出' : '未检出' }}</div>
       <div class="verdict__main">
-        <h3>{{ detected ? '检测到异常' : '未发现异常' }}<small>{{ meta?.label }}</small></h3>
+        <h3>
+          {{ detected ? '检测到异常' : '未发现异常' }}<small>{{ meta?.label }}</small>
+        </h3>
         <p>{{ result.summary || (detected ? '算法判定存在异常，请结合现场核查。' : '算法未发现需要关注的异常。') }}</p>
         <div class="verdict__meta">
           <span class="cp-mono">{{ task.id }}</span>
           <span v-if="task.algorithm">{{ task.algorithm.name }} v{{ task.algorithm.version }}</span>
           <span v-if="task.finished_at">完成于 {{ task.finished_at }}</span>
           <span>耗时 {{ timeCost }}</span>
-          <span v-if="task.location">位置 {{ task.location.longitude.toFixed(4) }}, {{ task.location.latitude.toFixed(4) }}</span>
+          <span v-if="task.location"
+            >位置 {{ task.location.longitude.toFixed(4) }}, {{ task.location.latitude.toFixed(4) }}</span
+          >
         </div>
       </div>
       <div class="confidence">
@@ -116,7 +122,11 @@ function gotoEvent(id: string) {
             hide-on-click-modal
             class="media__img"
           >
-            <template #error><div class="media__err"><el-icon><PictureIcon /></el-icon>标注图加载失败</div></template>
+            <template #error
+              ><div class="media__err">
+                <el-icon><PictureIcon /></el-icon>标注图加载失败
+              </div></template
+            >
           </el-image>
           <div v-if="annotated.length > 1" class="media__thumbs">
             <button
@@ -134,14 +144,25 @@ function gotoEvent(id: string) {
         <div v-if="originals.length" class="media__orig">
           <figure v-for="(o, i) in originals" :key="o.url + i">
             <figcaption>
-              <span class="tag">{{ originals.length > 1 ? (i === 0 ? '前时相' : i === 1 ? '后时相' : `原图 ${i + 1}`) : '原始输入' }}</span>
+              <span class="tag">{{
+                originals.length > 1 ? (i === 0 ? '前时相' : i === 1 ? '后时相' : `原图 ${i + 1}`) : '原始输入'
+              }}</span>
               {{ o.name }}
             </figcaption>
             <div v-if="overlayOnOriginal && i === 0" class="ov">
               <img :src="o.url" :alt="o.name" @load="onOriginalLoad" />
               <svg v-if="natural" class="ov__svg" :viewBox="`0 0 ${natural.w} ${natural.h}`" preserveAspectRatio="none">
                 <g v-for="(d, j) in detections" :key="j">
-                  <rect :x="d.bbox[0]" :y="d.bbox[1]" :width="d.bbox[2]" :height="d.bbox[3]" fill="none" :stroke="verdictColor" stroke-width="3" vector-effect="non-scaling-stroke" />
+                  <rect
+                    :x="d.bbox[0]"
+                    :y="d.bbox[1]"
+                    :width="d.bbox[2]"
+                    :height="d.bbox[3]"
+                    fill="none"
+                    :stroke="verdictColor"
+                    stroke-width="3"
+                    vector-effect="non-scaling-stroke"
+                  />
                 </g>
               </svg>
             </div>
@@ -155,7 +176,11 @@ function gotoEvent(id: string) {
               hide-on-click-modal
               class="media__thumb"
             >
-              <template #error><div class="media__err"><el-icon><PictureIcon /></el-icon>原图不可用</div></template>
+              <template #error
+                ><div class="media__err">
+                  <el-icon><PictureIcon /></el-icon>原图不可用
+                </div></template
+              >
             </el-image>
           </figure>
           <p v-if="overlayOnOriginal" class="media__note">未返回标注图，已按检测框坐标在原图上叠加标注。</p>
@@ -165,17 +190,30 @@ function gotoEvent(id: string) {
       <!-- 检测目标 + 指标 -->
       <div class="side">
         <div v-if="detections.length" class="blk">
-          <h4 class="blk__t"><el-icon><Tickets /></el-icon>检测目标<em>{{ detections.length }}</em></h4>
+          <h4 class="blk__t">
+            <el-icon><Tickets /></el-icon>检测目标<em>{{ detections.length }}</em>
+          </h4>
           <table class="dt">
             <thead>
-              <tr><th>#</th><th>目标</th><th>置信度</th><th>位置 x, y, 宽×高 (px)</th></tr>
+              <tr>
+                <th>#</th>
+                <th>目标</th>
+                <th>置信度</th>
+                <th>位置 x, y, 宽×高 (px)</th>
+              </tr>
             </thead>
             <tbody>
               <tr v-for="(d, i) in detections" :key="i">
                 <td class="cp-mono">{{ i + 1 }}</td>
-                <td><b>{{ detectionLabel(d.label) }}</b><small v-if="d.area_ratio !== undefined">占 {{ (d.area_ratio * 100).toFixed(2) }}%</small></td>
                 <td>
-                  <span class="dt__conf"><span class="cp-bar"><i :style="{ width: `${pct100(d.confidence)}%` }"></i></span>{{ pct100(d.confidence) }}%</span>
+                  <b>{{ detectionLabel(d.label) }}</b
+                  ><small v-if="d.area_ratio !== undefined">占 {{ (d.area_ratio * 100).toFixed(2) }}%</small>
+                </td>
+                <td>
+                  <span class="dt__conf"
+                    ><span class="cp-bar"><i :style="{ width: `${pct100(d.confidence)}%` }"></i></span
+                    >{{ pct100(d.confidence) }}%</span
+                  >
                 </td>
                 <td class="cp-mono">{{ d.bbox[0] }}, {{ d.bbox[1] }}, {{ d.bbox[2] }}×{{ d.bbox[3] }}</td>
               </tr>
@@ -183,26 +221,48 @@ function gotoEvent(id: string) {
           </table>
         </div>
         <div v-else class="blk blk--empty">
-          <h4 class="blk__t"><el-icon><Tickets /></el-icon>检测目标</h4>
+          <h4 class="blk__t">
+            <el-icon><Tickets /></el-icon>检测目标
+          </h4>
           <p>{{ detected ? '该分析类型不输出目标框（时序 / 指标类判定）。' : '未检出目标。' }}</p>
         </div>
 
         <div v-if="metrics.length" class="blk">
-          <h4 class="blk__t"><el-icon><Document /></el-icon>算法指标</h4>
+          <h4 class="blk__t">
+            <el-icon><Document /></el-icon>算法指标
+          </h4>
           <div class="metrics">
-            <el-tooltip v-for="m in metrics" :key="m.key" :disabled="!m.hint" :content="m.hint" placement="top" popper-class="cp-popper">
+            <el-tooltip
+              v-for="m in metrics"
+              :key="m.key"
+              :disabled="!m.hint"
+              :content="m.hint"
+              placement="top"
+              popper-class="cp-popper"
+            >
               <div class="metric">
                 <span class="metric__l">{{ m.label }}</span>
-                <span class="metric__v">{{ m.value }}<small>{{ m.unit }}</small></span>
+                <span class="metric__v"
+                  >{{ m.value }}<small>{{ m.unit }}</small></span
+                >
               </div>
             </el-tooltip>
           </div>
         </div>
 
         <div v-if="jsonArtifacts.length" class="blk">
-          <h4 class="blk__t"><el-icon><Download /></el-icon>其他产物</h4>
+          <h4 class="blk__t">
+            <el-icon><Download /></el-icon>其他产物
+          </h4>
           <div class="files">
-            <a v-for="a in jsonArtifacts" :key="a.url" :href="fileUrl(a.url)" target="_blank" rel="noopener" class="files__a">
+            <a
+              v-for="a in jsonArtifacts"
+              :key="a.url"
+              :href="fileUrl(a.url)"
+              target="_blank"
+              rel="noopener"
+              class="files__a"
+            >
               <el-icon><Document /></el-icon>{{ a.name }}
             </a>
           </div>
@@ -212,23 +272,36 @@ function gotoEvent(id: string) {
 
     <!-- 时序图 -->
     <div v-if="result.series?.length" class="chart">
-      <h4 class="blk__t">时序分析曲线<em>{{ result.series.length }} 个采样点</em></h4>
+      <h4 class="blk__t">
+        时序分析曲线<em>{{ result.series.length }} 个采样点</em>
+      </h4>
       <TaskSeriesChart :series="result.series" :type="task.type" :metrics="result.metrics ?? {}" />
     </div>
 
     <!-- 关联事件 -->
     <div v-if="eventCards.length" class="events">
-      <h4 class="blk__t"><el-icon><Position /></el-icon>由本次分析生成的事件<em>{{ eventCards.length }}</em></h4>
+      <h4 class="blk__t">
+        <el-icon><Position /></el-icon>由本次分析生成的事件<em>{{ eventCards.length }}</em>
+      </h4>
       <div class="events__list">
-        <div v-for="c in eventCards" :key="c.id" class="ev" :style="{ '--ec': c.event ? EVENT_TYPE_META[c.event.event_type].color : '#4fc3f7' }">
+        <div
+          v-for="c in eventCards"
+          :key="c.id"
+          class="ev"
+          :style="{ '--ec': c.event ? EVENT_TYPE_META[c.event.event_type].color : '#4fc3f7' }"
+        >
           <span class="ev__icon"><i /></span>
           <div class="ev__txt">
             <b>{{ c.event?.name ?? '事件详情加载中' }}</b>
             <span class="ev__sub">
               <span class="cp-mono">{{ c.id }}</span>
               <template v-if="c.event">
-                <span class="cp-pill cp-pill--sm" :style="{ '--c': SEVERITY_META[c.event.severity].color }">{{ SEVERITY_META[c.event.severity].label }}</span>
-                <span class="cp-pill cp-pill--sm" :style="{ '--c': EVENT_STATUS_COLOR[c.event.status] }">{{ EVENT_STATUS_LABEL[c.event.status] }}</span>
+                <span class="cp-pill cp-pill--sm" :style="{ '--c': SEVERITY_META[c.event.severity].color }">{{
+                  SEVERITY_META[c.event.severity].label
+                }}</span>
+                <span class="cp-pill cp-pill--sm" :style="{ '--c': EVENT_STATUS_COLOR[c.event.status] }">{{
+                  EVENT_STATUS_LABEL[c.event.status]
+                }}</span>
               </template>
             </span>
           </div>

@@ -5,7 +5,10 @@ import { computed } from 'vue'
 const props = defineProps<{ items: { name: string; count: number }[] }>()
 
 const rows = computed(() => {
-  const list = [...(props.items ?? [])].filter((x) => x && x.name).sort((a, b) => b.count - a.count).slice(0, 6)
+  const list = [...(props.items ?? [])]
+    .filter((x) => x && x.name)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
   const max = Math.max(1, ...list.map((x) => x.count))
   return list.map((x, i) => ({ ...x, rank: i + 1, pct: (x.count / max) * 100 }))
 })

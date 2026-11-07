@@ -80,7 +80,14 @@ function pick(s: Sample) {
 
 // ---------- 上传 ----------
 const allowedExt = computed(() => meta.value.accept.split(','))
-const uploadError = computed(() => (fileList.value.length ? validateFiles(props.type, fileList.value.map((f) => f.name)) : null))
+const uploadError = computed(() =>
+  fileList.value.length
+    ? validateFiles(
+        props.type,
+        fileList.value.map((f) => f.name)
+      )
+    : null
+)
 
 function onFileChange(file: UploadFile) {
   const ok = isImageFile(file.name) || (isCsvFile(file.name) && allowedExt.value.includes('.csv'))
@@ -95,7 +102,9 @@ function onExceed() {
 
 const rawFiles = computed(() => fileList.value.map((f) => f.raw as File | undefined).filter((f): f is File => !!f))
 
-const ready = computed(() => (tab.value === 'samples' ? !!selectedId.value : !!rawFiles.value.length && !uploadError.value))
+const ready = computed(() =>
+  tab.value === 'samples' ? !!selectedId.value : !!rawFiles.value.length && !uploadError.value
+)
 
 function start() {
   if (!ready.value || props.busy) return
@@ -105,7 +114,10 @@ function start() {
     latitude: latitude.value ?? undefined,
     createEvent: createEvent.value
   }
-  emit('submit', tab.value === 'samples' ? { ...base, sampleId: selectedId.value, files: [] } : { ...base, files: rawFiles.value })
+  emit(
+    'submit',
+    tab.value === 'samples' ? { ...base, sampleId: selectedId.value, files: [] } : { ...base, files: rawFiles.value }
+  )
 }
 </script>
 
@@ -113,7 +125,13 @@ function start() {
   <div class="tip" :style="{ '--c': meta.color }">
     <el-tabs v-model="tab" class="tip__tabs">
       <el-tab-pane label="示例数据" name="samples">
-        <SampleGallery :samples="samples" :selected-id="selectedId" :loading="loadingSamples" :color="meta.color" @select="pick" />
+        <SampleGallery
+          :samples="samples"
+          :selected-id="selectedId"
+          :loading="loadingSamples"
+          :color="meta.color"
+          @select="pick"
+        />
       </el-tab-pane>
       <el-tab-pane label="上传数据" name="upload">
         <el-upload
@@ -135,7 +153,9 @@ function start() {
           <template #tip>
             <div class="tip__rule" :class="{ 'is-bad': !!uploadError }">
               <template v-if="uploadError">上传错误：{{ uploadError }}</template>
-              <template v-else-if="fileList.length">已选择 {{ fileList.length }} 个文件，满足「{{ meta.label }}」输入要求</template>
+              <template v-else-if="fileList.length"
+                >已选择 {{ fileList.length }} 个文件，满足「{{ meta.label }}」输入要求</template
+              >
               <template v-else>{{ meta.rule }}</template>
             </div>
           </template>
@@ -146,8 +166,22 @@ function start() {
     <div class="tip__opts">
       <div class="tip__loc">
         <span class="cp-label">关联位置</span>
-        <el-input-number v-model="longitude" :precision="6" :step="0.001" :controls="false" placeholder="经度" size="small" />
-        <el-input-number v-model="latitude" :precision="6" :step="0.001" :controls="false" placeholder="纬度" size="small" />
+        <el-input-number
+          v-model="longitude"
+          :precision="6"
+          :step="0.001"
+          :controls="false"
+          placeholder="经度"
+          size="small"
+        />
+        <el-input-number
+          v-model="latitude"
+          :precision="6"
+          :step="0.001"
+          :controls="false"
+          placeholder="纬度"
+          size="small"
+        />
         <el-button link type="primary" :icon="Aim" @click="useCenter">示范区中心</el-button>
       </div>
       <label class="tip__sw">
@@ -157,7 +191,15 @@ function start() {
       </label>
     </div>
 
-    <el-button class="tip__go" type="primary" size="large" :icon="VideoPlay" :loading="busy" :disabled="!ready" @click="start">
+    <el-button
+      class="tip__go"
+      type="primary"
+      size="large"
+      :icon="VideoPlay"
+      :loading="busy"
+      :disabled="!ready"
+      @click="start"
+    >
       {{ busy ? '分析进行中…' : '开始分析' }}
     </el-button>
   </div>

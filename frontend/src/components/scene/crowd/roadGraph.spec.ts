@@ -72,12 +72,7 @@ describe('provisional road graph', () => {
     ])
     const navigate = graph.prepareEvacuation({ x: 0, z: 0 }, 10, 2)
     const exits = new Set(
-      [
-        navigate({ x: 1, z: 0 }),
-        navigate({ x: -1, z: 0 }),
-        navigate({ x: 0, z: 1 }),
-        navigate({ x: 0, z: -1 })
-      ]
+      [navigate({ x: 1, z: 0 }), navigate({ x: -1, z: 0 }), navigate({ x: 0, z: 1 }), navigate({ x: 0, z: -1 })]
         .filter((route) => route !== null)
         .map((route) => route!.exitNodeId)
     )

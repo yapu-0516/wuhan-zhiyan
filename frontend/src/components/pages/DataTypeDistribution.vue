@@ -3,7 +3,7 @@
 import { computed } from 'vue'
 import EChart from '@/components/charts/EChart.vue'
 import { dataTypeMeta } from '@/composables/pages/dataMeta'
-import AnimatedNumber from './AnimatedNumber.vue'
+import AnimatedNumber from '../common/AnimatedNumber.vue'
 
 const props = defineProps<{
   items: { type: string; count: number }[]

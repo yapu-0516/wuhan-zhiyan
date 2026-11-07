@@ -27,10 +27,14 @@ const CATEGORY: Record<string, string> = {
 const riskFilter = ref<RiskLevel | ''>('')
 const sorted = computed(() =>
   [...props.buildings].sort(
-    (a, b) => RANK[a.risk_level ?? 'normal'] - RANK[b.risk_level ?? 'normal'] || (a.name || a.id).localeCompare(b.name || b.id, 'zh-CN')
+    (a, b) =>
+      RANK[a.risk_level ?? 'normal'] - RANK[b.risk_level ?? 'normal'] ||
+      (a.name || a.id).localeCompare(b.name || b.id, 'zh-CN')
   )
 )
-const shown = computed(() => (riskFilter.value ? sorted.value.filter((b) => (b.risk_level ?? 'normal') === riskFilter.value) : sorted.value))
+const shown = computed(() =>
+  riskFilter.value ? sorted.value.filter((b) => (b.risk_level ?? 'normal') === riskFilter.value) : sorted.value
+)
 const counts = computed(() => {
   const c: Record<RiskLevel, number> = { warning: 0, watch: 0, normal: 0 }
   for (const b of props.buildings) c[b.risk_level ?? 'normal']++
@@ -81,7 +85,11 @@ function parseThresholds(text: string): { label: string; value: number; color: s
   const re = /(\d+(?:\.\d+)?)\s*mm\s*\/\s*月\s*(关注|预警)阈值/g
   let m: RegExpExecArray | null
   while ((m = re.exec(text))) {
-    out.push({ label: `${m[2]}速率 ${m[1]} mm/月`, value: Number(m[1]), color: m[2] === '预警' ? '#ff4d4f' : '#f0c050' })
+    out.push({
+      label: `${m[2]}速率 ${m[1]} mm/月`,
+      value: Number(m[1]),
+      color: m[2] === '预警' ? '#ff4d4f' : '#f0c050'
+    })
   }
   return out
 }
@@ -190,7 +198,7 @@ function openEvent(id: string) {
         <aside class="list">
           <div class="list__sum">
             <button
-              v-for="r in (['warning', 'watch', 'normal'] as RiskLevel[])"
+              v-for="r in ['warning', 'watch', 'normal'] as RiskLevel[]"
               :key="r"
               type="button"
               class="list__chip"
@@ -198,7 +206,8 @@ function openEvent(id: string) {
               :style="{ '--c': RISK_LEVEL_META[r].color }"
               @click="riskFilter = riskFilter === r ? '' : r"
             >
-              <i class="cp-dot" :class="{ 'cp-dot--pulse': r === 'warning' && counts[r] > 0 }"></i>{{ RISK_LEVEL_META[r].label }}<b>{{ counts[r] }}</b>
+              <i class="cp-dot" :class="{ 'cp-dot--pulse': r === 'warning' && counts[r] > 0 }"></i
+              >{{ RISK_LEVEL_META[r].label }}<b>{{ counts[r] }}</b>
             </button>
           </div>
           <ul class="list__ul">
@@ -212,7 +221,9 @@ function openEvent(id: string) {
             >
               <div class="item__txt">
                 <b class="cp-ellipsis">{{ b.name || b.id }}</b>
-                <small class="cp-ellipsis">{{ b.id }} · {{ b.district || '—' }}<template v-if="b.grid"> · {{ b.grid }}</template></small>
+                <small class="cp-ellipsis"
+                  >{{ b.id }} · {{ b.district || '—' }}<template v-if="b.grid"> · {{ b.grid }}</template></small
+                >
               </div>
               <span class="cp-pill cp-pill--sm" :style="{ '--c': RISK_LEVEL_META[b.risk_level ?? 'normal'].color }">
                 {{ RISK_LEVEL_META[b.risk_level ?? 'normal'].label }}
@@ -236,7 +247,10 @@ function openEvent(id: string) {
                   <span v-if="bProps.district">{{ bProps.district }}</span>
                 </p>
               </div>
-              <span class="cp-pill" :style="{ '--c': risk.color }"><i class="cp-dot" :class="{ 'cp-dot--pulse': mon?.risk_level === 'warning' }"></i>{{ risk.label }}</span>
+              <span class="cp-pill" :style="{ '--c': risk.color }"
+                ><i class="cp-dot" :class="{ 'cp-dot--pulse': mon?.risk_level === 'warning' }"></i
+                >{{ risk.label }}</span
+              >
               <el-button type="primary" plain :icon="Aim" @click="locate">三维定位</el-button>
             </header>
 
@@ -244,7 +258,9 @@ function openEvent(id: string) {
               <div class="stats">
                 <div v-for="s in stats" :key="s.label" class="stat" :style="{ '--c': s.color }">
                   <span class="cp-label">{{ s.label }}</span>
-                  <b>{{ s.value }}<small>{{ s.unit }}</small></b>
+                  <b
+                    >{{ s.value }}<small>{{ s.unit }}</small></b
+                  >
                 </div>
               </div>
 
@@ -262,8 +278,12 @@ function openEvent(id: string) {
               <span class="cp-label">关联事件</span>
               <button v-for="e in detail.events" :key="e.id" type="button" class="rel__item" @click="openEvent(e.id)">
                 <b class="cp-ellipsis">{{ e.name }}</b>
-                <span class="cp-pill cp-pill--sm" :style="{ '--c': SEVERITY_META[e.severity].color }">{{ SEVERITY_META[e.severity].short }}级</span>
-                <span class="cp-pill cp-pill--sm" :style="{ '--c': EVENT_STATUS_COLOR[e.status] }">{{ EVENT_STATUS_LABEL[e.status] }}</span>
+                <span class="cp-pill cp-pill--sm" :style="{ '--c': SEVERITY_META[e.severity].color }"
+                  >{{ SEVERITY_META[e.severity].short }}级</span
+                >
+                <span class="cp-pill cp-pill--sm" :style="{ '--c': EVENT_STATUS_COLOR[e.status] }">{{
+                  EVENT_STATUS_LABEL[e.status]
+                }}</span>
               </button>
             </div>
           </template>

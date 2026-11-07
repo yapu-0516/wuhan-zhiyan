@@ -47,10 +47,7 @@ function timeout(ms: number) {
 // 后端无响应时最多等待 8 秒，随后降级挂载（API 层会自动切换离线快照）。
 ;(async () => {
   setSplash('正在连接城市数据中台…')
-  await Promise.race([
-    Promise.allSettled([useCityEvents().loadFromApi(), useSystemInfo().load()]),
-    timeout(8000)
-  ])
+  await Promise.race([Promise.allSettled([useCityEvents().loadFromApi(), useSystemInfo().load()]), timeout(8000)])
   setSplash('正在构建三维城市…')
   await router.isReady().catch(() => undefined)
   app.mount('#app')

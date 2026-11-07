@@ -9,7 +9,14 @@
  */
 import * as Cesium from 'cesium'
 import type { Building, BuildingCollection } from '@/types/building'
-import { buildingAppearance, byte, fxAttribute, regionFrameGlsl, safeBuildingAppearance, type SceneClock } from './shaders'
+import {
+  buildingAppearance,
+  byte,
+  fxAttribute,
+  regionFrameGlsl,
+  safeBuildingAppearance,
+  type SceneClock
+} from './shaders'
 import { clamp, cleanRing, hashByte, type LonLat } from './geo'
 
 const CHUNK = 400
@@ -25,7 +32,10 @@ const WATCH_COLOR = Cesium.Color.fromCssColorString('#c59455')
 const WARNING_COLOR = Cesium.Color.fromCssColorString('#bd5f5d')
 const BASE_ALPHA = 1
 
-function buildingColor(b: Pick<Building, 'height' | 'risk_level' | 'monitored'>, result = new Cesium.Color()): Cesium.Color {
+function buildingColor(
+  b: Pick<Building, 'height' | 'risk_level' | 'monitored'>,
+  result = new Cesium.Color()
+): Cesium.Color {
   const t = clamp((b.height - 6) / 140, 0, 1)
   let i = 0
   while (i < HEIGHT_STOPS.length - 2 && t > HEIGHT_STOPS[i + 1][0]) i++
@@ -247,7 +257,8 @@ export class BuildingLayer {
   }
 
   private isShown(b: Building): boolean {
-    if (this.riskOnly) return b.monitored || b.risk_level === 'watch' || b.risk_level === 'warning' || this.alarms.has(b.id)
+    if (this.riskOnly)
+      return b.monitored || b.risk_level === 'watch' || b.risk_level === 'warning' || this.alarms.has(b.id)
     // 数据块视图使用完整 OSM 轮廓，街区密度本身就是城市信息。
     return !!b
   }
@@ -281,7 +292,8 @@ export class BuildingLayer {
   }
 
   private refreshMode(r: BuildingRecord) {
-    const mode = this.selected === r.props.id ? 2 : this.alarms.has(r.props.id) ? 1 : r.props.risk_level === 'warning' ? 3 : 0
+    const mode =
+      this.selected === r.props.id ? 2 : this.alarms.has(r.props.id) ? 1 : r.props.risk_level === 'warning' ? 3 : 0
     if (r.fx[0] !== mode) {
       r.fx[0] = mode
       this.dirty.add(r)
