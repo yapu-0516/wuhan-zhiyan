@@ -22,6 +22,7 @@ COPY llm_module llm_module
 COPY scenario_engine scenario_engine
 COPY backend backend
 COPY data/geo data/geo
+COPY data/datasets/derived/buildings data/datasets/derived/buildings
 COPY data/samples data/samples
 COPY --from=web /app/frontend/dist frontend/dist
 EXPOSE 8000

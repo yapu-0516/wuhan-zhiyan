@@ -1,8 +1,8 @@
-"""地理数据仓库：加载 data/geo 下的 OpenStreetMap 建筑 / 道路 / POI 与区域配置，提供空间查询。
+"""地理数据仓库：加载 data/geo 下的城市建筑 / 道路 / POI 与区域配置，提供空间查询。
 
 - 建筑 / 道路编号（B0001 / R001）在数据重新生成时可能变化，系统中所有引用都在启动时从文件派生，不写死；
 - 任意点所属行政区 = 最近建筑的行政区；网格编号 = {区前缀}-{行:02d}-{列:02d}（1 起算，自区域西南角）；
-- 距离计算使用以区域中心为原点的等距圆柱投影（示范区范围约 4 km，误差可忽略）。
+- 距离计算使用以区域中心为原点的等距圆柱投影，并通过均匀网格索引避免全市数据全量扫描。
 """
 from __future__ import annotations
 
@@ -20,16 +20,17 @@ import numpy as np
 log = logging.getLogger("cityeye.geo")
 
 DEFAULT_REGION: dict[str, Any] = {
-    "name": "汉口沿江示范区",
+    "name": "武汉中心城区",
     "city": "武汉",
-    "center": [114.2905, 30.5895],
-    "bbox": [114.270, 30.570, 114.312, 30.612],
-    "grid": {"origin": [114.270, 30.570], "cell_deg": 0.0045, "rows": 10, "cols": 10},
-    "district_prefix": {"江汉区": "JH", "江岸区": "JA", "硚口区": "QK", "汉阳区": "HY", "武昌区": "WC"},
-    "districts": ["江岸区", "江汉区"],
+    "center": [114.35, 30.585],
+    "bbox": [114.15, 30.45, 114.55, 30.72],
+    "grid": {"origin": [114.15, 30.45], "cell_deg": 0.0045, "rows": 60, "cols": 89},
+    "district_prefix": {"江汉区": "JH", "江岸区": "JA", "硚口区": "QK", "汉阳区": "HY", "武昌区": "WC", "洪山区": "HS", "青山区": "QS"},
+    "districts": ["江岸区", "江汉区", "硚口区", "汉阳区", "武昌区", "洪山区", "青山区"],
+    "event_districts": ["江岸区", "江汉区", "硚口区", "汉阳区", "武昌区", "洪山区", "青山区"],
 }
 ODBL = "建筑 / 道路 / POI 数据 © OpenStreetMap contributors（ODbL 1.0）"
-GENERIC_NAME = re.compile(r"(住宅|建筑|商业|办公|公共|工业|写字楼|商场)\s*B\d{3,}$")
+GENERIC_NAME = re.compile(r"(住宅|建筑|商业|办公|公共|工业|写字楼|商场)\s*(?:WH)?B\d{3,}$")
 SEGMENT_SUFFIX = re.compile(r"（[一二三四五六七八九十\d]+段）$")
 CATEGORY_CN = {
     "residential": "住宅楼",
@@ -81,8 +82,10 @@ class GeoRepository:
             ll = np.array([[p["longitude"], p["latitude"]] for p in self.buildings.values()], dtype=np.float64)
             self._b_ids = list(self.buildings.keys())
             self._b_xy = self._xy(ll[:, 0], ll[:, 1])
+            self._b_grid = self._index_points(self._b_xy)
         else:
             self._b_ids, self._b_xy = [], np.zeros((0, 2))
+            self._b_grid = {}
 
         self.roads: list[Road] = []
         for f in self._load_json("roads.geojson", {}).get("features", []):
@@ -103,6 +106,10 @@ class GeoRepository:
                 )
             )
         self.road_by_id = {r.id: r for r in self.roads}
+        self.road_district: dict[str, str] = {}
+        for r in self.roads:
+            midpoint = r.coords[len(r.coords) // 2]
+            self.road_district[r.id] = self.district_of(float(midpoint[0]), float(midpoint[1]))
         segs, owner = [], []
         for i, r in enumerate(self.roads):
             xy = self._xy(r.coords[:, 0], r.coords[:, 1])
@@ -110,6 +117,10 @@ class GeoRepository:
             owner += [i] * (len(xy) - 1)
         self._segs = np.vstack(segs) if segs else np.zeros((0, 4))
         self._seg_owner = np.asarray(owner, dtype=np.int64)
+        self._seg_grid: dict[tuple[int, int], list[int]] = {}
+        for i, (x1, y1, x2, y2) in enumerate(self._segs):
+            for key in self._grid_keys(min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)):
+                self._seg_grid.setdefault(key, []).append(i)
         self.pois: list[dict[str, Any]] = self._load_json("pois.json", [])
         self.monitoring: dict[str, str] = {}  # building_id → risk_level（由沉降评估写入）
         log.info("地理数据：%d 栋建筑，%d 条道路，%d 个 POI", len(self.buildings), len(self.roads), len(self.pois))
@@ -125,6 +136,25 @@ class GeoRepository:
     def _xy(self, lon: Any, lat: Any) -> np.ndarray:
         return np.column_stack([(np.asarray(lon) - self._lon0) * self._kx, (np.asarray(lat) - self._lat0) * self._ky])
 
+    def _key(self, x: float, y: float) -> tuple[int, int]:
+        return math.floor(x / 500.0), math.floor(y / 500.0)
+
+    def _grid_keys(self, west: float, south: float, east: float, north: float) -> list[tuple[int, int]]:
+        x0, y0 = self._key(west, south)
+        x1, y1 = self._key(east, north)
+        return [(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)]
+
+    def _index_points(self, xy: np.ndarray) -> dict[tuple[int, int], list[int]]:
+        cells: dict[tuple[int, int], list[int]] = {}
+        for i, (x, y) in enumerate(xy):
+            cells.setdefault(self._key(float(x), float(y)), []).append(i)
+        return cells
+
+    def _points_near(self, x: float, y: float, radius: float) -> np.ndarray:
+        keys = self._grid_keys(x - radius, y - radius, x + radius, y + radius)
+        idx = [i for key in keys for i in self._b_grid.get(key, ())]
+        return np.asarray(idx, dtype=np.int64)
+
     def lonlat(self, x: float, y: float) -> tuple[float, float]:
         return self._lon0 + x / self._kx, self._lat0 + y / self._ky
 
@@ -137,21 +167,32 @@ class GeoRepository:
         if not self._b_ids:
             return None
         p = self._xy([lon], [lat])[0]
-        d = np.hypot(self._b_xy[:, 0] - p[0], self._b_xy[:, 1] - p[1])
-        i = int(np.argmin(d))
-        if max_m is not None and d[i] > max_m:
+        radius = max_m if max_m is not None else 500.0
+        candidates = self._points_near(float(p[0]), float(p[1]), radius)
+        while max_m is None and candidates.size == 0 and radius < 10_000:
+            radius *= 2
+            candidates = self._points_near(float(p[0]), float(p[1]), radius)
+        if candidates.size == 0:
             return None
-        return self.buildings[self._b_ids[i]], float(d[i])
+        d = np.hypot(self._b_xy[candidates, 0] - p[0], self._b_xy[candidates, 1] - p[1])
+        local = int(np.argmin(d))
+        i = int(candidates[local])
+        if max_m is not None and d[local] > max_m:
+            return None
+        return self.buildings[self._b_ids[i]], float(d[local])
 
     def nearest_named_building(self, lon: float, lat: float, max_m: float) -> dict[str, Any] | None:
         if not self._b_ids:
             return None
         p = self._xy([lon], [lat])[0]
-        d = np.hypot(self._b_xy[:, 0] - p[0], self._b_xy[:, 1] - p[1])
-        for i in np.argsort(d)[:30]:
-            if d[i] > max_m:
+        candidates = self._points_near(float(p[0]), float(p[1]), max_m)
+        if candidates.size == 0:
+            return None
+        d = np.hypot(self._b_xy[candidates, 0] - p[0], self._b_xy[candidates, 1] - p[1])
+        for local in np.argsort(d)[:30]:
+            if d[local] > max_m:
                 break
-            b = self.buildings[self._b_ids[i]]
+            b = self.buildings[self._b_ids[int(candidates[local])]]
             if not is_generic_name(b.get("name", "")):
                 return b
         return None
@@ -185,17 +226,22 @@ class GeoRepository:
         if len(self._segs) == 0:
             return []
         p = self._xy([lon], [lat])[0]
-        a, b = self._segs[:, :2], self._segs[:, 2:]
+        keys = self._grid_keys(float(p[0] - within_m), float(p[1] - within_m), float(p[0] + within_m), float(p[1] + within_m))
+        seg_idx = np.asarray(sorted({i for key in keys for i in self._seg_grid.get(key, ())}), dtype=np.int64)
+        if seg_idx.size == 0:
+            return []
+        segs = self._segs[seg_idx]
+        a, b = segs[:, :2], segs[:, 2:]
         ab = b - a
         t = np.clip(((p - a) * ab).sum(1) / np.maximum((ab**2).sum(1), 1e-9), 0, 1)
         proj = a + ab * t[:, None]
         d = np.hypot(proj[:, 0] - p[0], proj[:, 1] - p[1])
         best: dict[int, float] = {}
-        for seg in np.argsort(d):
-            if d[seg] > within_m:
+        for local in np.argsort(d):
+            if d[local] > within_m:
                 break
-            ri = int(self._seg_owner[seg])
-            best.setdefault(ri, float(d[seg]))
+            ri = int(self._seg_owner[int(seg_idx[local])])
+            best.setdefault(ri, float(d[local]))
             if len(best) >= 8:
                 break
         out: list[tuple[Road, float]] = []
@@ -240,7 +286,7 @@ class GeoRepository:
         return self.lonlat(float(x), float(y))
 
     def random_point_on_road(self, rng: random.Random, road: Road) -> tuple[float, float]:
-        """道路上的随机点（限定在示范区内）。"""
+        """道路上的随机点（限定在中心城区内）。"""
         for _ in range(12):
             lon, lat = self.point_on_road(road, rng.uniform(0.1, 0.9))
             if self.in_region(lon, lat, margin_deg=0.0):
@@ -249,6 +295,10 @@ class GeoRepository:
 
     def roads_named(self, *prefixes: str) -> list[Road]:
         return [r for r in self.roads if any(r.base_name == p or r.name.startswith(p) for p in prefixes)]
+
+    def roads_in_district(self, district: str) -> list[Road]:
+        """返回中点位于指定行政区的主次干路。"""
+        return [r for r in self.roads if self.road_district.get(r.id) == district]
 
     # ------------------------------------------------------------------ GeoJSON 输出
     def buildings_geojson(self) -> dict[str, Any]:

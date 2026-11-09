@@ -1,0 +1,24 @@
+{
+  "bounds": [
+    114.15,
+    30.45,
+    114.55,
+    30.72
+  ],
+  "zoom": 13,
+  "tile_size": 256,
+  "tile_range": [
+    6693,
+    6702,
+    3360,
+    3367
+  ],
+  "tile_count": 80,
+  "pixel_size": [
+    2330,
+    1827
+  ],
+  "source": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  "attribution": "Esri, Maxar, Earthstar Geographics",
+  "generated_at": "2026-11-09T11:54:01.007837+00:00"
+}

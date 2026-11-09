@@ -56,7 +56,7 @@ pending ──► monitoring ──► processing ──► resolved
   "simulator": { "enabled": true, "interval_sec": 45 },
   "database": "sqlite",
   "uptime_sec": 1234,
-  "region": { "name": "汉口沿江示范区", "city": "武汉", "center": [114.2955, 30.5895], "bbox": [114.270, 30.570, 114.312, 30.612] },
+  "region": { "name": "武汉中心城区", "city": "武汉", "center": [114.3495, 30.5835], "bbox": [114.15, 30.45, 114.55, 30.72] },
   "algorithms": [
     { "type": "fire", "name": "FlameNet-Lite", "method": "YCbCr+HSV 火焰色彩规则 + 形态学 + 连通域分析", "version": "1.0.0" }
   ]
@@ -133,13 +133,13 @@ pending ──► monitoring ──► processing ──► resolved
   "type": "FeatureCollection",
   "features": [{
     "type": "Feature",
-    "id": "B0001",
+    "id": "WHB000007",
     "geometry": { "type": "Polygon", "coordinates": [[[114.29, 30.58], ...]] },
     "properties": {
-      "id": "B0001", "name": "汉口新世界中心", "height": 120.0, "levels": 38,
-      "height_source": "osm",          // osm | levels | estimated
+      "id": "WHB000007", "name": "建筑 WHB000007", "height": 120.0, "levels": 38,
+      "height_source": "floor",        // floor | osm | levels | estimated
       "category": "commercial",        // residential | commercial | office | public | industrial | other
-      "district": "江汉区", "grid": "JH-03-07",
+      "district": "江汉区", "grid": "JH-34-27",
       "longitude": 114.2921, "latitude": 30.5812, // 质心
       "area_m2": 2310.5,
       "monitored": true,               // 是否接入沉降监测
@@ -149,11 +149,14 @@ pending ──► monitoring ──► processing ──► resolved
 }
 ```
 
-### `GET /api/buildings/fine` → GeoJSON `FeatureCollection<Polygon>`
+### `GET /api/buildings/fine?district=武昌区` → GeoJSON `FeatureCollection<Polygon>`
 
-返回由本地武汉建筑轮廓裁剪生成的精细建筑图层，当前包含示范区内约 8,277 栋建筑。
+返回武汉中心城区按行政区拆分的精细建筑图层，七个城区合计 111,943 栋。
 属性中的 `id` 使用 `WHB000001` 格式，`height` 按楼层数估算，仅用于可视化；
 该接口不替代原始 OSM 建筑接口，也不包含沉降监测关联。
+
+不传 `district` 时保留旧版单文件入口；`GET /api/buildings/fine/districts`
+返回各城区名称、中心点、包围盒、建筑数量和推荐加载地址。
 
 ### `GET /api/buildings/{id}` → 建筑详情
 ```jsonc

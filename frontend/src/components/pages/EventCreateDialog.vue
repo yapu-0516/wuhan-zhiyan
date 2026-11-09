@@ -197,8 +197,8 @@ async function submit() {
         </el-form-item>
       </div>
       <div class="geo-tip">
-        <el-button link type="primary" :icon="Aim" @click="useCenter">使用示范区中心</el-button>
-        <span v-if="outOfRegion" class="geo-tip__warn">坐标超出示范区范围，三维场景中可能无法显示</span>
+        <el-button link type="primary" :icon="Aim" @click="useCenter">使用中心城区中心</el-button>
+        <span v-if="outOfRegion" class="geo-tip__warn">坐标超出中心城区范围，三维场景中可能无法显示</span>
       </div>
 
       <div class="row2">

@@ -1,4 +1,4 @@
-// 系统信息（模块级缓存）：示范区名称/范围、演示模式、算法清单。顶栏与三维场景共用。
+// 系统信息（模块级缓存）：中心城区名称/范围、演示模式、算法清单。顶栏与三维场景共用。
 import { computed, shallowRef } from 'vue'
 import { getSystemInfo } from '@/api/system'
 import type { SystemInfo } from '@/types/api'

@@ -32,6 +32,19 @@ from scenario_engine.models import (  # noqa: E402
 from scenario_engine.simulator import MockScenarioProvider  # noqa: E402
 
 _TYPE_TITLE = {"flood": "强降水与内涝情景", "traffic": "交通拥堵情景", "fire": "火灾应急情景"}
+_CITY_LOCATIONS = {
+    "江岸区": (114.309, 30.625),
+    "江汉区": (114.271, 30.601),
+    "硚口区": (114.216, 30.585),
+    "汉阳区": (114.218, 30.553),
+    "武昌区": (114.316, 30.553),
+    "洪山区": (114.397, 30.506),
+    "青山区": (114.405, 30.640),
+    "光谷": (114.3975, 30.5068),
+    "黄鹤楼": (114.305378, 30.545682),
+    "武汉长江大桥": (114.283457, 30.551792),
+    "武昌站": (114.3187, 30.5281),
+}
 
 
 def _new_id(prefix: str) -> str:
@@ -203,7 +216,7 @@ class ScenarioService:
 
         missing = missing_fields(scenario_type, merged) if scenario_type else ["情景类型"]
         if merged.location_name and not resolved_location and (merged.longitude is None or merged.latitude is None):
-            missing.append("可识别的示范区地点或经纬度")
+            missing.append("可识别的中心城区地点或经纬度")
 
         if auto_run and scenario_type and not missing and action != "compare":
             action = "run"
@@ -537,6 +550,9 @@ class ScenarioService:
 
     def _resolve_location(self, name: str) -> tuple[float, float] | None:
         needle = name.strip().lower()
+        for key, point in _CITY_LOCATIONS.items():
+            if key.lower() in needle:
+                return point
         for road in self.ctx.geo.roads:
             if needle in {road.name.lower(), road.base_name.lower()}:
                 return self.ctx.geo.point_on_road(road, 0.5)

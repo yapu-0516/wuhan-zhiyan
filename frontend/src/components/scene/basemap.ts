@@ -1,4 +1,4 @@
-// 底图控制：暗色（Esri Dark Gray）/ 卫星（在线 Esri→本地单幅缓存→离线
+// 底图控制：暗色（Esri Dark Gray）/ 卫星（在线 Esri→本地全城概览+重点区→离线
 // NaturalEarthII），运行时切换；各级失败都会自动降级，并通过回调通知界面。
 import * as Cesium from 'cesium'
 import { BASEMAPS, type BasemapConfig, type BasemapKey } from '@/config/cesium'
@@ -18,8 +18,8 @@ const STYLE: Record<
 export const GLOBE_BASE_COLOR = '#101519'
 
 export class BasemapController {
-  private layer: Cesium.ImageryLayer | null = null
-  private removeError: (() => void) | null = null
+  private layers: Cesium.ImageryLayer[] = []
+  private removeErrors: Array<() => void> = []
   private probeTimer: number | undefined
   private token = 0
   current: BasemapKey = 'offline'
@@ -50,7 +50,7 @@ export class BasemapController {
       )
       Object.assign(layer, style)
       this.viewer.imageryLayers.add(layer, 0)
-      this.layer = layer
+      this.layers = [layer]
       return
     }
     this.addRemote(key, cfg, style, token)
@@ -62,29 +62,44 @@ export class BasemapController {
     token: number,
     key: BasemapKey
   ) {
-    if (!cfg.localUrl || !cfg.localRectangle || !cfg.localWidth || !cfg.localHeight) return
-    const [west, south, east, north] = cfg.localRectangle
-    const provider = new Cesium.SingleTileImageryProvider({
-      url: cfg.localUrl,
-      rectangle: Cesium.Rectangle.fromDegrees(west, south, east, north),
-      tileWidth: cfg.localWidth,
-      tileHeight: cfg.localHeight,
-      credit: cfg.credit ? new Cesium.Credit(cfg.credit) : undefined
-    })
-    const layer = new Cesium.ImageryLayer(provider, {})
-    Object.assign(layer, style)
-    this.viewer.imageryLayers.add(layer, 0)
-    this.layer = layer
+    const definitions = cfg.localLayers ?? []
+    if (!definitions.length) return
+    // 单幅影像在矩形外会被边缘像素拉伸；先铺全球底图避免出现条带。
+    const base = Cesium.ImageryLayer.fromProviderAsync(
+      Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')),
+      {}
+    )
+    Object.assign(base, STYLE.offline)
+    this.viewer.imageryLayers.add(base, 0)
+    this.layers.push(base)
     let failed = false
-    this.removeError = provider.errorEvent.addEventListener(() => {
-      if (failed || token !== this.token) return
-      failed = true
-      console.warn('[basemap] 本地卫星底图加载失败，切换内置离线底图', cfg.localUrl)
-      this.removeError?.()
-      this.removeError = null
-      if (!this.viewer.isDestroyed()) this.viewer.imageryLayers.remove(layer, true)
-      if (this.layer === layer) this.layer = null
-      this.fallback(key, false)
+    let failures = 0
+    definitions.forEach((definition, index) => {
+      const [west, south, east, north] = definition.rectangle
+      const provider = new Cesium.SingleTileImageryProvider({
+        url: definition.url,
+        rectangle: Cesium.Rectangle.fromDegrees(west, south, east, north),
+        tileWidth: definition.width,
+        tileHeight: definition.height,
+        credit: cfg.credit ? new Cesium.Credit(cfg.credit) : undefined
+      })
+      const layer = new Cesium.ImageryLayer(provider, {})
+      Object.assign(layer, style)
+      // 后添加的高清影像位于上层，仅覆盖各自矩形。
+      this.viewer.imageryLayers.add(layer, index + 1)
+      this.layers.push(layer)
+      const remove = provider.errorEvent.addEventListener(() => {
+        if (failed || token !== this.token) return
+        failures++
+        console.warn('[basemap] 本地卫星底图加载失败', definition.url)
+        remove()
+        if (!this.viewer.isDestroyed()) this.viewer.imageryLayers.remove(layer, true)
+        this.layers = this.layers.filter((item) => item !== layer)
+        if (failures < definitions.length) return
+        failed = true
+        this.fallback(key, false)
+      })
+      this.removeErrors.push(remove)
     })
   }
 
@@ -111,11 +126,11 @@ export class BasemapController {
     const layer = new Cesium.ImageryLayer(provider, {})
     Object.assign(layer, style)
     this.viewer.imageryLayers.add(layer, 0)
-    this.layer = layer
+    this.layers = [layer]
     this.probe(cfg.url, cfg.subdomains, token, key)
   }
 
-  /** 探测一张示范区瓦片，6 秒内加载失败则回退离线底图 */
+  /** 探测一张中心城区瓦片，6 秒内加载失败则回退本地底图 */
   private probe(template: string, subdomains: string[] | undefined, token: number, key: BasemapKey) {
     const [lon, lat] = this.probePoint()
     const z = 12
@@ -148,7 +163,7 @@ export class BasemapController {
   private fallback(from: BasemapKey, allowLocal = true) {
     if (this.current === 'offline' || this.viewer.isDestroyed()) return
     const cfg = BASEMAPS.satellite
-    if (from === 'satellite' && allowLocal && cfg.localUrl && cfg.localRectangle && cfg.localWidth && cfg.localHeight) {
+    if (from === 'satellite' && allowLocal && cfg.localLayers?.length) {
       const token = ++this.token
       this.clear()
       this.current = 'satellite'
@@ -162,20 +177,19 @@ export class BasemapController {
 
   private clear() {
     window.clearTimeout(this.probeTimer)
-    this.removeError?.()
-    this.removeError = null
-    if (this.layer && !this.viewer.isDestroyed()) {
-      this.viewer.imageryLayers.remove(this.layer, true)
+    this.removeErrors.splice(0).forEach((remove) => remove())
+    if (!this.viewer.isDestroyed()) {
+      this.layers.forEach((layer) => this.viewer.imageryLayers.remove(layer, true))
     }
-    this.layer = null
+    this.layers = []
   }
 
   destroy() {
     this.token++
     window.removeEventListener('offline', this.onOffline)
     window.clearTimeout(this.probeTimer)
-    this.removeError?.()
-    this.removeError = null
-    this.layer = null
+    this.removeErrors.splice(0).forEach((remove) => remove())
+    this.removeErrors = []
+    this.layers = []
   }
 }

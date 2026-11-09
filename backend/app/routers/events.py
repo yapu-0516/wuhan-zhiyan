@@ -59,7 +59,7 @@ def get_logs(event_id: str, ctx: AppContext = Depends(get_ctx)) -> list[dict]:
 @router.post("", response_model=CityEventOut, status_code=201, summary="人工 / 市民上报事件")
 def post_event(body: EventCreate, ctx: AppContext = Depends(get_ctx)) -> dict:
     if not ctx.geo.in_region(body.longitude, body.latitude):
-        raise bad_request("坐标不在示范区范围内，请检查经纬度")
+        raise bad_request("坐标不在武汉中心城区范围内，请检查经纬度")
     creator = "市民上报" if body.source == "citizen" else "人工上报"
     with ctx.session() as s:
         e = create_event(

@@ -24,11 +24,11 @@
 
 | | |
 | --- | --- |
-| 🏙️ **真实城市底座** | 汉口沿江示范区（江汉路—汉口江滩—武汉天地）**822 栋 OpenStreetMap 真实建筑**、105 条主干道（93.6 km）、84 处医院/消防/公安/学校，四个行政区真实边界，网格化编码 |
-| 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 自研着色器，以精细建筑、中性体块、窗格和檐口轮廓呈现真实城市；卫星底图优先在线加载，失败时自动使用本地单幅缓存。GPU 不支持时自动降级 |
+| 🏙️ **七城区城市底座** | 武汉中心城区 **17458 栋概览建筑、111943 栋分区精细建筑**、955 条主次干道（1786 km）和 224 处医院/消防站/派出所/学校，覆盖江岸、江汉、硚口、汉阳、武昌、洪山、青山，支持区级网格编码 |
+| 🛰️ **三维数字孪生** | Cesium 批量 Primitive 渲染 + 按区精细图层；接入黄鹤楼、武汉长江大桥 3D Tiles 地标；卫星底图优先在线加载，失败时显示全城 z13 概览并叠加汉口 z17 精图 |
 | 🧠 **7 个真实可运行的算法** | 火灾识别、交通指数与短临预测、航拍车辆占有率、建筑沉降趋势、前后时相变化检测、积水水位研判、积水影像分割 —— 纯 NumPy 实现，**事件只由算法实际检出产生，绝不伪造** |
 | ⚡ **实时闭环** | WebSocket 推送事件/路况/任务进度；事件状态机（待核查→监测中→处置中→已办结）后端校验；派单、办结、处置时间线多终端同步 |
-| 🎬 **一键演示** | 打开页面先进入无异常、人群持续流动的平静基线；点击后自动恢复演示数据并执行 10 步故事线：城市感知 → 数字孪生 → 实时路况 → **随机异常识别** → 派单处置 → 沉降预警 → AI 追问 → 情景推演 → AI 分析 → 异常增多统一监测。附字幕，Esc 可退出 |
+| 🎬 **一键演示** | 打开页面先进入七城区平静基线；点击后执行 10 步故事线：城市感知 → 数字孪生 → 实时路况 → **全市随机异常识别** → 派单处置 → 沉降预警 → AI 追问 → 情景推演 → AI 分析 → 多城区异常增多统一监测。附字幕，Esc 可退出 |
 | 🛟 **永不翻车** | 后端不可达时前端自动降级为「离线演示模式」（读取后端导出的真实数据快照），可直接部署到 GitHub Pages 等静态托管 |
 
 ## 📸 界面预览
@@ -50,11 +50,13 @@ docker compose up --build
 浏览器打开 <http://localhost:8000>。
 
 默认优先加载 Esri 在线卫星瓦片；网络失败或超时时自动切换到
-`frontend/public/basemap/` 中的本地单幅缓存。如果需要更新本地底图范围或清晰度，
-可重新下载并拼接：
+`frontend/public/basemap/wuhan-city-z13.jpg` 全城概览，并叠加汉口重点区
+`wuhan-satellite-z17.jpg`。不预存全市 z17，因为该范围约需 1.7 万张瓦片、
+估算超过 500 MB；当前离线缓存约 6.8 MB。
 
 ```bash
-python scripts/download_satellite_basemap.py
+python scripts/download_satellite_basemap.py --bbox 114.15,30.45,114.55,30.72 --zoom 13 \
+  --out frontend/public/basemap/wuhan-city-z13.jpg
 ```
 
 ### 方式二：本地运行
@@ -78,6 +80,14 @@ Windows 路演可直接双击项目根目录的 `start-demo.cmd`。脚本会检�
 ```powershell
 .\start-demo.ps1 -Rebuild
 ```
+
+若本地已有黄鹤楼与长江大桥 3D Tiles 压缩包，先解压到前端静态目录：
+
+```powershell
+python scripts/prepare_3d_tiles.py
+```
+
+地标资产约 272 MB，已被 `.gitignore` 排除，只作为本地/镜像构建输入。
 
 首页默认进入平静基线。每次点击“一键演示”前会恢复固定种子数据，清除人工上报、
 历史分析任务和上一轮演示产生的数据，适合连续路演。
@@ -104,7 +114,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 
 | 页面 | 核心能力 |
 | --- | --- |
-| **城市总览** | 三维城市 + 指挥大屏：城市安全指数、实时路网 TPI、今日事件/待处置/处置率/平均响应、类型分布、24 小时趋势、实时事件流、区域排行、设备在线率；图层（OSM 建筑/精细建筑/路况/事件/应急资源）、底图（暗色/卫星/离线）、自动追踪、一键演示 |
+| **城市总览** | 七城区三维底座 + 指挥大屏；底部城区导航按需加载精细建筑；图层含概览建筑、分区建筑、黄鹤楼/长江大桥地标、路况、事件与应急资源 |
 | **城市监测** | 无人机/卫星/视频/物联四类数据源在线率与实时吞吐火花图；路网 TPI 仪表与拥堵排行；建筑沉降监测清单与沉降曲线 |
 | **事件中心** | 多维筛选（类型/状态/等级/关键词）、人工上报、事件详情抽屉（证据图、算法指标、处置时间线）、按状态机派单/办结/重开、三维定位 |
 | **数据管理** | 空间数据资产清单（遥感/无人机/视频/三维模型/传感器/矢量）、类型与状态分布、拖拽上传入库 |
@@ -126,7 +136,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 
 项目已使用 Graphify 生成持久化代码知识图谱，覆盖前端、后端、大模型、情景引擎、算法和数据处理代码：
 
-- 3092 个节点、7201 条关系边、136 个社区
+- 3163 个节点、7304 条关系边、151 个社区
 - [交互式代码图](graphify-out/graph.html)
 - [调用流程与架构图](graphify-out/CALLFLOW.html)
 - [图谱审计报告](graphify-out/GRAPH_REPORT.md)
@@ -182,7 +192,7 @@ flowchart LR
 | --- | --- | --- |
 | GET | `/api/events` · `/api/events/{id}` · `/api/events/{id}/logs` | 事件列表（类型/状态/等级/关键词筛选）、详情、处置日志 |
 | POST · PATCH | `/api/events` · `/api/events/{id}` | 人工上报；状态流转/派单（状态机校验，非法流转 409） |
-| GET | `/api/buildings` · `/api/buildings/{id}` · `/api/roads` · `/api/pois` | GeoJSON 城市底座、建筑沉降详情、实时路况、应急资源 |
+| GET | `/api/buildings` · `/api/buildings/fine?district=武昌区` · `/api/buildings/{id}` · `/api/roads` · `/api/pois` | 全市概览、分区精细建筑、建筑沉降详情、实时路况、应急资源 |
 | GET | `/api/stats/overview` | 大屏指标：KPI、分布、24h 趋势、城市指数 |
 | GET · POST | `/api/data` · `/api/data/stats` · `/api/data/upload` | 数据资产 |
 | GET · POST | `/api/tasks` · `/api/tasks/upload` · `/api/samples` | AI 分析任务（示例数据 / 上传文件） |
@@ -205,7 +215,7 @@ flowchart LR
 | `CITYEYE_RESET_ON_START` | `false` | 启动时重置演示数据 |
 | `CITYEYE_FRONTEND_DIST` | `frontend/dist` | 托管的前端构建目录 |
 | `CITYEYE_MAX_UPLOAD_MB` | `20` | 单文件上传大小上限（MB） |
-| `CITYEYE_FINE_BUILDINGS_PATH` | `data/datasets/derived/buildings/wuhan_demo_buildings.geojson` | 精细建筑派生图层 |
+| `CITYEYE_FINE_BUILDINGS_PATH` | `data/datasets/derived/buildings/wuhan_demo_buildings.geojson` | 精细建筑兼容入口；七城区分块位于同目录 `districts/` |
 | `VITE_USE_MOCK` | `false` | 前端强制使用离线快照 |
 | `VITE_BASEMAP` | `satellite` | 底图：`satellite` / `dark` / `offline` |
 | `VITE_CESIUM_ION_TOKEN` | 空 | 可选，启用 Cesium Ion 在线地形/影像 |
@@ -259,12 +269,14 @@ wuhan-zhiyan/
 - [x] 第 4 周：FastAPI 后端、算法层、实时推送、处置闭环、OSM 真实城市底座、离线演示模式
 - [ ] 接入真实无人机/视频流（RTSP → 抽帧 → 推理）
 - [ ] 深度模型替换（YOLOv8 火焰/烟雾、SegFormer 积水分割），沿用现有注册表接口
-- [ ] 倾斜摄影 3D Tiles 与 Cesium World Terrain
+- [x] 黄鹤楼、长江大桥 3D Tiles 与按区建筑精细图层
+- [ ] Cesium World Terrain
 - [ ] PostgreSQL + PostGIS、权限与多租户、移动端处置 App
 
 ## 📚 数据来源与致谢
 
 - 建筑、道路、行政区、POI：© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors，ODbL 1.0。缺少高度标签的建筑按占地面积与类别估算高度，并在 `height_source=estimated` 中如实标注。
+- 七城区应急资源点通过 OpenStreetMap Nominatim 补充，并按名称、类型和空间距离去重；未查到明确设施时不做随机补齐。
 - 底图：© Esri（World Dark Gray Canvas / World Imagery）；离线底图为 CesiumJS 自带 Natural Earth II。
-- 本地卫星缓存仅用于当前示范区演示，使用和再分发前请核对 Esri World Imagery 服务条款。
+- 本地卫星缓存仅用于演示；全城只保存 z13 概览，重点区保存 z17 精图。使用和再分发前请核对 Esri World Imagery 服务条款。
 - 三维引擎：[CesiumJS](https://cesium.com/platform/cesiumjs/)；图表：[Apache ECharts](https://echarts.apache.org/)；UI：[Element Plus](https://element-plus.org/)。

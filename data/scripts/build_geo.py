@@ -4,7 +4,7 @@
     buildings.geojson  真实建筑轮廓 + 高度（OSM 实测 / 楼层推算 / 规则估算，height_source 标明来源）
     roads.geojson      主干路网（同名道路合并为连续路段）
     pois.json          应急资源点位（医院 / 消防站 / 派出所 / 学校）
-    region.json        示范区元信息：中心、范围、网格化管理编码规则、行政区前缀
+    region.json        中心城区元信息：中心、范围、网格化管理编码规则、行政区前缀
 
 高度说明：OSM 中武汉建筑多数缺少 height / building:levels 标签。缺失时按"占地面积 + 建筑类别 +
 确定性随机"估算，仅用于三维可视化体量表达，并在属性 height_source=estimated 中如实标注。
@@ -21,10 +21,19 @@ import math
 from collections import defaultdict
 from pathlib import Path
 
-BBOX = (30.570, 114.270, 30.612, 114.312)  # south, west, north, east
-REGION_NAME = "汉口沿江示范区"
+BBOX = (30.450, 114.150, 30.720, 114.550)  # south, west, north, east
+REGION_NAME = "武汉中心城区"
 CELL_DEG = 0.0045  # 网格边长约 430m × 500m
-DISTRICT_PREFIX = {"江汉区": "JH", "江岸区": "JA", "硚口区": "QK", "汉阳区": "HY", "武昌区": "WC"}
+DISTRICT_PREFIX = {"江汉区": "JH", "江岸区": "JA", "硚口区": "QK", "汉阳区": "HY", "武昌区": "WC", "洪山区": "HS", "青山区": "QS"}
+DISTRICT_CENTERS = {
+    "江岸区": (114.309, 30.625),
+    "江汉区": (114.271, 30.601),
+    "硚口区": (114.216, 30.585),
+    "汉阳区": (114.218, 30.553),
+    "武昌区": (114.316, 30.553),
+    "洪山区": (114.397, 30.506),
+    "青山区": (114.405, 30.640),
+}
 
 M_PER_DEG_LAT = 111_320.0
 M_PER_DEG_LON = 111_320.0 * math.cos(math.radians((BBOX[0] + BBOX[2]) / 2))
@@ -75,6 +84,14 @@ def in_bbox(lon: float, lat: float, pad: float = 0.0) -> bool:
     return s - pad <= lat <= n + pad and w - pad <= lon <= e + pad
 
 
+def read_json(path: Path) -> dict:
+    data = path.read_bytes()
+    try:
+        return json.loads(data.decode("utf-8"))
+    except UnicodeDecodeError:
+        return json.loads(data.decode("gbk"))
+
+
 # ---------------------------------------------------------------- 行政区
 def load_district_segments(raw: Path) -> dict[str, list[tuple[float, float, float, float]]]:
     """行政区边界：收集各区边界 way 的线段，射线法判断点所属（无需拼环，奇偶规则对无序线段集同样成立）。"""
@@ -82,7 +99,7 @@ def load_district_segments(raw: Path) -> dict[str, list[tuple[float, float, floa
     for f in sorted(raw.glob("district_*.json")):
         name = f.stem.split("_", 1)[1]
         segs = []
-        for el in json.loads(f.read_text()).get("elements", []):
+        for el in read_json(f).get("elements", []):
             g = el.get("geometry") or []
             for p, q in zip(g, g[1:]):
                 segs.append((p["lon"], p["lat"], q["lon"], q["lat"]))
@@ -105,8 +122,7 @@ def district_of(lon: float, lat: float, districts) -> str:
     for name, segs in districts.items():
         if point_in_segments(lon, lat, segs):
             return name
-    # 兜底：汉口沿江片区以江汉路—沿江大道一线为界，东北为江岸区，西南为江汉区
-    return "江岸区" if (lat - 30.578) > -(lon - 114.292) * 0.9 else "江汉区"
+    return min(DISTRICT_CENTERS, key=lambda name: dist_m((lon, lat), DISTRICT_CENTERS[name]))
 
 
 def grid_of(lon: float, lat: float, district: str) -> str:
@@ -148,7 +164,7 @@ SPEED_LIMIT = {"motorway": 80, "trunk": 60, "primary": 50, "secondary": 40, "ter
 def build_roads(raw: Path) -> list[dict]:
     ways_by_id: dict[int, dict] = {}
     for f in sorted(raw.glob("roads*.json")):
-        for e in json.loads(f.read_text()).get("elements", []):
+        for e in read_json(f).get("elements", []):
             if e["type"] == "way":
                 ways_by_id[e["id"]] = e
     ways = list(ways_by_id.values())
@@ -278,7 +294,7 @@ def build_buildings(raw: Path, districts, roads: list[dict]) -> list[dict]:
     seen = set()
     items = []
     for f in sorted(raw.glob("buildings_*.json")):
-        for el in json.loads(f.read_text()).get("elements", []):
+        for el in read_json(f).get("elements", []):
             key = (el["type"], el["id"])
             if key in seen:
                 continue
@@ -358,7 +374,7 @@ def build_pois(raw: Path) -> list[dict]:
         return []
     out = []
     seen = set()
-    for el in json.loads(f.read_text())["elements"]:
+    for el in read_json(f)["elements"]:
         t = el.get("tags", {})
         name = t.get("name:zh") or t.get("name")
         kind = t.get("amenity")
@@ -377,16 +393,32 @@ def build_pois(raw: Path) -> list[dict]:
 
 
 def main() -> None:
+    global BBOX, REGION_NAME, M_PER_DEG_LAT, M_PER_DEG_LON
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default="data/raw/osm")
     ap.add_argument("--out", default="data/geo")
+    ap.add_argument("--bbox", nargs=4, type=float, default=(114.15, 30.45, 114.55, 30.72), metavar=("W", "S", "E", "N"))
+    ap.add_argument("--region-name", default="武汉中心城区")
+    ap.add_argument("--skip-buildings", action="store_true", help="保留 out/buildings.geojson，仅重建路网 / 边界 / POI")
     args = ap.parse_args()
     raw, out = Path(args.raw), Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    west, south, east, north = args.bbox
+    BBOX = (south, west, north, east)
+    REGION_NAME = args.region_name
+    M_PER_DEG_LON = 111_320.0 * math.cos(math.radians((south + north) / 2))
 
     districts = load_district_segments(raw)
     roads = build_roads(raw)
-    buildings = build_buildings(raw, districts, roads)
+    building_file = out / "buildings.geojson"
+    if args.skip_buildings:
+        buildings = json.loads(building_file.read_text(encoding="utf-8")).get("features", []) if building_file.exists() else []
+    else:
+        buildings = build_buildings(raw, districts, roads)
+        (building_file).write_text(
+            json.dumps({"type": "FeatureCollection", "features": buildings}, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
 
     road_feats = []
     for i, r in enumerate(roads, 1):
@@ -401,6 +433,9 @@ def main() -> None:
             },
         })
     pois = build_pois(raw)
+    poi_file = out / "pois.json"
+    if not pois and poi_file.exists():
+        pois = read_json(poi_file)
 
     s, w, n, e = BBOX
     region = {
@@ -416,10 +451,10 @@ def main() -> None:
     }
 
     dump = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))  # noqa: E731
-    (out / "buildings.geojson").write_text(dump({"type": "FeatureCollection", "features": buildings}))
-    (out / "roads.geojson").write_text(dump({"type": "FeatureCollection", "features": road_feats}))
-    (out / "pois.json").write_text(json.dumps(pois, ensure_ascii=False, indent=1))
-    (out / "region.json").write_text(json.dumps(region, ensure_ascii=False, indent=2))
+    (out / "roads.geojson").write_text(dump({"type": "FeatureCollection", "features": road_feats}), encoding="utf-8")
+    if pois or not poi_file.exists():
+        poi_file.write_text(json.dumps(pois, ensure_ascii=False, indent=1), encoding="utf-8")
+    (out / "region.json").write_text(json.dumps(region, ensure_ascii=False, indent=2), encoding="utf-8")
 
     srcs = defaultdict(int)
     for b in buildings:

@@ -6,7 +6,11 @@
 frontend/dist
 backend/var
 data/raw
-data/datasets
+data/datasets/raw
+data/datasets/derived/*
+!data/datasets/derived/buildings/
+data/datasets/derived/buildings/*
+!data/datasets/derived/buildings/districts/
 .git
 .github
 docs

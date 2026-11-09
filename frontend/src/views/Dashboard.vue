@@ -92,10 +92,15 @@ const monitored = ref<number | undefined>(undefined)
 
 const touring = computed(() => viewerRef.value?.tourState?.running ?? false)
 
+function onFineDistrictChange(active: boolean) {
+  layers.buildingsFine = active
+  viewerRef.value?.setBuildingRiskOnly(active)
+}
+
 async function toggleLayer(key: LayerKey) {
   layers[key] = !layers[key]
   if (layers[key] && key === 'buildingsFine') {
-    ElMessage.info('正在构建精细建筑模型…')
+    ElMessage.info('正在加载城区精细建筑模型…')
     const ok = await viewerRef.value?.loadFineBuildingLayer()
     if (ok && layers.buildingsFine) {
       viewerRef.value?.setBuildingRiskOnly(true)
@@ -104,7 +109,7 @@ async function toggleLayer(key: LayerKey) {
       layers.buildingsFine = false
     }
   } else if (!layers[key] && key === 'buildingsFine') {
-    viewerRef.value?.setBuildingRiskOnly(true)
+    viewerRef.value?.setBuildingRiskOnly(false)
     layers.buildings = true
   }
 }
@@ -113,7 +118,7 @@ function toggleType(t: EventType) {
 }
 function goHome() {
   viewerRef.value?.closePanels()
-  void viewerRef.value?.flySkyline()
+  void viewerRef.value?.flyHome()
 }
 async function toggleTour() {
   const v = viewerRef.value
@@ -283,14 +288,14 @@ function demoPromptFor(event: CityEvent | null): { question: string; scenario: s
   if (!event) {
     return {
       question: '当前城市运行状态下，研判下一小时风险需要哪些信息？',
-      scenario: '江汉路发生暴雨，推演未来30分钟积水对周边人员和道路的影响。'
+      scenario: '武昌区发生暴雨，推演未来30分钟积水对周边人员和道路的影响。'
     }
   }
   const label = EVENT_TYPE_META[event.event_type]?.label ?? '城市异常'
   const prompts: Record<EventType, string> = {
     fire: `${event.name}火势可能扩大，推演未来30分钟烟气、疏散和周边道路影响。`,
     traffic: `${event.name}拥堵持续扩大，推演未来30分钟排队长度、波及道路和绕行方案。`,
-    building: `${event.district || '江汉路'}发生中型火灾，危险半径120米，影响300人，推演人员疏散和周边道路影响。`,
+    building: `${event.district || '武昌区'}发生中型火灾，危险半径120米，影响300人，推演人员疏散和周边道路影响。`,
     flood: `${event.name}积水继续加深，推演未来30分钟淹没范围、人员和道路影响。`
   }
   return {
@@ -434,6 +439,7 @@ onBeforeUnmount(() => {
       @basemap-change="(k: BasemapKey) => (basemap = k)"
       @tour-focus="(f: TourFocus | null) => (focus = f)"
       @selection="onSelection"
+      @fine-district-change="onFineDistrictChange"
     />
 
     <!-- 左列：城市态势 -->

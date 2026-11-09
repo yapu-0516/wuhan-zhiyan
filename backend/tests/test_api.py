@@ -95,7 +95,7 @@ def test_create_and_patch_event_state_machine(client, ctx):
 
 def test_create_event_validation(client):
     r = client.post("/api/events", json={"event_type": "flood", "name": "x", "longitude": 120.0, "latitude": 30.0})
-    assert r.status_code == 400 and "示范区" in r.json()["detail"]
+    assert r.status_code == 400 and "中心城区" in r.json()["detail"]
     r = client.post("/api/events", json={"event_type": "quake", "name": "x", "longitude": 114.29, "latitude": 30.59})
     assert r.status_code == 422 and isinstance(r.json()["detail"], str)
     assert client.patch("/api/events/E9999", json={"status": "resolved"}).status_code == 404

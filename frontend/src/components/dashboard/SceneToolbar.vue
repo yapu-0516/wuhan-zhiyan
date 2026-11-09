@@ -13,7 +13,8 @@ import {
   Grid,
   User,
   DataAnalysis,
-  ChatDotRound
+  ChatDotRound,
+  Place
 } from '@element-plus/icons-vue'
 import type { LayerKey, LayerVisibility } from '@/components/scene/types'
 import type { BasemapKey } from '@/config/cesium'
@@ -39,6 +40,7 @@ const emit = defineEmits<{
 const LAYERS: { key: LayerKey; label: string; icon: typeof OfficeBuilding }[] = [
   { key: 'buildings', label: '建筑体量', icon: OfficeBuilding },
   { key: 'buildingsFine', label: '全城楼', icon: Grid },
+  { key: 'landmarks', label: '地标', icon: Place },
   { key: 'roads', label: '路况', icon: Guide },
   { key: 'events', label: '事件', icon: Location },
   { key: 'pois', label: '应急资源', icon: FirstAidKit }
@@ -88,7 +90,7 @@ const BASEMAP_OPTIONS: { key: BasemapKey; label: string }[] = [
         <i class="tb-switch__knob" />
         <el-icon><Aim /></el-icon><span class="tb-label">自动追踪</span>
       </button>
-      <button class="tb-btn" title="复位到示范区默认视角" @click="emit('home')">
+      <button class="tb-btn" title="复位到中心城区默认视角" @click="emit('home')">
         <el-icon><RefreshLeft /></el-icon><span class="tb-label">复位视角</span>
       </button>
       <button class="tb-btn" title="用一句话描述任务，交给大模型解析" @click="emit('parse')">
@@ -252,7 +254,7 @@ button:hover {
   background: #d65359;
 }
 /* 中心区域较窄时（容器查询）仅保留图标 */
-@container hud-toolbar (max-width: 860px) {
+@container hud-toolbar (max-width: 1180px) {
   .tb-label {
     display: none;
   }

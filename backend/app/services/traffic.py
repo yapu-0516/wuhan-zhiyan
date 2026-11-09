@@ -22,7 +22,10 @@ from cityeye_algo.traffic import network_tpi, speed_to_tpi, tpi_level
 from .. import timeutil
 from ..geo import GeoRepository, Road
 
-ARTERIALS = ("解放大道", "中山大道", "京汉大道", "建设大道", "沿江大道", "香港路", "发展大道", "江汉北路", "台北路", "新华路")
+ARTERIALS = (
+    "解放大道", "中山大道", "京汉大道", "建设大道", "沿江大道", "香港路", "发展大道", "江汉北路", "台北路", "新华路",
+    "武珞路", "珞喻路", "雄楚大道", "友谊大道", "和平大道", "鹦鹉大道", "汉阳大道", "琴台大道", "光谷大道", "楚雄大道",
+)
 CLASS_SENSITIVITY = {"trunk": 1.05, "primary": 1.0, "secondary": 0.86, "tertiary": 0.7}
 
 

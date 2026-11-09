@@ -80,9 +80,9 @@ const extractedItems = computed(() => {
   ].filter(Boolean)
 })
 const prompts = [
-  '江汉路发生暴雨，推演积水对周边人员和道路的影响。',
+  '武昌区发生暴雨，推演积水对周边人员和道路的影响。',
   '中山大道从 2026-10-31 17:30 起发生严重拥堵，持续60分钟，原因为交通事故，请推演。',
-  '江汉路在 2026-10-31 18:00 发生中型火灾，危险半径200米，影响200人，持续30分钟，请开始推演。'
+  '武昌区在 2026-10-31 18:00 发生中型火灾，危险半径200米，影响200人，持续30分钟，请开始推演。'
 ]
 const METRIC_META: Record<string, { label: string; unit?: string }> = {
   water_depth_cm: { label: '积水深度', unit: 'cm' },

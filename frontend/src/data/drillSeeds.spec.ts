@@ -8,12 +8,12 @@ describe('emergency drill seeds', () => {
     )
   })
 
-  it('keeps every seed inside the Hankou demonstration region', () => {
+  it('keeps every seed inside the Wuhan central urban area', () => {
     for (const seed of DRILL_SEEDS) {
-      expect(seed.longitude).toBeGreaterThanOrEqual(114.27)
-      expect(seed.longitude).toBeLessThanOrEqual(114.312)
-      expect(seed.latitude).toBeGreaterThanOrEqual(30.57)
-      expect(seed.latitude).toBeLessThanOrEqual(30.612)
+      expect(seed.longitude).toBeGreaterThanOrEqual(114.15)
+      expect(seed.longitude).toBeLessThanOrEqual(114.55)
+      expect(seed.latitude).toBeGreaterThanOrEqual(30.45)
+      expect(seed.latitude).toBeLessThanOrEqual(30.72)
     }
   })
 

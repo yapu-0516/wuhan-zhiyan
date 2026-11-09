@@ -27,6 +27,15 @@ def test_crop_matches_requested_pixel_size() -> None:
     assert (right - left, bottom - top) == (3915, 4547)
 
 
+def test_central_city_overview_size() -> None:
+    bounds = module.BBox(114.15, 30.45, 114.55, 30.72)
+    zoom = 13
+    x_min, x_max, y_min, y_max = module.tile_range(bounds, zoom)
+    assert (x_max - x_min + 1) * (y_max - y_min + 1) == 80
+    left, top, right, bottom = module.crop_window(bounds, zoom, x_min, y_min)
+    assert (right - left, bottom - top) == (2330, 1827)
+
+
 def test_tile_url_replaces_xyz() -> None:
     url = module.tile_url(
         "https://tiles.example/{z}/{y}/{x}/tile.jpg?sat={s}",

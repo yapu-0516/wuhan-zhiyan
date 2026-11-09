@@ -7,7 +7,7 @@
  *   路况   RoadLayer       按路况等级着色的流光线，WS traffic.updated 实时更新
  *   事件   EventLayer      定位针 + 标签 + 地面涟漪 + 光柱，新事件强提示
  *   资源   PoiLayer        医院/消防站/派出所/学校
- *   氛围   AmbientEffects  示范区雷达扫描 + 边界发光线
+ *   氛围   AmbientEffects  中心城区雷达扫描 + 边界发光线
  * 交互：拾取建筑/道路/事件/资源点；路由 ?eventId= / ?buildingId= 定位；新事件通知 + 自动追踪；一键演示导览。
  * KeepAlive：失活时暂停渲染循环，激活时恢复；卸载时销毁全部图层、监听与 Viewer。
  */
@@ -28,14 +28,14 @@ import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
 import { BASEMAPS, CESIUM_ION_TOKEN, DEFAULT_BASEMAP, type BasemapKey } from '@/config/cesium'
-import { getBuildings, getFineBuildings, getPois, getRoads } from '@/api/geo'
+import { getBuildingDistricts, getBuildings, getFineBuildings, getPois, getRoads } from '@/api/geo'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { useRealtime } from '@/composables/useRealtime'
 import { useSystemInfo } from '@/composables/useSystemInfo'
 import { useDemoTour, type DemoTourHooks } from '@/composables/useDemoTour'
 import type { CityEvent } from '@/types/event'
 import { EVENT_TYPE_META, SEVERITY_META } from '@/types/event'
-import type { Building, Poi } from '@/types/building'
+import type { Building, BuildingDistrictManifest, Poi } from '@/types/building'
 import { POI_META, TRAFFIC_LEVEL_META } from '@/types/building'
 import { hhmm } from '@/utils/format'
 import EventDetail from './EventDetail.vue'
@@ -48,6 +48,7 @@ import { BuildingLayer } from './scene/buildingLayer'
 import { RoadLayer } from './scene/roadLayer'
 import { EventLayer } from './scene/eventLayer'
 import { PoiLayer } from './scene/poiLayer'
+import { LandmarkLayer } from './scene/landmarkLayer'
 import { AmbientEffects } from './scene/effects'
 import { CrowdLayer } from './scene/crowd/crowdLayer'
 import {
@@ -105,6 +106,7 @@ const emit = defineEmits<{
   (e: 'basemap-change', key: BasemapKey): void
   (e: 'tour-focus', focus: TourFocus | null): void
   (e: 'selection', payload: { kind: 'event' | 'building' | null; id: string | null }): void
+  (e: 'fine-district-change', active: boolean): void
 }>()
 
 const route = useRoute()
@@ -124,9 +126,11 @@ let cam: CameraController | null = null
 let buildings: BuildingLayer | null = null
 let fineBuildings: BuildingLayer | null = null
 let fineBuildingsLoading: Promise<number> | null = null
+let fineBuildingsDistrict = ''
 let roads: RoadLayer | null = null
 let eventLayer: EventLayer | null = null
 let pois: PoiLayer | null = null
+let landmarks: LandmarkLayer | null = null
 let effects: AmbientEffects | null = null
 let crowd: CrowdLayer | null = null
 let handler: Cesium.ScreenSpaceEventHandler | null = null
@@ -152,6 +156,12 @@ const typeFilter = reactive<EventTypeFilter>({
 })
 const currentBasemap = ref<BasemapKey>(props.basemap ?? DEFAULT_BASEMAP)
 const active = ref(true)
+const districtManifest = shallowRef<BuildingDistrictManifest | null>(null)
+const selectedDistrict = ref('全市')
+const LANDMARK_VIEWS = {
+  'yellow-building': { label: '黄鹤楼', longitude: 114.305378, latitude: 30.545682, range: 520 },
+  'yangtze-bridge': { label: '长江大桥', longitude: 114.283457, latitude: 30.551792, range: 1600 }
+}
 
 const selectedEventId = ref<string | null>(null)
 const selectedBuilding = shallowRef<Building | null>(null)
@@ -267,11 +277,14 @@ function setLayerVisible(layer: LayerKey, visible: boolean) {
       break
     case 'buildingsFine':
       fineBuildings?.setVisible(visible)
-      if (visible) void loadFineBuildings()
+      if (visible) void loadFineBuildings(selectedDistrict.value === '全市' ? undefined : selectedDistrict.value)
       break
     case 'roads':
       roads?.setVisible(visible)
       if (!visible) roadTip.value = null
+      break
+    case 'landmarks':
+      landmarks?.setVisible(visible)
       break
     case 'events':
       eventLayer?.setVisible(visible)
@@ -314,20 +327,28 @@ async function demoDispatch(assignee?: string): Promise<CityEvent | null> {
   return detail.demoDispatch(assignee)
 }
 
-async function loadFineBuildings(): Promise<number> {
-  if (!fineBuildings || disposed) return 0
-  if (fineBuildings.count > 0) return fineBuildings.count
-  if (fineBuildingsLoading) return fineBuildingsLoading
+async function loadFineBuildings(district?: string): Promise<number> {
+  if (!viewer || !clock || disposed) return 0
+  const target = district ?? districtManifest.value?.districts[0]?.name
+  if (!target) return 0
+  if (selectedDistrict.value === '全市') selectedDistrict.value = target
+  if (fineBuildings && fineBuildingsDistrict === target && fineBuildings.count > 0) return fineBuildings.count
+  if (fineBuildingsLoading) await fineBuildingsLoading
+  if (disposed) return 0
   const showStage = status.ready && !status.loading
   if (showStage) {
     status.loading = true
-    status.stage = '构建精细建筑模型…'
+    status.stage = `加载${target}精细建筑…`
   }
   fineBuildingsLoading = (async () => {
     try {
-      const data = await getFineBuildings()
+      const data = await getFineBuildings(target)
+      fineBuildings?.destroy()
+      fineBuildings = new BuildingLayer(viewer!.scene, clock!)
+      fineBuildingsDistrict = target
       const count = await fineBuildings!.load(data)
       if (!disposed) fineBuildings!.setVisible(layerState.buildingsFine)
+      syncEvents()
       return count
     } catch (error) {
       console.error('[buildings] 精细建筑图层加载失败', error)
@@ -343,6 +364,53 @@ async function loadFineBuildings(): Promise<number> {
 
 async function loadFineBuildingLayer(): Promise<boolean> {
   return (await loadFineBuildings()) > 0
+}
+
+async function chooseDistrict(name: string) {
+  selectedDistrict.value = name
+  if (name === '全市') {
+    layerState.buildingsFine = false
+    fineBuildings?.setVisible(false)
+    emit('fine-district-change', false)
+    await cam?.flyHome(2)
+    return
+  }
+  const item = districtManifest.value?.districts.find((district) => district.name === name)
+  if (!item) return
+  layerState.buildingsFine = true
+  emit('fine-district-change', true)
+  await Promise.all([
+    loadFineBuildings(name),
+    cam?.flyTo(item.center[0], item.center[1], {
+      range: 5200,
+      pitch: -44,
+      heading: 118,
+      duration: 2.2
+    })
+  ])
+}
+
+async function flyToLandmark(key: keyof typeof LANDMARK_VIEWS) {
+  const item = LANDMARK_VIEWS[key]
+  const load = key === 'yellow-building' ? landmarks?.loadOne(key) : Promise.resolve()
+  const showStage = status.ready && !status.loading
+  if (showStage && key === 'yellow-building') {
+    status.loading = true
+    status.stage = '加载黄鹤楼三维模型…'
+  }
+  try {
+    await load
+  } catch (error) {
+    console.warn(`[landmarks] ${item.label}加载失败`, error)
+  } finally {
+    if (showStage) status.loading = false
+  }
+  await cam?.flyTo(item.longitude, item.latitude, {
+    range: item.range,
+    pitch: -30,
+    heading: 108,
+    duration: 2.2
+  })
 }
 
 const api: SceneApi = {
@@ -375,7 +443,8 @@ const api: SceneApi = {
       layerState.buildingsFine && (fineBuildings?.count ?? 0) > 0 ? fineBuildings!.count : (buildings?.count ?? 0),
     roads: roads?.count ?? 0,
     pois: pois?.count ?? 0,
-    monitored: (buildings?.monitoredCount ?? 0) + (layerState.buildingsFine ? (fineBuildings?.monitoredCount ?? 0) : 0)
+    monitored: (buildings?.monitoredCount ?? 0) + (layerState.buildingsFine ? (fineBuildings?.monitoredCount ?? 0) : 0),
+    landmarks: landmarks?.count ?? 0
   })
 }
 
@@ -704,6 +773,7 @@ async function init() {
   effects = new AmbientEffects(scene, c)
   eventLayer = new EventLayer(scene, c)
   pois = new PoiLayer(scene)
+  landmarks = new LandmarkLayer(scene)
   roads = new RoadLayer(scene, c)
   buildings = new BuildingLayer(scene, c)
   fineBuildings = new BuildingLayer(scene, c)
@@ -714,6 +784,7 @@ async function init() {
   // 应用初始图层可见性
   ;(Object.keys(layerState) as LayerKey[]).forEach((k) => setLayerVisible(k, layerState[k]))
   bindInteraction(v)
+  void landmarks.load()
 
   disposers.push(
     realtime.on('traffic.updated', (d) => {
@@ -721,8 +792,13 @@ async function init() {
     })
   )
 
-  // 数据并行加载；系统信息（示范区范围）先到先用
-  status.stage = '加载示范区配置…'
+  // 数据并行加载；系统信息（中心城区范围）先到先用
+  status.stage = '加载中心城区配置…'
+  void getBuildingDistricts()
+    .then((manifest) => {
+      if (!disposed) districtManifest.value = manifest
+    })
+    .catch((error) => console.warn('[buildings] 精细分区清单加载失败', error))
   const dataPromise = Promise.allSettled([getBuildings(), getRoads(), getPois()])
   await systemInfo.load()
   if (disposed) return
@@ -760,7 +836,7 @@ async function init() {
   flushPending()
   if (failed.length) ElMessage.warning(`${failed.join('、')}数据加载失败，相关图层暂不可用`)
   if (!hasTarget && !tour.state.running) {
-    await cam.flySkyline(denseCenter(), 2.4)
+    await cam.flyHome(2.4)
   }
   emit('ready')
 }
@@ -804,11 +880,13 @@ onBeforeUnmount(() => {
   roads?.destroy()
   eventLayer?.destroy()
   pois?.destroy()
+  landmarks?.destroy()
   effects?.destroy()
   crowd?.destroy()
-  buildings = roads = null
+  buildings = fineBuildings = roads = null
   eventLayer = null
   pois = null
+  landmarks = null
   effects = null
   crowd = null
   if (viewer && !viewer.isDestroyed()) viewer.destroy()
@@ -845,6 +923,28 @@ defineExpose({
     <div ref="containerRef" class="cv-canvas" />
     <div ref="crowdLayerRef" class="cv-crowd-layer" />
     <div class="cv-vignette" />
+
+    <nav
+      v-if="ambientCrowd && districtManifest?.districts.length"
+      v-show="!tour.state.running"
+      class="cv-districts"
+      aria-label="主要城区精细图层"
+    >
+      <span class="cv-districts__label">主要城区</span>
+      <button :class="{ on: selectedDistrict === '全市' && !layerState.buildingsFine }" @click="chooseDistrict('全市')">全市</button>
+      <button
+        v-for="district in districtManifest.districts"
+        :key="district.name"
+        :class="{ on: selectedDistrict === district.name && layerState.buildingsFine }"
+        :title="`${district.count.toLocaleString()} 栋精细建筑`"
+        @click="chooseDistrict(district.name)"
+      >
+        {{ district.name.replace('区', '') }}
+      </button>
+      <span class="cv-districts__split" aria-hidden="true" />
+      <button @click="flyToLandmark('yellow-building')">黄鹤楼</button>
+      <button @click="flyToLandmark('yangtze-bridge')">长江大桥</button>
+    </nav>
 
     <!-- 详情停靠区：事件详情 / 建筑信息 -->
     <div class="cv-dock">
@@ -960,6 +1060,63 @@ defineExpose({
   display: block;
   width: 100%;
   height: 100%;
+}
+.cv-districts {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--scene-inset-bottom, 12px) + 34px);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: min(760px, calc(100% - 48px));
+  padding: 4px;
+  overflow-x: auto;
+  transform: translateX(-50%);
+  border: 1px solid var(--ce-panel-border);
+  border-radius: 4px;
+  background: rgba(4, 13, 24, 0.9);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+  scrollbar-width: none;
+}
+.cv-districts::-webkit-scrollbar {
+  display: none;
+}
+.cv-districts__label {
+  padding: 0 8px;
+  color: var(--ce-text-faint);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.cv-districts__split {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--ce-divider);
+}
+.cv-districts button {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--ce-text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cv-districts button:hover,
+.cv-districts button:focus-visible {
+  color: var(--ce-text-strong);
+  background: rgba(79, 195, 247, 0.1);
+  outline: none;
+}
+.cv-districts button.on {
+  border-bottom-color: var(--ce-accent);
+  color: var(--ce-text-strong);
+  font-weight: 600;
 }
 .cv-canvas :deep(.cesium-viewer),
 .cv-canvas :deep(.cesium-widget),

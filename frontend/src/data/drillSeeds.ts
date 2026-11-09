@@ -142,5 +142,115 @@ export const DRILL_SEEDS: DrillSeed[] = [
       { label: '扩展趋势', value: '持续' },
       { label: '风险等级', value: 'Ⅱ级' }
     ]
+  },
+  {
+    key: 'fire-yellow-crane',
+    sourceEventId: 'E9001',
+    eventType: 'fire',
+    typeLabel: '景区火情',
+    name: '黄鹤楼景区附属建筑烟感告警',
+    severity: 'high',
+    severityLabel: 'Ⅱ级 重大',
+    district: '武昌区',
+    address: '黄鹤楼公园 · 东门附属建筑',
+    longitude: 114.305378,
+    latitude: 30.545682,
+    confidence: 0.936,
+    algorithm: 'FlameNet-Lite',
+    description: '烟感与视频复核同步触发，系统按景区客流密度扩大疏散半径并联动周边道路管控。',
+    color: '#e4777b',
+    riskRadiusM: 280,
+    affectedBuildings: 9,
+    responseLabel: '景区疏散与消防联动',
+    responseMix: [
+      { type: 'firefighter', count: 18 },
+      { type: 'rescuer', count: 26 }
+    ],
+    metrics: [
+      { label: '烟雾评分', value: '0.94' },
+      { label: '客流密度', value: '1.8 人/m²' },
+      { label: '疏散出口', value: '4 处' }
+    ]
+  },
+  {
+    key: 'traffic-yangtze-bridge',
+    sourceEventId: 'E9002',
+    eventType: 'traffic',
+    typeLabel: '桥梁交通',
+    name: '武汉长江大桥桥面车辆故障',
+    severity: 'high',
+    severityLabel: 'Ⅱ级 重大',
+    district: '武昌区',
+    address: '武汉长江大桥 · 武昌侧桥面',
+    longitude: 114.283457,
+    latitude: 30.551792,
+    confidence: 0.91,
+    algorithm: 'TrafficPulse',
+    description: '桥面车道占用造成排队快速回溯，系统联动两岸入口并模拟分流。',
+    color: '#d6b45d',
+    riskRadiusM: 220,
+    affectedBuildings: 2,
+    responseLabel: '桥梁清障与两岸分流',
+    responseMix: [{ type: 'rescuer', count: 18 }],
+    metrics: [
+      { label: '排队长度', value: '680 m' },
+      { label: '当前车速', value: '11.2 km/h' },
+      { label: '占用车道', value: '1 条' }
+    ]
+  },
+  {
+    key: 'flood-optics-valley',
+    sourceEventId: 'E9003',
+    eventType: 'flood',
+    typeLabel: '道路积水',
+    name: '光谷广场周边道路短时积水',
+    severity: 'medium',
+    severityLabel: 'Ⅲ级 较大',
+    district: '洪山区',
+    address: '珞喻路 · 光谷广场附近',
+    longitude: 114.3975,
+    latitude: 30.5068,
+    confidence: 0.858,
+    algorithm: 'AquaSeg',
+    description: '短时强降雨叠加下穿通道汇水，系统模拟积水外扩、车辆绕行和行人疏散。',
+    color: '#71acd2',
+    riskRadiusM: 300,
+    affectedBuildings: 12,
+    responseLabel: '排涝与交通管控',
+    responseMix: [{ type: 'rescuer', count: 24 }],
+    metrics: [
+      { label: '积水深度', value: '32 cm' },
+      { label: '影响车道', value: '4 条' },
+      { label: '预测退水', value: '85 min' }
+    ]
+  },
+  {
+    key: 'building-wuchang-station',
+    sourceEventId: 'E9004',
+    eventType: 'building',
+    typeLabel: '公共建筑异常',
+    name: '武昌站候车区结构监测异常',
+    severity: 'high',
+    severityLabel: 'Ⅱ级 重大',
+    district: '武昌区',
+    address: '武昌站 · 东候车厅',
+    longitude: 114.3187,
+    latitude: 30.5281,
+    confidence: 0.952,
+    algorithm: 'SettleWatch',
+    description: '结构监测出现短时加速，系统优先保障旅客疏散并联动周边公交与出租车运力。',
+    color: '#8eaaa8',
+    riskRadiusM: 240,
+    affectedBuildings: 4,
+    responseLabel: '旅客疏散与结构鉴定',
+    responseMix: [
+      { type: 'firefighter', count: 8 },
+      { type: 'rescuer', count: 22 }
+    ],
+    metrics: [
+      { label: '沉降速率', value: '1.42 mm/月' },
+      { label: '监测点位', value: '16 处' },
+      { label: '在站客流', value: '4200 人' }
+    ]
   }
 ]

@@ -37,11 +37,13 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("cityeye.seed")
 
-SEED_VERSION = "1"
+SEED_VERSION = "2"
 DUTY = ["值班员 王磊", "值班员 张敏", "调度员 李娜", "值班员 陈刚", "调度员 赵倩"]
-FLOOD_PRONE = ("京汉大道", "建设大道", "解放大道", "新华路", "江汉北路", "香港路", "台北路", "黄浦大街", "三阳路")
-ARTERIALS = ("解放大道", "京汉大道", "建设大道", "中山大道", "沿江大道", "香港路", "江汉北路", "台北路", "新华路")
 SYNTH = "（合成演示数据）"
+LANDMARKS = {
+    "黄鹤楼": (114.30538, 30.54568),
+    "武汉长江大桥": (114.283457, 30.551792),
+}
 
 
 # ====================================================================== 入口
@@ -95,8 +97,8 @@ def load_runtime_state(ctx: "AppContext") -> None:
 
 def _seed_sources(s: Session, now: datetime) -> None:
     rows = [
-        ("S-DRONE", "无人机巡检", "drone", "🚁", "8 架多旋翼巡检无人机按航线巡航，回传可见光 / 热红外影像", "采集中", 6, 8, 124, "帧/分钟", "汉口沿江 12.4 km²"),
-        ("S-SAT", "卫星遥感", "satellite", "🛰️", "高分二号 / 资源三号 / Sentinel-2 过境影像，用于变化检测", "在线", 3, 3, 2, "景/天", "示范区全域 18.6 km²"),
+        ("S-DRONE", "无人机巡检", "drone", "🚁", "8 架多旋翼巡检无人机按航线巡航，回传可见光 / 热红外影像", "采集中", 6, 8, 124, "帧/分钟", "七城区重点航段"),
+        ("S-SAT", "卫星遥感", "satellite", "🛰️", "高分二号 / 资源三号 / Sentinel-2 过境影像，用于变化检测", "在线", 3, 3, 2, "景/天", "武汉中心城区"),
         ("S-VIDEO", "视频监控", "video", "📹", "公安天网与交通卡口高清视频，AI 抽帧分析", "在线", 1124, 1180, 1124, "路", "主干道与重点区域"),
         ("S-IOT-WATER", "积水监测", "sensor", "🌊", "下穿通道与低洼路段超声波液位计 + 雨量计，5 分钟上报", "在线", 46, 48, 552, "条/小时", "易涝点 48 处"),
         ("S-IOT-SETTLE", "结构安全监测", "sensor", "🏗️", "高层建筑静力水准仪 / GNSS 沉降监测，日解算", "在线", 152, 160, 152, "条/小时", "重点建筑 40 栋"),
@@ -126,14 +128,14 @@ def _seed_data_assets(ctx: "AppContext", s: Session, now: datetime) -> None:
     n_b, n_r, n_p = len(ctx.geo.buildings), len(ctx.geo.roads), len(ctx.geo.pois)
     catalog = "演示目录条目，未附带原始数据文件"
     rows = [
-        ("汉口沿江示范区建筑轮廓（OpenStreetMap）", "矢量数据", now - timedelta(days=1, hours=3), "已入库", "OpenStreetMap", "GeoJSON",
+        ("武汉中心城区建筑概览", "矢量数据", now - timedelta(days=1, hours=3), "已入库", "OpenStreetMap / 武汉建筑楼层数据", "GeoJSON",
          size_of(geo_dir / "buildings.geojson"), n_b, f"{n_b} 栋真实建筑轮廓，含高度 / 层数 / 类别；{ODBL}", "/api/buildings"),
-        ("示范区主干路网（OpenStreetMap）", "矢量数据", now - timedelta(days=1, hours=3), "已入库", "OpenStreetMap", "GeoJSON",
+        ("中心城区主次干路网（OpenStreetMap）", "矢量数据", now - timedelta(days=1, hours=3), "已入库", "OpenStreetMap", "GeoJSON",
          size_of(geo_dir / "roads.geojson"), n_r, f"{n_r} 条主次干路，含等级与限速；{ODBL}", "/api/roads"),
         ("应急资源点位（医院 / 派出所 / 学校）", "矢量数据", now - timedelta(days=1, hours=2), "已入库", "OpenStreetMap", "JSON",
          size_of(geo_dir / "pois.json"), n_p, f"{n_p} 个应急资源点；{ODBL}", "/api/pois"),
-        ("示范区建筑白模 LOD1", "三维模型", now - timedelta(days=1), "已入库", "OSM 轮廓按高度拉伸", "GeoJSON / Cesium",
-         size_of(geo_dir / "buildings.geojson"), n_b, "由真实建筑轮廓按高度拉伸生成的 LOD1 白模，前端 Cesium 实时构建", "/api/buildings"),
+        ("中心城区建筑白模 LOD1", "三维模型", now - timedelta(days=1), "已入库", "OSM 轮廓按高度拉伸", "GeoJSON / Cesium",
+         size_of(geo_dir / "buildings.geojson"), n_b, "中心城区概览与按区精细图层，前端 Cesium 按需构建", "/api/buildings"),
         ("高分二号 0.8 m 融合影像", "遥感影像", now - timedelta(days=2, hours=5), "待接入", "高分二号卫星", "GeoTIFF",
          2_576_980_378, 1, f"0.8 m 全色 + 3.2 m 多光谱融合；{catalog}", None),
         ("Sentinel-2 L2A 多光谱影像", "遥感影像", now - timedelta(days=4, hours=2), "待接入", "Sentinel-2", "SAFE",
@@ -161,14 +163,20 @@ def _seed_data_assets(ctx: "AppContext", s: Session, now: datetime) -> None:
 # ====================================================================== 沉降监测
 
 def _seed_settlement(ctx: "AppContext", s: Session, now: datetime, rng: random.Random) -> list[str]:
-    """选取汉口侧最高的 40 栋建筑接入沉降监测，生成 180 天位移序列并用 SettleWatch 评估风险。
+    """从主要城区选取最高 40 栋建筑接入沉降监测，生成 180 天位移序列并用 SettleWatch 评估风险。
 
     预设剖面（加速 / 持续 / 稳定）只决定合成序列的形态；风险等级完全由算法计算。
     风险剖面优先放在无名建筑上，避免对具名建筑作出安全暗示。
     """
-    cands = [p for p in ctx.geo.buildings.values() if p.get("district") in ("江汉区", "江岸区") and p.get("height", 0) >= 20]
+    event_districts = set(ctx.geo.region.get("event_districts") or ctx.geo.region.get("districts") or [])
+    cands = [p for p in ctx.geo.buildings.values() if p.get("district") in event_districts and p.get("height", 0) >= 20]
     cands.sort(key=lambda p: (-p["height"], p["id"]))
-    chosen = cands[:40]
+    chosen = []
+    for district in sorted(event_districts):
+        chosen.extend([p for p in cands if p.get("district") == district][:5])
+    seen = {p["id"] for p in chosen}
+    chosen.extend(p for p in cands if p["id"] not in seen)
+    chosen = chosen[:40]
     generic = [p["id"] for p in chosen if is_generic_name(p.get("name", ""))]
     accel = set(generic[:2])
     steady = set(generic[2:7])
@@ -177,7 +185,7 @@ def _seed_settlement(ctx: "AppContext", s: Session, now: datetime, rng: random.R
     th = SettlementThresholds()
     for p in chosen:
         bid = p["id"]
-        nrng = np.random.default_rng(int(bid[1:]) + 7)
+        nrng = np.random.default_rng(int(bid[3:] if bid.startswith("WHB") else bid[1:]) + 7)
         if bid in accel:
             y = -rng.uniform(0.8, 1.2) / 30.44 * t - rng.uniform(0.0007, 0.0009) * np.clip(t - 100, 0, None) ** 2
         elif bid in steady:
@@ -234,6 +242,10 @@ class _EventBuilder:
         self.sample_runs: dict[str, tuple[Any, AnalysisResult]] = {}
         self.task_results: dict[str, tuple[Task, AnalysisResult]] = {}
         self.geo = ctx.geo
+        self.event_districts = set(ctx.geo.region.get("event_districts") or ctx.geo.region.get("districts") or [])
+        self.arterials = [
+            road for road in ctx.geo.roads if road.highway in ("motorway", "trunk", "primary", "secondary")
+        ]
 
     # ------------------------------------------------------------------ 工具
     def at(self, days_ago: int, hour: float, jitter_min: float = 0) -> datetime:
@@ -254,12 +266,13 @@ class _EventBuilder:
 
     def pick_building(self, categories: tuple[str, ...], min_area: float = 300) -> dict[str, Any]:
         cands = [p for p in self.geo.buildings.values() if p.get("category") in categories and p.get("area_m2", 0) >= min_area
-                 and p.get("district") in ("江汉区", "江岸区")]
+                 and p.get("district") in self.event_districts]
         cands = cands or list(self.geo.buildings.values())
         return self.rng.choice(sorted(cands, key=lambda p: p["id"]))
 
     def road_point(self, names: tuple[str, ...]) -> tuple[Any, float, float] | None:
-        roads = sorted(self.geo.roads_named(*names), key=lambda r: r.id)
+        roads = sorted(self.geo.roads_named(*names), key=lambda r: r.id) if names else []
+        roads = roads or self.arterials or list(self.geo.roads)
         if not roads:
             return None
         road = self.rng.choice(roads)
@@ -338,7 +351,17 @@ class _EventBuilder:
         if not self.geo.roads:
             return  # 无路网数据时跳过交通事件
         tr = self.ctx.traffic
-        arterials = sorted(self.geo.roads_named(*ARTERIALS), key=lambda rd: -tr.roads[rd.id].sensitivity)[:8] or self.geo.roads[:8]
+        ranked = sorted(
+            self.arterials or self.geo.roads,
+            key=lambda rd: (tr.roads[rd.id].sensitivity, rd.length_m),
+            reverse=True,
+        )
+        arterials = []
+        for district in sorted(self.event_districts):
+            arterials.extend([road for road in ranked if self.geo.road_district.get(road.id) == district][:4])
+        seen = {road.id for road in arterials}
+        arterials.extend(road for road in ranked if road.id not in seen)
+        arterials = arterials[:32] or self.geo.roads[:8]
         analyzer = TrafficSeriesAnalyzer()
         r = self.rng
         for d in range(6, -1, -1):
@@ -409,6 +432,13 @@ class _EventBuilder:
                 self.specs.append(_Spec(ts, "building", "citizen", b["longitude"], b["latitude"], building_id=b["id"],
                                         name=f"{self.geo.building_label(b)}{title}", severity=sev, description=desc, hold=hold,
                                         feedback="已拉设警戒线并清理坠落物，督促物业维修" if hold is None else ""))
+        ts = (self.now - timedelta(minutes=11)).replace(microsecond=0)
+        lon, lat = LANDMARKS["武汉长江大桥"]
+        self.specs.append(_Spec(
+            ts, "building", "citizen", lon, lat, name="武汉长江大桥桥面伸缩缝异常",
+            severity="medium", description="巡查人员上报：桥面伸缩缝附近出现轻微异响，已进入持续监测。",
+            hold="monitoring",
+        ))
 
     # ------------------------------------------------------------------ 内涝
     def plan_flood(self) -> None:
@@ -420,7 +450,7 @@ class _EventBuilder:
         rain = np.where((k < 4) | (k > 50), 0.0, rain)
         aq = WaterLevelAnalyzer()
         for i in range(7):
-            pt = self.road_point(FLOOD_PRONE)
+            pt = self.road_point(())
             if pt is None:
                 break
             road, lon, lat = pt
@@ -445,17 +475,17 @@ class _EventBuilder:
                                         evidence_src=chart, road_id=road.id, feedback="泵车抽排 2 小时，积水已退",
                                         input_label=f"输入：{road.base_name}积水点液位计与雨量计 5 分钟序列（模拟数据）"))
         for hour, text in ((14.6, "路口积水没过脚踝，车辆涉水缓行"), (15.1, "雨水箅子堵塞，路面大面积积水")):
-            pt = self.road_point(FLOOD_PRONE)
+            pt = self.road_point(())
             ts = self.at(storm_day, hour, 10)
             if pt and self.past(ts):
                 road, lon, lat = pt
                 self.specs.append(_Spec(ts, "flood", "citizen", lon, lat, road_id=road.id, name=f"{road.base_name}路面积水",
                                         severity="medium", description=f"市民上报：{text}。", feedback="已清掏雨水箅子，积水消退"))
-        pt = self.road_point(FLOOD_PRONE)
+        pt = self.road_point(())
         if pt:
             road, lon, lat = pt
             self.add_from_sample("flood-02", self.at(storm_day, 15.4, 5), "drone", lon, lat, road_id=road.id, feedback="交警封闭车道，泵车抽排后恢复通行")
-        pt = self.road_point(FLOOD_PRONE)
+        pt = self.road_point(())
         ts = (self.now - timedelta(minutes=4)).replace(microsecond=0)
         if pt:
             road, lon, lat = pt

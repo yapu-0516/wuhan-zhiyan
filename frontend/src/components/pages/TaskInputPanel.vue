@@ -182,7 +182,7 @@ function start() {
           placeholder="纬度"
           size="small"
         />
-        <el-button link type="primary" :icon="Aim" @click="useCenter">示范区中心</el-button>
+        <el-button link type="primary" :icon="Aim" @click="useCenter">中心城区中心</el-button>
       </div>
       <label class="tip__sw">
         <el-switch v-model="createEvent" />

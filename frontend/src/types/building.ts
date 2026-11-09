@@ -51,6 +51,22 @@ export interface FeatureCollection<G, P> {
 
 export type BuildingCollection = FeatureCollection<PolygonGeometry, Building>
 
+export interface BuildingDistrict {
+  name: string
+  prefix: string
+  center: [number, number]
+  bbox: [number, number, number, number]
+  count: number
+  url: string
+}
+
+export interface BuildingDistrictManifest {
+  bbox: [number, number, number, number]
+  overview_url: string
+  overview_count: number
+  districts: BuildingDistrict[]
+}
+
 export interface SettlementPoint {
   date: string
   displacement_mm: number

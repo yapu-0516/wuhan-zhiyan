@@ -94,9 +94,9 @@ sequenceDiagram
 
 ## 3. 三维场景设计
 
-- **城市底座**：OpenStreetMap 真实建筑轮廓（汉口沿江示范区），按高度拉伸；以单个 `Primitive` +
+- **城市底座**：武汉七城区概览建筑与按区精细建筑，按高度拉伸；以单个 `Primitive` +
   `GeometryInstance` 批量渲染，保证上千栋建筑 60fps。
-- **底图**：Esri 在线卫星 / 本地示范区卫星单图 / Esri 暗色画布 /
+- **底图**：Esri 在线卫星 / 本地全城 z13 概览 + 汉口 z17 精图 / Esri 暗色画布 /
   Cesium NaturalEarthII 可选；在线卫星失败后切换本地单图，本地图失败再回退内置离线底图。
 - **路况**：主干路按 TPI 五级着色并随 `traffic.updated` 实时刷新。
 - **事件**：类型图标 + 等级光环 + 脉冲涟漪；新事件强提示并可自动追踪。
@@ -117,6 +117,6 @@ sequenceDiagram
 - **算法替换**：`algorithm/cityeye_algo/registry.py` 按事件类型注册分析器，可无缝替换为 YOLO / SegFormer 等深度模型，接口不变。
 - **数据库**：`CITYEYE_DB_URL` 切换为 PostgreSQL/PostGIS（SQLAlchemy 方言无关）。
 - **三维数据**：配置 `VITE_CESIUM_ION_TOKEN` 后可叠加 Cesium World Terrain、倾斜摄影 3D Tiles。
-- **精细建筑图层**：运行 `data/scripts/build_wuhan_buildings.py` 生成示范区派生 GeoJSON，
+- **精细建筑图层**：运行 `data/scripts/build_wuhan_buildings.py` 生成七城区派生 GeoJSON，
   经 `/api/buildings/fine` 加载；与现有 OSM 建筑图层互斥，避免模型重叠。
 - **新事件类型**：在 `docs/api.md` 枚举、`frontend/src/types/event.ts` 元信息、算法注册表三处追加即可。

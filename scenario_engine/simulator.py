@@ -175,8 +175,8 @@ class MockScenarioProvider:
 
     def run(self, draft: ScenarioDraft, run_id: str, version_id: str) -> ScenarioRun:
         p = draft.parameters
-        lon = float(p.longitude if p.longitude is not None else 114.2905)
-        lat = float(p.latitude if p.latitude is not None else 30.5895)
+        lon = float(p.longitude if p.longitude is not None else 114.35)
+        lat = float(p.latitude if p.latitude is not None else 30.585)
         duration = p.duration_min or 60
         frames: list[ScenarioFrame] = []
 

@@ -1,15 +1,32 @@
 // 城市三维对象接口层 —— docs/api.md §3
 import { request, loadSnapshot } from './http'
-import type { BuildingCollection, BuildingDetail, Poi, RoadCollection } from '@/types/building'
+import type {
+  BuildingCollection,
+  BuildingDetail,
+  BuildingDistrictManifest,
+  Poi,
+  RoadCollection
+} from '@/types/building'
 
 /** 建筑轮廓 GeoJSON GET /api/buildings */
 export function getBuildings(): Promise<BuildingCollection> {
   return request('/buildings', undefined, () => loadSnapshot<BuildingCollection>('buildings.geojson'))
 }
 
-/** 武汉精细建筑轮廓 GET /api/buildings/fine */
-export function getFineBuildings(): Promise<BuildingCollection> {
-  return request('/buildings/fine', undefined, () => loadSnapshot<BuildingCollection>('buildings_fine.geojson'))
+/** 可加载的精细建筑分区 GET /api/buildings/fine/districts */
+export function getBuildingDistricts(): Promise<BuildingDistrictManifest> {
+  return request('/buildings/fine/districts', undefined, () => ({
+    bbox: [114.15, 30.45, 114.55, 30.72],
+    overview_url: '/api/buildings',
+    overview_count: 0,
+    districts: []
+  }))
+}
+
+/** 武汉分区精细建筑轮廓 GET /api/buildings/fine?district=武昌区 */
+export function getFineBuildings(district?: string): Promise<BuildingCollection> {
+  const query = district ? `?district=${encodeURIComponent(district)}` : ''
+  return request(`/buildings/fine${query}`, undefined, () => ({ type: 'FeatureCollection', features: [] }))
 }
 
 /** 建筑详情（含沉降监测）GET /api/buildings/{id} */

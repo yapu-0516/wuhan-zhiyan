@@ -62,6 +62,7 @@ class AppContext:
     started_at: float = field(default_factory=time.time)
     _buildings_cache: bytes | None = None
     _fine_buildings_cache: bytes | None = None
+    _fine_district_cache: dict[str, bytes] = field(default_factory=dict)
 
     @classmethod
     def create(cls, settings: Settings) -> "AppContext":
@@ -149,7 +150,27 @@ class AppContext:
             self._buildings_cache = json.dumps(self.geo.buildings_geojson(), ensure_ascii=False, separators=(",", ":")).encode()
         return self._buildings_cache
 
-    def fine_buildings_json(self) -> bytes:
+    @property
+    def fine_district_dir(self) -> Path:
+        return self.settings.fine_buildings_path.parent / "districts"
+
+    def fine_building_manifest(self) -> dict[str, Any]:
+        path = self.fine_district_dir / "manifest.json"
+        if not path.exists():
+            return {"districts": []}
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def fine_buildings_json(self, district: str | None = None) -> bytes:
+        if district:
+            if district not in self._fine_district_cache:
+                item = next((d for d in self.fine_building_manifest().get("districts", []) if d.get("name") == district), None)
+                if item is None:
+                    raise FileNotFoundError(district)
+                path = self.fine_district_dir / f"{item['prefix']}.geojson"
+                if not path.exists():
+                    raise FileNotFoundError(path)
+                self._fine_district_cache[district] = path.read_bytes()
+            return self._fine_district_cache[district]
         if self._fine_buildings_cache is None:
             path = self.settings.fine_buildings_path
             if not path.exists():

@@ -3,14 +3,15 @@ import type { BasemapKey } from '@/config/cesium'
 import type { Building, TrafficLevel } from '@/types/building'
 import type { CityEvent, EventType } from '@/types/event'
 
-export type LayerKey = 'buildings' | 'buildingsFine' | 'roads' | 'events' | 'pois' | 'effects'
+export type LayerKey = 'buildings' | 'buildingsFine' | 'landmarks' | 'roads' | 'events' | 'pois' | 'effects'
 
 export type LayerVisibility = Record<LayerKey, boolean>
 
 export const DEFAULT_LAYERS: LayerVisibility = {
-  // 默认只显示少量超高层、风险建筑与事件关联建筑，街区仍以卫星屋顶为主。
+  // 默认显示全市概览建筑；精细层按城区按需加载。
   buildings: true,
   buildingsFine: false,
+  landmarks: true,
   roads: true,
   events: true,
   pois: true,
@@ -74,7 +75,7 @@ export interface SceneApi {
   closePanels(): void
   /** 演示：在事件详情中打开派单表单并提交 */
   demoDispatch(assignee?: string): Promise<CityEvent | null>
-  /** 示范区中心 [lon, lat] */
+  /** 中心城区中心 [lon, lat] */
   regionCenter(): [number, number]
   /** 高层建筑最密集处（CBD）[lon, lat] */
   denseCenter(): [number, number]
@@ -85,5 +86,5 @@ export interface SceneApi {
   /** 演示用沉降预警建筑（warning 优先，其次 watch） */
   findRiskBuilding(): Building | null
   /** 统计信息：建筑 / 道路 / 应急资源数量 */
-  sceneStats(): { buildings: number; roads: number; pois: number; monitored: number }
+  sceneStats(): { buildings: number; roads: number; pois: number; monitored: number; landmarks: number }
 }

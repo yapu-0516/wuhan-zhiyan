@@ -28,11 +28,11 @@ export class CameraController {
     this.region = r
   }
 
-  /** 默认视角参数：斜视 -32°，朝东南方向看向长江，覆盖整个示范区 */
+  /** 默认视角参数：斜视俯瞰，覆盖整个中心城区。 */
   homeParams() {
     const [w, s, e, n] = this.region.bbox
     const diag = Cesium.Cartesian3.distance(Cesium.Cartesian3.fromDegrees(w, s), Cesium.Cartesian3.fromDegrees(e, n))
-    const range = Cesium.Math.clamp(diag * 0.72, 2200, 9000)
+    const range = Cesium.Math.clamp(diag * 1.05, 3500, 52000)
     // 视点略向西北偏移，使沿江密集街区与江面同时入画
     const lon = this.region.center[0] + (e - w) * 0.04
     const lat = this.region.center[1] - (n - s) * 0.02
@@ -79,7 +79,7 @@ export class CameraController {
     })
   }
 
-  /** 从高空俯冲到示范区 */
+  /** 从高空俯冲到中心城区 */
   async flyFromSpace(): Promise<boolean> {
     this.stopOrbit()
     const [lon, lat] = this.region.center
@@ -96,7 +96,7 @@ export class CameraController {
   intro(): Promise<boolean> {
     const p = this.homeParams()
     this.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(p.lon - 0.08, p.lat - 0.11, 20000),
+      destination: Cesium.Cartesian3.fromDegrees(p.lon - 0.18, p.lat - 0.16, 52000),
       orientation: { heading: toRad(30), pitch: toRad(-62), roll: 0 }
     })
     return this.flyTo(p.lon, p.lat, { heading: p.heading, pitch: p.pitch, range: p.range, duration: 3.2 })

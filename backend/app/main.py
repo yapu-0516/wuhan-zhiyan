@@ -90,7 +90,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title=APP_NAME,
         version=APP_VERSION,
-        description="武汉汉口沿江示范区城市智能监测数字孪生平台后端。接口契约见 docs/api.md。" "建筑 / 道路 / POI 数据 © OpenStreetMap contributors（ODbL）。",
+        description="武汉中心城区城市智能监测数字孪生平台后端。接口契约见 docs/api.md。" "建筑 / 道路 / POI 数据 © OpenStreetMap contributors（ODbL）。",
         lifespan=lifespan,
     )
     app.state.ctx = ctx

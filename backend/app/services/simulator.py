@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import random
 import tempfile
 from datetime import timedelta
@@ -45,12 +46,20 @@ PATROL_SCENARIOS = {  # 场景 → (权重, 数据源)
 
 
 def random_site(geo: Any, r: random.Random, scenario: str) -> tuple[float, float]:
-    """演示场景的随机发生位置：交通 / 内涝取主干道上的点，火灾 / 建筑取汉口侧对应类别建筑质心。"""
+    """演示场景的随机发生位置：按主要城区抽样道路或对应类别建筑。"""
+    districts = geo.region.get("event_districts") or geo.region.get("districts") or []
+    district = r.choice(districts) if districts else None
     if scenario in ("traffic", "flood") and geo.roads:
-        roads = geo.roads_named("解放大道", "京汉大道", "建设大道", "中山大道", "沿江大道", "香港路", "新华路") or geo.roads
+        roads = geo.roads_in_district(district) if district else []
+        roads = [road for road in roads if road.highway in ("motorway", "trunk", "primary", "secondary", "tertiary")] or geo.roads
         return geo.random_point_on_road(r, r.choice(roads))
     cats = ("commercial", "residential", "office", "other") if scenario == "fire" else ("residential", "other", "public")
-    cands = [b for b in geo.buildings.values() if b.get("category") in cats and b.get("district") in ("江汉区", "江岸区")]
+    cands = [
+        b for b in geo.buildings.values()
+        if b.get("category") in cats and (district is None or b.get("district") == district)
+    ]
+    if not cands:
+        cands = [b for b in geo.buildings.values() if b.get("category") in cats]
     if not cands:
         lon, lat = geo.region["center"]
         return lon, lat
@@ -133,7 +142,9 @@ class Simulator:
                 hist = list(st.history)[-60:]
                 times = [t for t, _ in hist]
                 speeds = np.array([v for _, v in hist])
-                chart = Path(tempfile.mkstemp(suffix=".png", dir=ctx.results_dir)[1])
+                fd, chart_path = tempfile.mkstemp(suffix=".png", dir=ctx.results_dir)
+                os.close(fd)
+                chart = Path(chart_path)
                 res = self._traffic_analyzer.analyze_series(
                     times, speeds, chart, free_flow_kmh=st.free_flow, road_name=st.road.base_name,
                     min_congestion_min=1.0, smooth_min=0.5, forecast_min=30,

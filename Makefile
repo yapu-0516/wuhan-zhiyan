@@ -1,7 +1,7 @@
 # 城市智眼 CityEye 常用命令
 PY ?= python3
 
-.PHONY: help install dev demo build test snapshot geo samples docker clean
+.PHONY: help install dev demo build test snapshot geo pois samples docker clean
 
 help:  ## 显示帮助
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  \033[36mmake %-9s\033[0m %s\n", $$1, $$2}'
@@ -21,14 +21,19 @@ build:  ## 构建前端
 
 test:  ## 运行算法与后端测试
 	$(PY) -m pytest algorithm/tests -q
-	$(PY) -m pytest backend/tests llm_module/tests scenario_engine/tests -q
+	$(PY) -m pytest backend/tests llm_module/tests scenario_engine/tests scripts/tests -q
 
 snapshot:  ## 从后端导出前端离线快照（frontend/public/snapshot）
 	$(PY) scripts/export_snapshot.py
 
 geo:  ## 重新抓取并加工 OpenStreetMap 城市底座
-	$(PY) data/scripts/fetch_osm.py --out data/raw/osm
-	$(PY) data/scripts/build_geo.py --raw data/raw/osm --out data/geo
+	$(PY) data/scripts/fetch_osm.py --out data/raw/osm --bbox 114.15,30.45,114.55,30.72 --tile 0.08 --skip-buildings --skip-water
+	$(PY) data/scripts/build_geo.py --raw data/raw/osm --out data/geo --bbox 114.15 30.45 114.55 30.72 --skip-buildings
+	$(PY) data/scripts/build_wuhan_buildings.py
+	$(PY) scripts/prepare_3d_tiles.py
+
+pois:  ## 补充七城区医院 / 消防站 / 派出所 / 学校
+	$(PY) data/scripts/fetch_city_pois.py
 
 samples:  ## 重新生成合成演示样本
 	$(PY) data/scripts/generate_samples.py

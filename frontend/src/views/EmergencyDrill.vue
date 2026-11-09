@@ -57,6 +57,7 @@ const vehicleStats = ref<VehicleStats>({
 const layers = reactive<LayerVisibility>({
   buildings: true,
   buildingsFine: false,
+  landmarks: true,
   roads: true,
   events: false,
   pois: false,
@@ -167,22 +168,22 @@ function populateCalmCity() {
   if (!layer) return
   layer.clear()
   for (const item of DRILL_SEEDS) {
-    layer.spawnAt(86, 'resident', item.longitude, item.latitude, Math.min(260, item.riskRadiusM * 1.2))
-    layer.spawnAt(34, 'tourist', item.longitude, item.latitude, Math.min(220, item.riskRadiusM))
-    layer.spawnVehicles(58, { lon: item.longitude, lat: item.latitude, radius: Math.max(280, item.riskRadiusM * 1.6) })
+    layer.spawnAt(36, 'resident', item.longitude, item.latitude, Math.min(260, item.riskRadiusM * 1.2))
+    layer.spawnAt(14, 'tourist', item.longitude, item.latitude, Math.min(220, item.riskRadiusM))
+    layer.spawnVehicles(24, { lon: item.longitude, lat: item.latitude, radius: Math.max(280, item.riskRadiusM * 1.6) })
   }
-  const [centerLon, centerLat] = viewerRef.value?.regionCenter() ?? [114.289, 30.592]
-  layer.spawnAt(160, 'resident', centerLon, centerLat, 430)
-  layer.spawnAt(60, 'tourist', centerLon, centerLat, 330)
-  layer.spawnVehicles(80, { lon: centerLon, lat: centerLat, radius: 650 })
-  layer.spawn(112, 'resident')
-  layer.spawnVehicles(92)
+  const [centerLon, centerLat] = viewerRef.value?.regionCenter() ?? [114.35, 30.585]
+  layer.spawnAt(120, 'resident', centerLon, centerLat, 650)
+  layer.spawnAt(48, 'tourist', centerLon, centerLat, 480)
+  layer.spawnVehicles(56, { lon: centerLon, lat: centerLat, radius: 900 })
+  layer.spawn(96, 'resident')
+  layer.spawnVehicles(72)
   refreshStats()
 }
 
 async function resetView() {
   if (!viewerRef.value || !ready) return
-  await viewerRef.value.flyTo(114.289, 30.592, { range: 2850, pitch: -62, heading: 0, duration: 1.5 })
+  await viewerRef.value.flyTo(114.35, 30.585, { range: 26000, pitch: -62, heading: 0, duration: 1.5 })
 }
 
 function removeIncidentGraphic() {

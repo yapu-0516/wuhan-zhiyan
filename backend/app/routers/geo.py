@@ -1,7 +1,7 @@
 """城市三维对象接口（docs/api.md §3）：建筑、道路（含实时路况）、应急资源点位。"""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import select
 
 from ..context import AppContext, get_ctx, not_found
@@ -18,12 +18,17 @@ def buildings(ctx: AppContext = Depends(get_ctx)) -> Response:
 
 
 @router.get("/buildings/fine", summary="武汉精细建筑轮廓 GeoJSON（本地派生数据）")
-def fine_buildings(ctx: AppContext = Depends(get_ctx)) -> Response:
+def fine_buildings(district: str | None = Query(None), ctx: AppContext = Depends(get_ctx)) -> Response:
     try:
-        payload = ctx.fine_buildings_json()
+        payload = ctx.fine_buildings_json(district)
     except FileNotFoundError as exc:
         raise not_found("精细建筑图层不存在，请运行 data/scripts/build_wuhan_buildings.py") from exc
     return Response(content=payload, media_type="application/json")
+
+
+@router.get("/buildings/fine/districts", summary="可加载的精细建筑行政区分区")
+def fine_building_districts(ctx: AppContext = Depends(get_ctx)) -> dict:
+    return ctx.fine_building_manifest()
 
 
 @router.get("/buildings/{building_id}", response_model=BuildingDetailOut, summary="建筑详情（含沉降监测与关联事件）")

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 顶部品牌栏：品牌标识 + 示范区 + 演示模式徽标 + 实时连接状态 + 时钟
+// 顶部品牌栏：品牌标识 + 中心城区 + 演示模式徽标 + 实时连接状态 + 时钟
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRealtime } from '@/composables/useRealtime'
 import { useSystemInfo } from '@/composables/useSystemInfo'

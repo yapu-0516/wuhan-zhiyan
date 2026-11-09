@@ -38,6 +38,7 @@ node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo
 frontend/vite.config.ts.timestamp-*
+frontend/public/models/3d-tiles/
 
 # ---- Codex QA / design review artifacts ----
 .taste-skill/

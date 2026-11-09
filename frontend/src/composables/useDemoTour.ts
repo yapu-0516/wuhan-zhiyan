@@ -1,7 +1,7 @@
 /**
  * 一键演示（导览）：脚本化的 10 步城市运行故事线，适合现场演示。
  *
- *  1 城市全域感知   太空俯冲切入示范区
+ *  1 城市全域感知   太空俯冲切入中心城区
  *  2 数字孪生底座   环绕 CBD 高层建筑群
  *  3 实时路网态势   聚焦最拥堵路段，高亮拥堵流光
  *  4 随机异常发现   在线随机选择四类风险之一，真实运行算法并等待 WS event.created
@@ -105,7 +105,7 @@ export function useDemoTour(getApi: () => SceneApi | null, hooks: DemoTourHooks 
     step(
       1,
       '城市全域感知',
-      `从卫星视角切入汉口沿江示范区：${stats.buildings || '—'} 栋真实建筑、${stats.roads || '—'} 条主干道、${stats.pois || '—'} 处应急资源已接入城市智眼。`,
+      `从卫星视角切入武汉中心城区：${stats.buildings || '—'} 栋概览建筑、${stats.roads || '—'} 条主次干道、${stats.pois || '—'} 处应急资源已接入城市智眼。`,
       'kpi'
     )
     await api.flyFromSpace()
@@ -116,7 +116,7 @@ export function useDemoTour(getApi: () => SceneApi | null, hooks: DemoTourHooks 
     step(
       2,
       '三维数字孪生底座',
-      `基于 OpenStreetMap 建筑轮廓按实测/楼层/估算高度拉伸，${stats.monitored} 栋重点建筑接入沉降监测；红色脉冲为存在活动事件的建筑。`
+      `中心城区建筑按楼层拉伸，支持按区加载精细图层；${stats.monitored} 栋重点建筑接入沉降监测，黄鹤楼与长江大桥采用独立三维地标模型。`
     )
     await api.orbit(clon, clat, { range: 1500, pitch: -27, speed: 8 })
     await sleep(9500, id)
@@ -269,7 +269,7 @@ export function useDemoTour(getApi: () => SceneApi | null, hooks: DemoTourHooks 
     step(
       10,
       '异常增多 · 统一监测',
-      '假设多个风险同时出现，指挥中心汇聚新增事件、优先级和处置状态，形成一张完整的城市运行监测图。',
+      '假设多个城区同时出现风险，指挥中心汇聚新增事件、优先级和处置状态，形成一张覆盖武汉主要城区的运行监测图。',
       'kpi'
     )
     await runHook(hooks.showAnomalySurge, { event: target }, 5000, 35000, id)
