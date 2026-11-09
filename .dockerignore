@@ -7,6 +7,16 @@ frontend/dist
 backend/var
 data/raw
 data/datasets/raw
+!data/datasets/raw/
+data/datasets/raw/*
+!data/datasets/raw/3d_tiles/
+data/datasets/raw/3d_tiles/*
+!data/datasets/raw/3d_tiles/yellow_building/
+data/datasets/raw/3d_tiles/yellow_building/*
+!data/datasets/raw/3d_tiles/yellow_building/yellow building.zip
+!data/datasets/raw/3d_tiles/yangtze_river_bridge/
+data/datasets/raw/3d_tiles/yangtze_river_bridge/*
+!data/datasets/raw/3d_tiles/yangtze_river_bridge/Yantze River Bridge.zip
 data/datasets/derived/*
 !data/datasets/derived/buildings/
 data/datasets/derived/buildings/*

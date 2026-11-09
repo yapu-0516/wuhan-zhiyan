@@ -8,6 +8,17 @@ import type {
   RoadCollection
 } from '@/types/building'
 
+const districtAssetBase = `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}buildings/districts`
+let districtManifestAsset: Promise<BuildingDistrictManifest> | null = null
+
+function loadDistrictManifest(): Promise<BuildingDistrictManifest> {
+  districtManifestAsset ??= fetch(`${districtAssetBase}/manifest.json`).then((response) => {
+    if (!response.ok) throw new Error('精细建筑分区清单不存在')
+    return response.json() as Promise<BuildingDistrictManifest>
+  })
+  return districtManifestAsset
+}
+
 /** 建筑轮廓 GeoJSON GET /api/buildings */
 export function getBuildings(): Promise<BuildingCollection> {
   return request('/buildings', undefined, () => loadSnapshot<BuildingCollection>('buildings.geojson'))
@@ -15,18 +26,20 @@ export function getBuildings(): Promise<BuildingCollection> {
 
 /** 可加载的精细建筑分区 GET /api/buildings/fine/districts */
 export function getBuildingDistricts(): Promise<BuildingDistrictManifest> {
-  return request('/buildings/fine/districts', undefined, () => ({
-    bbox: [114.15, 30.45, 114.55, 30.72],
-    overview_url: '/api/buildings',
-    overview_count: 0,
-    districts: []
-  }))
+  return request('/buildings/fine/districts', undefined, loadDistrictManifest)
 }
 
 /** 武汉分区精细建筑轮廓 GET /api/buildings/fine?district=武昌区 */
 export function getFineBuildings(district?: string): Promise<BuildingCollection> {
   const query = district ? `?district=${encodeURIComponent(district)}` : ''
-  return request(`/buildings/fine${query}`, undefined, () => ({ type: 'FeatureCollection', features: [] }))
+  return request(`/buildings/fine${query}`, undefined, async () => {
+    const manifest = await loadDistrictManifest()
+    const item = manifest.districts.find((entry) => entry.name === district)
+    if (!item) return { type: 'FeatureCollection', features: [] }
+    const response = await fetch(`${districtAssetBase}/${item.prefix}.geojson`)
+    if (!response.ok) throw new Error(`${district}精细建筑不存在`)
+    return response.json() as Promise<BuildingCollection>
+  })
 }
 
 /** 建筑详情（含沉降监测）GET /api/buildings/{id} */

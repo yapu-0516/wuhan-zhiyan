@@ -2,12 +2,21 @@
 # 构建：docker build -t cityeye .
 # 运行：docker run -p 8000:8000 cityeye   → http://localhost:8000
 
+# ---------- 阶段 0：解压 3D Tiles ----------
+FROM python:3.12-slim AS tile-assets
+WORKDIR /app
+COPY scripts/prepare_3d_tiles.py scripts/prepare_3d_tiles.py
+COPY data/datasets/raw/3d_tiles data/datasets/raw/3d_tiles
+RUN python scripts/prepare_3d_tiles.py
+
 # ---------- 阶段 1：构建前端 ----------
 FROM node:22-alpine AS web
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
+COPY data/datasets/derived/buildings/districts /app/data/datasets/derived/buildings/districts
+COPY --from=tile-assets /app/frontend/public/models /app/frontend/public/models
 RUN npm run build
 
 # ---------- 阶段 2：运行后端 ----------

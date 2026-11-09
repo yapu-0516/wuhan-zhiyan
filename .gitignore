@@ -29,9 +29,33 @@ backend/var/
 data/raw/
 
 # ---- 公开研究数据集 ----
-# 原始数据与派生大文件只保存在本地；索引和授权说明可以提交。
+# 无关原始数据仍保留在本地；以下交接必需文件单独纳入版本控制。
 data/datasets/raw/
 data/datasets/derived/
+!data/raw/
+data/raw/*
+!data/raw/osm/
+data/raw/osm/*
+!data/raw/osm/*.json
+!data/datasets/raw/
+data/datasets/raw/*
+!data/datasets/raw/wuhan_buildings/
+data/datasets/raw/wuhan_buildings/*
+!data/datasets/raw/wuhan_buildings/wh_building.json
+!data/datasets/raw/3d_tiles/
+data/datasets/raw/3d_tiles/*
+!data/datasets/raw/3d_tiles/yellow_building/
+data/datasets/raw/3d_tiles/yellow_building/*
+!data/datasets/raw/3d_tiles/yellow_building/yellow building.zip
+!data/datasets/raw/3d_tiles/yangtze_river_bridge/
+data/datasets/raw/3d_tiles/yangtze_river_bridge/*
+!data/datasets/raw/3d_tiles/yangtze_river_bridge/Yantze River Bridge.zip
+!data/datasets/derived/
+data/datasets/derived/*
+!data/datasets/derived/buildings/
+data/datasets/derived/buildings/*
+!data/datasets/derived/buildings/districts/
+!data/datasets/derived/buildings/districts/*
 
 # ---- 前端 ----
 node_modules/

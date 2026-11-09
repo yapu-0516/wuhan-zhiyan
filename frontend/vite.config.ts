@@ -27,7 +27,8 @@ export default defineConfig(({ mode }) => {
           { src: 'node_modules/cesium/Build/Cesium/Workers', dest: 'cesium' },
           { src: 'node_modules/cesium/Build/Cesium/Assets', dest: 'cesium' },
           { src: 'node_modules/cesium/Build/Cesium/ThirdParty', dest: 'cesium' },
-          { src: 'node_modules/cesium/Build/Cesium/Widgets', dest: 'cesium' }
+          { src: 'node_modules/cesium/Build/Cesium/Widgets', dest: 'cesium' },
+          { src: '../data/datasets/derived/buildings/districts', dest: 'buildings' }
         ]
       })
     ],

@@ -81,13 +81,13 @@ Windows 路演可直接双击项目根目录的 `start-demo.cmd`。脚本会检�
 .\start-demo.ps1 -Rebuild
 ```
 
-若本地已有黄鹤楼与长江大桥 3D Tiles 压缩包，先解压到前端静态目录：
+仓库已附带黄鹤楼与长江大桥 3D Tiles 压缩包。首次运行先解压到前端静态目录：
 
 ```powershell
 python scripts/prepare_3d_tiles.py
 ```
 
-地标资产约 272 MB，已被 `.gitignore` 排除，只作为本地/镜像构建输入。
+压缩包合计约 84 MB；解压后的约 272 MB 模型目录仍被 `.gitignore` 排除，由构建流程自动生成。
 
 首页默认进入平静基线。每次点击“一键演示”前会恢复固定种子数据，清除人工上报、
 历史分析任务和上一轮演示产生的数据，适合连续路演。
@@ -124,6 +124,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 | **智能情景推演** | 输入一句话生成火灾、内涝或交通情景；演示模式自动补齐参数并生成常规、不利、干预三套可能结果，支持三维回放、时间轴、方案对比和结构化报告 |
 
 5 分钟路演脚本见 [docs/demo-script.md](docs/demo-script.md)。
+接手开发、数据再生成和环境配置见 [HANDOFF.md](HANDOFF.md)。
 
 虚拟人群仿真的技术融合、坐标转换、接口和实测记录见
 [docs/crowd-simulation.md](docs/crowd-simulation.md)。
