@@ -1,1 +1,1 @@
-{"total":12,"total_size":"3.5 GB","by_type":[{"type":"遥感影像","count":3},{"type":"无人机影像","count":1},{"type":"视频流","count":1},{"type":"三维模型","count":1},{"type":"传感器数据","count":3},{"type":"矢量数据","count":3}]}
+{"total":12,"total_size":"3.5 GB","by_type":[{"type":"遥感影像","count":3},{"type":"无人机影像","count":1},{"type":"视频流","count":1},{"type":"三维模型","count":1},{"type":"传感器数据","count":3},{"type":"矢量数据","count":3}],"analyzable":9,"by_analysis_status":[{"type":"ready","count":9},{"type":"pending","count":1},{"type":"unavailable","count":2},{"type":"unknown","count":0}]}
