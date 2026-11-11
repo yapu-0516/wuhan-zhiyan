@@ -28,8 +28,29 @@ from sqlalchemy.orm import Session
 from . import timeutil
 from .db import Base
 from .geo import ODBL, is_generic_name
-from .models import AppMeta, DataAsset, SettlementSeries, Source, Task
-from .services.events import add_log, create_event, default_assignee, event_from_result
+from .models import (
+    AppMeta,
+    AuditLog,
+    AssessmentRecord,
+    DataAsset,
+    DataValidationRecord,
+    EmergencyResource,
+    Event,
+    MonitoringRun,
+    MonitoringTask,
+    MonitoringTaskTemplate,
+    NotificationRecord,
+    OperatorAccount,
+    ReviewRecord,
+    ResponsibilityGrid,
+    ScenarioTemplate,
+    ScenarioTemplateRevision,
+    SettlementSeries,
+    Source,
+    Task,
+    WorkOrder,
+)
+from .services.events import TYPE_CN, add_log, create_event, default_assignee, event_from_result
 from .services.tasks import create_task
 
 if TYPE_CHECKING:
@@ -37,7 +58,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("cityeye.seed")
 
-SEED_VERSION = "2"
+SEED_VERSION = "5"
 DUTY = ["值班员 王磊", "值班员 张敏", "调度员 李娜", "值班员 陈刚", "调度员 赵倩"]
 SYNTH = "（合成演示数据）"
 LANDMARKS = {
@@ -67,11 +88,13 @@ def seed_database(ctx: "AppContext") -> dict[str, int]:
         builder.plan_building(monitored)
         builder.plan_flood()
         n_events = builder.commit_all()
+        _seed_workflow(ctx, s, now)
         s.add(AppMeta(key="seed_version", value=SEED_VERSION))
         s.add(AppMeta(key="seeded_at", value=timeutil.fmt(now) or ""))
         s.commit()
         ctx.sources.load(s)
         counts = {"events": n_events, "tasks": s.scalar(select(func.count()).select_from(Task)) or 0, "buildings_monitored": len(monitored)}
+    ensure_support_data(ctx)
     ctx.invalidate_buildings()
     log.info("种子数据已生成：%s", counts)
     return counts
@@ -91,6 +114,575 @@ def load_runtime_state(ctx: "AppContext") -> None:
         ctx.geo.monitoring = {r.building_id: r.risk_level for r in s.scalars(select(SettlementSeries))}
         ctx.sources.load(s)
     ctx.invalidate_buildings()
+
+
+def ensure_support_data(ctx: "AppContext") -> None:
+    """为已有演示库补建角色、责任网格和初始站内提醒。"""
+    now = timeutil.now()
+    with ctx.session() as s:
+        if (s.scalar(select(func.count()).select_from(OperatorAccount)) or 0) == 0:
+            s.add_all(
+                [
+                    OperatorAccount(
+                        id="A0001", name="王磊", role="duty", organization="市城市运行管理中心",
+                        grid_ids=["G-JH-01", "G-JA-01"], status="active", contact="值班席 01",
+                        created_at=now, updated_at=now,
+                    ),
+                    OperatorAccount(
+                        id="A0002", name="张敏", role="analyst", organization="市城市运行管理中心",
+                        grid_ids=["G-JH-01", "G-WC-01"], status="active", contact="分析席 02",
+                        created_at=now, updated_at=now,
+                    ),
+                    OperatorAccount(
+                        id="A0003", name="李娜", role="dispatcher", organization="市城市运行管理中心",
+                        grid_ids=["G-JH-01", "G-HY-01", "G-QK-01"], status="active", contact="调度席 03",
+                        created_at=now, updated_at=now,
+                    ),
+                    OperatorAccount(
+                        id="A0004", name="陈刚", role="field", organization="水务 / 属地联动处置组",
+                        grid_ids=["G-WC-01", "G-HS-01"], status="active", contact="现场席位 04",
+                        created_at=now, updated_at=now,
+                    ),
+                    OperatorAccount(
+                        id="A0005", name="周宁", role="data_admin", organization="城市数据资源中心",
+                        grid_ids=["G-JH-01"], status="active", contact="数据维护席",
+                        created_at=now, updated_at=now,
+                    ),
+                    OperatorAccount(
+                        id="A0006", name="刘洋", role="admin", organization="系统运行保障组",
+                        grid_ids=[], status="active", contact="系统保障席",
+                        created_at=now, updated_at=now,
+                    ),
+                ]
+            )
+        if (s.scalar(select(func.count()).select_from(ResponsibilityGrid)) or 0) == 0:
+            districts = list(ctx.geo.region.get("event_districts") or ctx.geo.region.get("districts") or [])
+            for district in districts:
+                prefix = {
+                    "江岸区": "JA", "江汉区": "JH", "硚口区": "QK", "汉阳区": "HY",
+                    "武昌区": "WC", "洪山区": "HS", "青山区": "QS",
+                }.get(district, "WH")
+                points = [
+                    (p["longitude"], p["latitude"])
+                    for p in ctx.geo.buildings.values()
+                    if p.get("district") == district
+                ]
+                if points:
+                    bbox = [
+                        min(x for x, _ in points), min(y for _, y in points),
+                        max(x for x, _ in points), max(y for _, y in points),
+                    ]
+                else:
+                    bbox = list(ctx.geo.region["bbox"])
+                s.add(
+                    ResponsibilityGrid(
+                        id=f"G-{prefix}-01", district=district, name=f"{district}综合责任网格",
+                        organization=f"{district}城市运行管理中心", owner="值班调度员",
+                        contact="12345", bbox=bbox, risk_types=["fire", "traffic", "building", "flood"],
+                        created_at=now,
+                    )
+                )
+        if (s.scalar(select(func.count()).select_from(MonitoringTaskTemplate)) or 0) == 0:
+            s.add_all(
+                [
+                    MonitoringTaskTemplate(
+                        id="TP0001", name="火灾重点区域即时核查", description="影像或视频发现火情线索后立即核查。",
+                        event_type="fire", schedule_type="instant", area_name="武汉中心城区",
+                        bbox=list(ctx.geo.region["bbox"]), data_source_ids=["S-DRONE", "S-VIDEO"],
+                        rule_config={"priority": "high"}, owner="消防救援联动组",
+                        notify_targets=["消防救援指挥中心", "属地街道"], created_at=now, updated_at=now,
+                    ),
+                    MonitoringTaskTemplate(
+                        id="TP0002", name="交通高峰拥堵周期监测", description="早晚高峰按周期分析车速和持续拥堵。",
+                        event_type="traffic", schedule_type="periodic", area_name="武汉中心城区",
+                        bbox=list(ctx.geo.region["bbox"]), data_source_ids=["S-TRAFFIC", "S-VIDEO"],
+                        rule_config={"interval_minutes": 30, "tpi_threshold": 6.0}, owner="交通运行值班组",
+                        notify_targets=["交管指挥中心"], created_at=now, updated_at=now,
+                    ),
+                    MonitoringTaskTemplate(
+                        id="TP0003", name="建筑沉降日监测", description="对已接入沉降监测的建筑执行日尺度分析。",
+                        event_type="building", schedule_type="periodic", area_name="武汉中心城区",
+                        bbox=list(ctx.geo.region["bbox"]), data_source_ids=["S-IOT-SETTLE"],
+                        rule_config={"interval_minutes": 1440}, owner="结构安全监测组",
+                        notify_targets=["房安中心", "属地街道"], created_at=now, updated_at=now,
+                    ),
+                    MonitoringTaskTemplate(
+                        id="TP0004", name="强降雨道路积水专项监测", description="降雨期间监测水位、雨量并核查道路积水。",
+                        event_type="flood", schedule_type="periodic", area_name="武汉中心城区",
+                        bbox=list(ctx.geo.region["bbox"]), data_source_ids=["S-RADAR", "S-IOT-WATER"],
+                        rule_config={"interval_minutes": 15, "rainfall_mm_h": 50, "water_level_threshold_cm": 15},
+                        owner="防汛值班组", notify_targets=["水务排水中心", "属地街道"],
+                        created_at=now, updated_at=now,
+                    ),
+                ]
+            )
+        if (s.scalar(select(func.count()).select_from(EmergencyResource)) or 0) == 0:
+            capability = {
+                "hospital": ("急救床位与医疗救援", 120),
+                "fire_station": ("消防车辆与救援班组", 8),
+                "police": ("现场秩序与交通管控", 30),
+                "school": ("临时避难与人员安置", 500),
+            }
+            for poi in ctx.geo.pois:
+                label, capacity = capability.get(poi.get("kind", "other"), ("应急资源", 20))
+                s.add(
+                    EmergencyResource(
+                        id=poi["id"], name=poi.get("name") or poi["id"], kind=poi.get("kind", "other"),
+                        longitude=float(poi["longitude"]), latitude=float(poi["latitude"]),
+                        capability=label, capacity=capacity, available=capacity,
+                        status="available", contact="通过属地调度席联系",
+                        notes="演示资源能力档案，实际可调度状态以现场确认为准。", updated_at=now,
+                    )
+                )
+        s.commit()
+
+        if (s.scalar(select(func.count()).select_from(NotificationRecord)) or 0) == 0:
+            active = s.scalars(
+                select(WorkOrder)
+                .where(WorkOrder.status.in_(("pending", "accepted", "in_progress", "completed")))
+                .order_by(WorkOrder.due_at.is_(None), WorkOrder.due_at, WorkOrder.updated_at.desc())
+            ).first()
+            if active is not None:
+                s.add(
+                    NotificationRecord(
+                        target=active.unit or active.assignee or "属地责任单位",
+                        title=f"待处置工单 {active.id}",
+                        body=f"{active.title} 需要现场核查并及时反馈。",
+                        level="warning",
+                        entity_type="work_order",
+                        entity_id=active.id,
+                        is_read=False,
+                        created_at=now,
+                    )
+                )
+            review = s.scalars(select(ReviewRecord).order_by(ReviewRecord.created_at.desc())).first()
+            if review is not None:
+                s.add(
+                    NotificationRecord(
+                        target="防汛值班组",
+                        title="复盘建议待审核",
+                        body=f"{review.id} 已形成改进建议，请纳入下一次任务配置评审。",
+                        level="info",
+                        entity_type="review",
+                        entity_id=review.id,
+                        is_read=False,
+                        created_at=now - timedelta(minutes=12),
+                    )
+                )
+            s.commit()
+
+        if (s.scalar(select(func.count()).select_from(AuditLog)) or 0) == 0:
+            audit_rows = [
+                AuditLog(
+                    method="POST", path="/api/monitoring-tasks/MT0001/execute", action="task_execute",
+                    entity_type="monitoring_task", entity_id="MT0001", operator_id="A0001",
+                    operator_name="王磊", role="duty", status_code=200,
+                    summary="周期监测任务启动算法运行", created_at=now - timedelta(hours=2),
+                ),
+                AuditLog(
+                    method="PATCH", path="/api/work-orders/WO0003", action="update_api",
+                    entity_type="work_order", entity_id="WO0003", operator_id="A0003",
+                    operator_name="李娜", role="dispatcher", status_code=200,
+                    summary="工单进入现场执行状态",
+                    before_data={"status": "accepted"},
+                    after_data={"status": "in_progress"},
+                    created_at=now - timedelta(minutes=40),
+                ),
+                AuditLog(
+                    method="POST", path="/api/reviews", action="create_review",
+                    entity_type="review", entity_id="RV0001", operator_id="A0002",
+                    operator_name="张敏", role="analyst", status_code=201,
+                    summary="确认复盘结论与改进建议", created_at=now - timedelta(minutes=18),
+                ),
+            ]
+            s.add_all(audit_rows)
+            s.commit()
+
+        if (s.scalar(select(func.count()).select_from(DataValidationRecord)) or 0) == 0:
+            ready_assets = s.scalars(
+                select(DataAsset).where(DataAsset.analysis_status == "ready").order_by(DataAsset.id)
+            ).all()
+            for index, asset in enumerate(ready_assets, 1):
+                s.add(
+                    DataValidationRecord(
+                        id=f"DV{index:04d}",
+                        asset_id=asset.id,
+                        decision="pass",
+                        checks={"coordinate": True, "time": True, "fields": True},
+                        quality_score=asset.quality_score,
+                        notes=["演示数据已完成坐标、时相与字段校验"],
+                        operator="数据管理员 周宁",
+                        created_at=now - timedelta(days=1),
+                    )
+                )
+            s.commit()
+
+        if (s.scalar(select(func.count()).select_from(ScenarioTemplate)) or 0) == 0:
+            s.add_all(
+                [
+                    ScenarioTemplate(
+                        id="ST0001", name="中心城区暴雨内涝", description="50 mm/h 降雨，持续 60 分钟，评估道路积水与人员疏散。",
+                        scenario_type="flood",
+                        parameters={
+                            "location_name": "江汉区", "start_time": now.strftime("%Y-%m-%d %H:%M"),
+                            "duration_min": 60, "rainfall_mm_h": 50, "people_count": 300,
+                            "response_delay_min": 3, "available_resource_count": 4,
+                        },
+                        created_at=now, updated_at=now,
+                    ),
+                    ScenarioTemplate(
+                        id="ST0002", name="主干道严重拥堵", description="严重拥堵持续 60 分钟，评估分流和恢复时间。",
+                        scenario_type="traffic",
+                        parameters={
+                            "location_name": "中山大道", "start_time": now.strftime("%Y-%m-%d %H:%M"),
+                            "duration_min": 60, "congestion_level": "severe", "traffic_cause": "交通事故",
+                            "people_count": 120, "response_delay_min": 5, "available_resource_count": 3,
+                        },
+                        created_at=now, updated_at=now,
+                    ),
+                    ScenarioTemplate(
+                        id="ST0003", name="重点区域中型火灾", description="危险半径 240 米，评估警戒、疏散与周边道路影响。",
+                        scenario_type="fire",
+                        parameters={
+                            "location_name": "武昌区", "start_time": now.strftime("%Y-%m-%d %H:%M"),
+                            "duration_min": 30, "fire_severity": "medium", "danger_radius_m": 240,
+                            "people_count": 240, "response_delay_min": 3, "available_resource_count": 5,
+                        },
+                        created_at=now, updated_at=now,
+                    ),
+                    ScenarioTemplate(
+                        id="ST0004", name="建筑沉降异常复核", description="沉降速率 4.5 mm/月，评估建筑周边警戒和人员核查。",
+                        scenario_type="building",
+                        parameters={
+                            "location_name": "江汉区", "start_time": now.strftime("%Y-%m-%d %H:%M"),
+                            "duration_min": 60, "settlement_rate_mm_month": 4.5,
+                            "people_count": 120, "response_delay_min": 5, "available_resource_count": 4,
+                        },
+                        created_at=now, updated_at=now,
+                    ),
+                ]
+            )
+            s.commit()
+
+        if s.get(ScenarioTemplate, "ST0004") is None:
+            s.add(
+                ScenarioTemplate(
+                    id="ST0004",
+                    name="建筑沉降异常复核",
+                    description="沉降速率 4.5 mm/月，评估建筑周边警戒和人员核查。",
+                    scenario_type="building",
+                    parameters={
+                        "location_name": "江汉区",
+                        "start_time": now.strftime("%Y-%m-%d %H:%M"),
+                        "duration_min": 60,
+                        "settlement_rate_mm_month": 4.5,
+                        "people_count": 120,
+                        "response_delay_min": 5,
+                        "available_resource_count": 4,
+                    },
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            s.commit()
+
+        templates_without_revision = [
+            row for row in s.scalars(select(ScenarioTemplate)).all()
+            if s.scalar(
+                select(func.count()).select_from(ScenarioTemplateRevision).where(
+                    ScenarioTemplateRevision.template_id == row.id
+                )
+            ) == 0
+        ]
+        for row in templates_without_revision:
+            s.add(
+                ScenarioTemplateRevision(
+                    template_id=row.id,
+                    version_no=1,
+                    name=row.name,
+                    description=row.description,
+                    scenario_type=row.scenario_type,
+                    parameters=row.parameters or {},
+                    operator="初始模板",
+                    created_at=row.created_at,
+                )
+            )
+        s.commit()
+
+
+def _seed_workflow(ctx: "AppContext", s: Session, now: datetime) -> None:
+    """为最近一次已办结内涝事件建立任务、研判、工单和复盘的示例闭环。"""
+    event = s.scalars(
+        select(Event)
+        .where(Event.event_type == "flood", Event.status == "resolved")
+        .order_by(Event.timestamp.desc())
+        .limit(1)
+    ).first()
+    if event is None:
+        return
+    started = event.timestamp - timedelta(minutes=35)
+    task = MonitoringTask(
+        id="MT0001",
+        name="强降雨道路积水专项监测",
+        event_type="flood",
+        schedule_type="periodic",
+        status="completed",
+        area_name="武汉中心城区",
+        bbox=ctx.geo.region["bbox"],
+        data_source_ids=["S-SAT", "S-IOT-WATER"],
+        rule_config={"rainfall_mm_h": 50, "water_level_threshold_cm": 15},
+        owner="防汛值班组",
+        notify_targets=["水务排水中心", "属地街道"],
+        template_key="flood-road",
+        start_at=started,
+        end_at=event.updated_at,
+        last_run_at=event.updated_at,
+        created_at=started,
+        updated_at=event.updated_at,
+    )
+    run = MonitoringRun(
+        id="MR0001",
+        monitoring_task_id=task.id,
+        analysis_task_id=event.task_id,
+        event_ids=[event.id],
+        status="completed",
+        coverage={"bbox": ctx.geo.region["bbox"], "window_minutes": 120},
+        quality={"data_completeness": 0.92, "event_count": 1},
+        started_at=started,
+        finished_at=event.updated_at,
+        created_at=started,
+    )
+    assessment = AssessmentRecord(
+        id="AS0001",
+        event_id=event.id,
+        monitoring_run_id=run.id,
+        decision="confirmed",
+        summary=f"结合积水时序与空间位置，确认「{event.name}」为有效积水事件。",
+        evidence=[{"kind": "event", "id": event.id, "url": event.evidence_url}],
+        impact={"district": event.district, "road_id": event.road_id, "risk_level": event.severity},
+        missing_information=[],
+        priority=event.severity,
+        operator="值班员 王磊",
+        created_at=event.timestamp + timedelta(minutes=8),
+    )
+    unit = default_assignee(event.event_type, event.district)
+    first_verified = event.updated_at
+    first_completed = first_verified - timedelta(minutes=5)
+    second_verified = event.updated_at
+    second_completed = second_verified - timedelta(minutes=8)
+    orders = [
+        WorkOrder(
+            id="WO0001",
+            event_id=event.id,
+            assessment_id=assessment.id,
+            title="核验积水范围与道路通行条件",
+            unit=unit,
+            assignee=unit,
+            status="verified",
+            priority=event.severity,
+            description="现场复核积水边界、雨箅子状态和车辆通行条件。",
+            feedback=[
+                {
+                    "at": timeutil.fmt(assessment.created_at + timedelta(minutes=2)),
+                    "operator": unit,
+                    "action": "status_changed",
+                    "from": "pending",
+                    "to": "accepted",
+                    "note": "责任单位已接单",
+                },
+                {
+                    "at": timeutil.fmt(assessment.created_at + timedelta(minutes=4)),
+                    "operator": unit,
+                    "action": "status_changed",
+                    "from": "accepted",
+                    "to": "in_progress",
+                    "note": "核查人员出发",
+                },
+                {
+                    "at": timeutil.fmt(first_completed),
+                    "operator": unit,
+                    "action": "status_changed",
+                    "from": "in_progress",
+                    "to": "completed",
+                    "note": "现场范围核查完成",
+                },
+                {
+                    "at": timeutil.fmt(first_verified),
+                    "operator": "值班复核员",
+                    "action": "status_changed",
+                    "from": "completed",
+                    "to": "verified",
+                    "note": "证据与反馈复核通过",
+                },
+            ],
+            due_at=assessment.created_at + timedelta(minutes=120),
+            created_at=assessment.created_at,
+            updated_at=event.updated_at,
+        ),
+        WorkOrder(
+            id="WO0002",
+            event_id=event.id,
+            assessment_id=assessment.id,
+            title="积水抽排与雨箅子清理",
+            unit=unit,
+            assignee=unit,
+            status="verified",
+            priority=event.severity,
+            description="清理堵塞雨水口并安排移动泵车抽排。",
+            feedback=[
+                {
+                    "at": timeutil.fmt(assessment.created_at + timedelta(minutes=3)),
+                    "operator": unit,
+                    "action": "status_changed",
+                    "from": "pending",
+                    "to": "accepted",
+                    "note": "抽排班组已接单",
+                },
+                {
+                    "at": timeutil.fmt(assessment.created_at + timedelta(minutes=6)),
+                    "operator": unit,
+                    "action": "status_changed",
+                    "from": "accepted",
+                    "to": "in_progress",
+                    "note": "移动泵车到场",
+                },
+                {
+                    "at": timeutil.fmt(second_completed),
+                    "operator": unit,
+                    "action": "status_changed",
+                    "from": "in_progress",
+                    "to": "completed",
+                    "note": "积水抽排完成",
+                },
+                {
+                    "at": timeutil.fmt(second_verified),
+                    "operator": "值班复核员",
+                    "action": "status_changed",
+                    "from": "completed",
+                    "to": "verified",
+                    "note": "水位消退，道路恢复通行",
+                },
+            ],
+            due_at=assessment.created_at + timedelta(minutes=120),
+            created_at=assessment.created_at,
+            updated_at=event.updated_at,
+        ),
+    ]
+    review = ReviewRecord(
+        id="RV0001",
+        entity_type="event",
+        entity_id=event.id,
+        status="confirmed",
+        summary="发现、核查、抽排和复核流程完整；数据覆盖满足演示要求。",
+        metrics={"response_min": 8, "resolve_min": max(1, int((event.updated_at - event.timestamp).total_seconds() / 60))},
+        findings=["现场反馈与水位序列方向一致", "雨箅子堵塞是主要局部积水原因"],
+        recommendations=["降雨前增加重点路段雨水口巡检"],
+        created_at=now,
+        updated_at=now,
+    )
+    s.add(task)
+    s.flush()
+    s.add(run)
+    s.flush()
+    s.add(assessment)
+    s.flush()
+    s.add_all(orders)
+    s.add(review)
+    s.commit()
+
+    active_event = s.scalars(
+        select(Event)
+        .where(Event.status.in_(("pending", "monitoring", "processing")))
+        .order_by(Event.timestamp.desc())
+        .limit(1)
+    ).first()
+    if active_event is None:
+        return
+    active_started = active_event.timestamp - timedelta(minutes=12)
+    active_task = MonitoringTask(
+        id="MT0002",
+        name=f"{TYPE_CN[active_event.event_type]}即时核查",
+        event_type=active_event.event_type,
+        schedule_type="instant",
+        status="completed",
+        area_name=active_event.district,
+        bbox=ctx.geo.region["bbox"],
+        data_source_ids=["S-VIDEO", "S-IOT-WATER"] if active_event.event_type == "flood" else ["S-VIDEO"],
+        rule_config={"priority": active_event.severity},
+        owner="联合值班组",
+        notify_targets=[default_assignee(active_event.event_type, active_event.district)],
+        template_key=f"{active_event.event_type}-quick-check",
+        start_at=active_started,
+        end_at=active_event.timestamp,
+        last_run_at=active_event.timestamp,
+        created_at=active_started,
+        updated_at=active_event.timestamp,
+    )
+    active_run = MonitoringRun(
+        id="MR0002",
+        monitoring_task_id=active_task.id,
+        analysis_task_id=active_event.task_id,
+        event_ids=[active_event.id],
+        status="completed",
+        coverage={"district": active_event.district, "window_minutes": 20},
+        quality={"data_completeness": 0.86, "event_count": 1},
+        started_at=active_started,
+        finished_at=active_event.timestamp,
+        created_at=active_started,
+    )
+    active_assessment = AssessmentRecord(
+        id="AS0002",
+        event_id=active_event.id,
+        monitoring_run_id=active_run.id,
+        decision="confirmed",
+        summary=f"初步研判确认「{active_event.name}」需要现场核查。",
+        evidence=[{"kind": "event", "id": active_event.id, "url": active_event.evidence_url}],
+        impact={"district": active_event.district, "risk_level": active_event.severity},
+        missing_information=["等待现场边界与受影响对象反馈"],
+        priority=active_event.severity,
+        operator="调度员 赵倩",
+        created_at=active_event.timestamp + timedelta(minutes=3),
+    )
+    active_order = WorkOrder(
+        id="WO0003",
+        event_id=active_event.id,
+        assessment_id=active_assessment.id,
+        title="现场核查与影响范围确认",
+        unit=default_assignee(active_event.event_type, active_event.district),
+        assignee=default_assignee(active_event.event_type, active_event.district),
+        status="in_progress",
+        priority=active_event.severity,
+        description="核查现场状态、受影响对象、道路通行条件和所需增援资源。",
+        due_at=active_assessment.created_at + timedelta(minutes=90),
+        feedback=[
+            {
+                "at": timeutil.fmt(active_assessment.created_at + timedelta(minutes=2)),
+                "operator": default_assignee(active_event.event_type, active_event.district),
+                "action": "status_changed",
+                "from": "pending",
+                "to": "accepted",
+                "note": "责任单位已接单",
+            },
+            {
+                "at": timeutil.fmt(active_assessment.created_at + timedelta(minutes=6)),
+                "operator": default_assignee(active_event.event_type, active_event.district),
+                "action": "status_changed",
+                "from": "accepted",
+                "to": "in_progress",
+                "note": "处置力量已出发，现场信息待回传",
+            }
+        ],
+        created_at=active_assessment.created_at,
+        updated_at=timeutil.now(),
+    )
+    s.add(active_task)
+    s.flush()
+    s.add(active_run)
+    s.flush()
+    s.add(active_assessment)
+    s.flush()
+    s.add(active_order)
+    s.commit()
 
 
 # ====================================================================== 数据源 / 数据资产
@@ -155,8 +747,30 @@ def _seed_data_assets(ctx: "AppContext", s: Session, now: datetime) -> None:
     ]
     rows.sort(key=lambda r: r[2])
     for i, (name, typ, t, status, src, fmt, size, rec, desc, url) in enumerate(rows, 1):
+        if status == "已入库":
+            analysis_status = "ready"
+            quality_score = 94.0 if typ in ("矢量数据", "三维模型") else 88.0
+            quality_notes = ["空间与时相口径已登记", "字段清单可用于演示分析"]
+        elif status == "采集中":
+            analysis_status = "pending"
+            quality_score = 72.0
+            quality_notes = ["实时流可用，尚未完成稳定性抽检"]
+        else:
+            analysis_status = "unavailable"
+            quality_score = 0.0
+            quality_notes = ["原始文件未接入，当前仅保留目录信息"]
+        time_start = now - (
+            timedelta(days=365) if typ in ("矢量数据", "三维模型")
+            else timedelta(days=1) if typ == "传感器数据"
+            else timedelta(hours=6) if typ == "无人机影像"
+            else timedelta(hours=24)
+        )
         s.add(DataAsset(id=f"D{i:04d}", name=name, type=typ, time=t, status=status, source=src, format=fmt, size_bytes=int(size),
-                        records=int(rec), description=desc, url=url, created_at=t))
+                        records=int(rec), description=desc, url=url,
+                        spatial_extent={"label": "武汉中心城区", "bbox": list(ctx.geo.region["bbox"])},
+                        time_start=time_start, time_end=None if typ == "视频流" else t,
+                        crs="EPSG:4326", quality_score=quality_score, quality_notes=quality_notes,
+                        version=f"{t:%Y.%m.%d}", analysis_status=analysis_status, created_at=t))
     s.commit()
 
 

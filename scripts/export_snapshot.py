@@ -66,6 +66,20 @@ def main() -> None:
                 "samples.json": get("/samples"),
                 "sources.json": get("/sources"),
                 "system_info.json": get("/system/info"),
+                "monitoring_tasks.json": get("/monitoring-tasks"),
+                "task_templates.json": get("/task-templates"),
+                "scenario_templates.json": get("/scenario/templates"),
+                "monitoring_runs.json": get("/monitoring-runs"),
+                "assessments.json": get("/assessments"),
+                "work_orders.json": get("/work-orders"),
+                "reviews.json": get("/reviews"),
+                "accounts.json": get("/support/accounts"),
+                "grids.json": get("/support/grids"),
+                "emergency_resources.json": get("/support/emergency-resources"),
+                "notifications.json": get("/support/notifications"),
+                "audit.json": get("/support/audit"),
+                "sla_summary.json": get("/support/sla-summary"),
+                "traceability_graph.json": get("/traceability/graph"),
             }
             ids = {f["id"] for f in payloads["buildings.geojson"]["features"] if f["properties"]["monitored"]}
             ids |= {e["building_id"] for e in events if e.get("building_id")}

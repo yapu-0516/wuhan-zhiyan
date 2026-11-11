@@ -114,17 +114,23 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 
 | 页面 | 核心能力 |
 | --- | --- |
-| **城市总览** | 七城区三维底座 + 指挥大屏；底部城区导航按需加载精细建筑；图层含概览建筑、分区建筑、黄鹤楼/长江大桥地标、路况、事件与应急资源 |
+| **城市总览** | 七城区三维底座 + 指挥大屏；支持责任网格和风险类型筛选；展示任务、事件、工单、复盘、可分析数据和最近更新时间；图层含精细建筑、地标、路况、事件与应急资源 |
 | **城市监测** | 无人机/卫星/视频/物联四类数据源在线率与实时吞吐火花图；路网 TPI 仪表与拥堵排行；建筑沉降监测清单与沉降曲线 |
 | **事件中心** | 多维筛选（类型/状态/等级/关键词）、人工上报、事件详情抽屉（证据图、算法指标、处置时间线）、按状态机派单/办结/重开、三维定位 |
-| **数据管理** | 空间数据资产清单（遥感/无人机/视频/三维模型/传感器/矢量）、类型与状态分布、拖拽上传入库 |
+| **数据资源** | 空间数据资产清单与时空检索、地图定位、人工校验/自动预检；同时维护医院/消防/派出所/学校的容量、可用数量和调度状态 |
 | **AI 分析** | 4 类分析 × 18 份示例数据或自有数据上传；实时进度；标注结果图、检测框、指标、时序与预测曲线；检出即生成事件并可在三维场景定位 |
 | **虚拟人群仿真** | Three.js 低模人物叠加 Cesium 城市场景；支持人员类型、1—1000 人批量分布、单人路径运动、区域聚集、危险区疏散、实时统计与性能测试 |
 | **应急演练** | 独立平静基线页面：按火灾、交通、积水或建筑异常固定场景推演，支持 1/4/8 倍速、动态风险场、四出口、风险加权路径、出口排队、过程时间线和完成摘要 |
-| **智能情景推演** | 输入一句话生成火灾、内涝或交通情景；演示模式自动补齐参数并生成常规、不利、干预三套可能结果，支持三维回放、时间轴、方案对比和结构化报告 |
+| **智能情景推演** | 可从现有事件或情景模板创建，四种场景均可推演；支持模板编辑、删除与参数修订历史，从应急库存预留资源、受影响建筑/道路、三维回放、三方案对比、报告与结果导出、选定方案转工单 |
+| **监测任务** | 即时、周期、专项与演练任务配置；可保存和复用任务模板；立即运行真实算法；周期任务按到期时间自动启动并保留运行结果与失败原因 |
+| **风险研判** | 统一事件证据、地点、周边建筑/道路/设施、相近告警关联、缺失信息和多轮研判结论 |
+| **协同处置** | 从研判或情景方案生成工单；支持接单、转派、执行、从应急资源库存登记使用、现场反馈、复测/复飞申请、复核与方案来源追踪 |
+| **复盘评估** | 自动汇总全过程，生成摘要、时间线、指标和建议；确认后进入案例库，支持报告导出和审核规则回写任务模板 |
+| **系统管理** | 演示身份、责任网格与建筑/道路空间对象维护、站内提醒、修改前后值审计、SLA 时间趋势、统一业务关系图与完整链路导出、运行配置和服务/算法版本状态 |
 
 5 分钟路演脚本见 [docs/demo-script.md](docs/demo-script.md)。
 接手开发、数据再生成和环境配置见 [HANDOFF.md](HANDOFF.md)。
+业务闭环第一阶段的模型、接口和迁移说明见 [docs/workflow-refactor.md](docs/workflow-refactor.md)。
 
 虚拟人群仿真的技术融合、坐标转换、接口和实测记录见
 [docs/crowd-simulation.md](docs/crowd-simulation.md)。
@@ -137,7 +143,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 
 项目已使用 Graphify 生成持久化代码知识图谱，覆盖前端、后端、大模型、情景引擎、算法和数据处理代码：
 
-- 3163 个节点、7304 条关系边、151 个社区
+- 3952 个节点、9627 条关系边、160 个社区
 - [交互式代码图](graphify-out/graph.html)
 - [调用流程与架构图](graphify-out/CALLFLOW.html)
 - [图谱审计报告](graphify-out/GRAPH_REPORT.md)
@@ -195,12 +201,18 @@ flowchart LR
 | POST · PATCH | `/api/events` · `/api/events/{id}` | 人工上报；状态流转/派单（状态机校验，非法流转 409） |
 | GET | `/api/buildings` · `/api/buildings/fine?district=武昌区` · `/api/buildings/{id}` · `/api/roads` · `/api/pois` | 全市概览、分区精细建筑、建筑沉降详情、实时路况、应急资源 |
 | GET | `/api/stats/overview` | 大屏指标：KPI、分布、24h 趋势、城市指数 |
-| GET · POST | `/api/data` · `/api/data/stats` · `/api/data/upload` | 数据资产 |
+| GET · POST | `/api/data` · `/api/data/stats` · `/api/data/upload` · `/api/data/{id}/validations` | 数据资产、时空质量画像和校验历史 |
 | GET · POST | `/api/tasks` · `/api/tasks/upload` · `/api/samples` | AI 分析任务（示例数据 / 上传文件） |
 | GET | `/api/sources` · `/api/system/info` · `/api/health` | 数据源、系统信息、健康检查 |
 | POST | `/api/demo/scenario` · `/api/demo/reset` | 演示控制：触发场景 / 重置数据 |
 | GET · POST | `/api/llm/status` · `/api/llm/parse-task` · `/api/llm/chat` · `/api/llm/report` | 大模型状态、任务解析、多轮治理问答和事件研判报告 |
 | GET · POST | `/api/scenario/status` · `/api/scenario/sessions` · `/api/scenario/runs/{id}` | 情景会话、参数版本、模拟推演、对比与报告 |
+| GET · POST | `/api/monitoring-tasks` · `/api/monitoring-runs` · `/api/assessments` · `/api/work-orders` · `/api/reviews` | 业务监测任务、研判、协同工单与复盘闭环 |
+| POST | `/api/monitoring-tasks/{id}/execute` · `/api/scenario-runs/{id}/dispatch` | 立即运行任务；将确认的推演方案转为处置工单 |
+| POST | `/api/work-orders/{id}/feedback` | 提交现场反馈、经纬度与最多 5 张照片 |
+| POST | `/api/work-orders/{id}/feedback/{index}/assess` | 将现场反馈转入新一轮研判 |
+| GET · PATCH | `/api/support/accounts` · `/api/support/grids` · `/api/support/notifications` · `/api/support/audit` · `/api/support/sla-summary` | 公共支撑：身份、网格、提醒、审计和 SLA |
+| GET | `/api/traceability/graph` · `/api/traceability/export` | 统一业务关系图、按对象定位链路和完整 JSON 导出 |
 | WS | `/api/ws` | `event.created` · `event.updated` · `task.updated` · `traffic.updated` · `sensor.tick` |
 
 启动后访问 <http://127.0.0.1:8000/docs> 查看交互式 Swagger 文档。
@@ -227,10 +239,9 @@ flowchart LR
 
 ```bash
 make test
-# algorithm/tests  53 passed   —— 每个算法的正例/反例/边界
-# backend + llm_module + scenario_engine  68 passed —— REST、任务、LLM、情景推演
-# frontend  49 passed          —— 人群、路网、事件优先级、格式化与 HTTP 层
-# scripts   3 passed           —— 卫星底图范围、裁切和 URL 生成
+# Python 全量  135 passed      —— 算法、REST、业务闭环、LLM、情景推演、数据脚本
+# frontend  51 passed          —— 人群、路网、业务状态机、格式化与 HTTP 层
+# 其中包括 scripts 8 passed    —— 卫星底图、建筑分块与应急资源合并
 cd frontend
 npm run lint                   # ESLint（Vue + TypeScript）
 npm run test                   # Vitest

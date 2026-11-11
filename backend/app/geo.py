@@ -88,11 +88,13 @@ class GeoRepository:
             self._b_grid = {}
 
         self.roads: list[Road] = []
+        self.road_features: list[dict[str, Any]] = []
         for f in self._load_json("roads.geojson", {}).get("features", []):
             g = f.get("geometry") or {}
             if g.get("type") != "LineString" or len(g.get("coordinates", [])) < 2:
                 continue
             p = f["properties"]
+            self.road_features.append(f)
             self.roads.append(
                 Road(
                     id=p["id"],
@@ -196,6 +198,39 @@ class GeoRepository:
             if not is_generic_name(b.get("name", "")):
                 return b
         return None
+
+    def nearby_buildings(
+        self, lon: float, lat: float, within_m: float = 300.0, limit: int = 12
+    ) -> list[tuple[dict[str, Any], float]]:
+        if not self._b_ids:
+            return []
+        p = self._xy([lon], [lat])[0]
+        candidates = self._points_near(float(p[0]), float(p[1]), within_m)
+        if candidates.size == 0:
+            return []
+        distances = np.hypot(
+            self._b_xy[candidates, 0] - p[0],
+            self._b_xy[candidates, 1] - p[1],
+        )
+        out: list[tuple[dict[str, Any], float]] = []
+        for local in np.argsort(distances):
+            distance = float(distances[local])
+            if distance > within_m or len(out) >= limit:
+                break
+            out.append((self.buildings[self._b_ids[int(candidates[local])]], distance))
+        return out
+
+    def nearby_pois(
+        self, lon: float, lat: float, within_m: float = 500.0, limit: int = 12
+    ) -> list[tuple[dict[str, Any], float]]:
+        p = self._xy([lon], [lat])[0]
+        out: list[tuple[dict[str, Any], float]] = []
+        for poi in self.pois:
+            xy = self._xy([poi["longitude"]], [poi["latitude"]])[0]
+            distance = float(np.hypot(xy[0] - p[0], xy[1] - p[1]))
+            if distance <= within_m:
+                out.append((poi, distance))
+        return sorted(out, key=lambda item: item[1])[:limit]
 
     def building_label(self, b: dict[str, Any]) -> str:
         """事件命名用的建筑称谓：具名建筑用其名称，无名建筑用"道路 + 类别"。"""

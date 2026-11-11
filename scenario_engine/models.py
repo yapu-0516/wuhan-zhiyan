@@ -8,7 +8,7 @@ import re
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-ScenarioType = Literal["flood", "traffic", "fire"]
+ScenarioType = Literal["flood", "traffic", "fire", "building"]
 RiskLevel = Literal["unknown", "low", "medium", "high", "critical"]
 DataClass = Literal["real", "professional_analysis", "simulated", "llm_inference", "unknown"]
 
@@ -27,10 +27,16 @@ class ScenarioParameters(BaseModel):
     traffic_cause: str | None = None
     fire_severity: Literal["small", "medium", "large"] | None = None
     danger_radius_m: float | None = Field(default=None, ge=10, le=3000)
+    settlement_rate_mm_month: float | None = Field(default=None, ge=0, le=100)
+    affected_building_id: str | None = None
     people_count: int | None = Field(default=None, ge=0, le=5000)
     population_profile: Literal["workday", "weekend_day", "weekend_night"] | None = None
     response_delay_min: int | None = Field(default=None, ge=0, le=60)
     closed_exit_count: int | None = Field(default=None, ge=0, le=4)
+    available_resource_count: int | None = Field(default=None, ge=0, le=100)
+    resource_types: list[str] = Field(default_factory=list)
+    resource_ids: list[str] = Field(default_factory=list)
+    source_event_id: str | None = None
     variation_seed: int | None = Field(default=None, ge=0, le=2_147_483_647)
 
     @field_validator("congestion_level", mode="before")
@@ -69,7 +75,7 @@ class ScenarioParameters(BaseModel):
             return int(match.group()) if match else value
         return value
 
-    @field_validator("rainfall_mm_h", "danger_radius_m", mode="before")
+    @field_validator("rainfall_mm_h", "danger_radius_m", "settlement_rate_mm_month", mode="before")
     @classmethod
     def normalize_float(cls, value: object) -> object:
         if isinstance(value, str):
@@ -130,6 +136,7 @@ class ScenarioRun(BaseModel):
     variant_label: str = "默认方案"
     status: Literal["preview", "success", "failed"] = "success"
     provider: str
+    model_version: str = "demo-1.0"
     data_classification: DataClass
     frames: list[ScenarioFrame]
     summary: str
@@ -168,4 +175,6 @@ def missing_fields(scenario_type: ScenarioType, params: ScenarioParameters) -> l
             missing.append("火灾规模或危险半径")
         if params.people_count is None:
             missing.append("影响人数")
+    if scenario_type == "building" and params.settlement_rate_mm_month is None:
+        missing.append("沉降速率")
     return missing

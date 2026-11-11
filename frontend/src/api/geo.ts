@@ -1,5 +1,5 @@
 // 城市三维对象接口层 —— docs/api.md §3
-import { request, loadSnapshot } from './http'
+import { jsonBody, request, loadSnapshot } from './http'
 import type {
   BuildingCollection,
   BuildingDetail,
@@ -64,4 +64,23 @@ export function getRoads(): Promise<RoadCollection> {
 /** 应急资源点位 GET /api/pois */
 export function getPois(): Promise<Poi[]> {
   return request('/pois', undefined, () => loadSnapshot<Poi[]>('pois.json'))
+}
+
+export interface SpatialFeature {
+  entity_type: 'building' | 'road'
+  entity_id: string
+  geometry: Record<string, unknown>
+  properties: Record<string, unknown>
+}
+
+export function getSpatialFeature(entityType: 'building' | 'road', id: string): Promise<SpatialFeature> {
+  return request(`/spatial/${entityType}/${encodeURIComponent(id)}`)
+}
+
+export function patchSpatialFeature(
+  entityType: 'building' | 'road',
+  id: string,
+  body: { properties: Record<string, unknown>; geometry?: Record<string, unknown> }
+): Promise<SpatialFeature> {
+  return request(`/spatial/${entityType}/${encodeURIComponent(id)}`, jsonBody(body, 'PATCH'))
 }

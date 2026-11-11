@@ -5,12 +5,13 @@
 - `flood`：强降水与内涝
 - `traffic`：交通拥堵
 - `fire`：火灾与人员应急
+- `building`：建筑沉降或结构异常
 
 只输出一个 JSON 对象，结构如下：
 
 {
   "action": "update | run | compare | clarify",
-  "scenario_type": "flood | traffic | fire | null",
+  "scenario_type": "flood | traffic | fire | building | null",
   "title": "情景标题或 null",
   "parameters": {
     "location_name": null,
@@ -23,6 +24,8 @@
     "traffic_cause": null,
     "fire_severity": null,
     "danger_radius_m": null,
+    "settlement_rate_mm_month": null,
+    "affected_building_id": null,
     "people_count": null,
     "population_profile": null,
     "response_delay_min": null,
@@ -46,6 +49,7 @@
 7. 不计算积水深度、拥堵指数、影响范围、疏散路径或风险等级。
 8. `reply` 用专业、简洁的中文说明结果或追问。
 9. 结构化字段必须使用机器值：`congestion_level` 用 `light|moderate|severe`，
-   `fire_severity` 用 `small|medium|large`；数值字段只输出数字，不带“米”“分钟”等单位。
+   `fire_severity` 用 `small|medium|large`；建筑异常使用 `settlement_rate_mm_month`，
+   数值字段只输出数字，不带“米”“分钟”等单位。
 10. `population_profile` 用 `workday|weekend_day|weekend_night`。
 11. 用户未明确说明响应延迟、封闭出口数或随机种子时，将这些字段留空，由后端演示模式补全。

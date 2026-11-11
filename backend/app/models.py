@@ -79,6 +79,31 @@ class DataAsset(Base):
     records: Mapped[int] = mapped_column(Integer, default=1)
     description: Mapped[str] = mapped_column(Text, default="")
     url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    spatial_extent: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    time_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    time_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    crs: Mapped[str] = mapped_column(String(32), default="EPSG:4326")
+    quality_score: Mapped[float] = mapped_column(Float, default=0.0)
+    quality_notes: Mapped[list[str]] = mapped_column(JSON, default=list)
+    version: Mapped[str] = mapped_column(String(32), default="")
+    analysis_status: Mapped[str] = mapped_column(String(16), default="unknown", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class DataValidationRecord(Base):
+    """数据资源的坐标、时相和字段校验历史。"""
+
+    __tablename__ = "data_validations"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # DV0001
+    asset_id: Mapped[str] = mapped_column(
+        ForeignKey("data_assets.id", ondelete="CASCADE"), index=True
+    )
+    decision: Mapped[str] = mapped_column(String(16), index=True)
+    checks: Mapped[dict[str, bool]] = mapped_column(JSON, default=dict)
+    quality_score: Mapped[float] = mapped_column(Float, default=0.0)
+    notes: Mapped[list[str]] = mapped_column(JSON, default=list)
+    operator: Mapped[str] = mapped_column(String(64), default="数据管理员")
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
 
@@ -105,6 +130,147 @@ class Task(Base):
     create_event: Mapped[bool] = mapped_column(Boolean, default=True)
     result: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class MonitoringTask(Base):
+    """业务监测任务；一次任务可产生多次算法运行和多个事件。"""
+
+    __tablename__ = "monitoring_tasks"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # MT0001
+    name: Mapped[str] = mapped_column(String(128))
+    event_type: Mapped[str] = mapped_column(String(16), index=True)
+    schedule_type: Mapped[str] = mapped_column(String(16), default="instant")
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    area_name: Mapped[str] = mapped_column(String(64), default="武汉中心城区")
+    bbox: Mapped[list[float]] = mapped_column(JSON, default=list)
+    data_source_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    rule_config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    owner: Mapped[str] = mapped_column(String(64), default="")
+    notify_targets: Mapped[list[str]] = mapped_column(JSON, default=list)
+    template_key: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    start_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    end_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class MonitoringTaskTemplate(Base):
+    """可复用的监测任务模板。"""
+
+    __tablename__ = "monitoring_task_templates"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # TP0001
+    name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str] = mapped_column(Text, default="")
+    event_type: Mapped[str] = mapped_column(String(16), index=True)
+    schedule_type: Mapped[str] = mapped_column(String(16), default="instant")
+    area_name: Mapped[str] = mapped_column(String(64), default="武汉中心城区")
+    bbox: Mapped[list[float]] = mapped_column(JSON, default=list)
+    data_source_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    rule_config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    owner: Mapped[str] = mapped_column(String(64), default="")
+    notify_targets: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class TaskTemplateRevision(Base):
+    """任务模板的审核后修订版本。"""
+
+    __tablename__ = "task_template_revisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    template_id: Mapped[str] = mapped_column(
+        ForeignKey("monitoring_task_templates.id", ondelete="CASCADE"), index=True
+    )
+    version_no: Mapped[int] = mapped_column(Integer)
+    rule_config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    source_review_id: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    operator: Mapped[str] = mapped_column(String(64), default="系统管理员")
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class MonitoringRun(Base):
+    """业务任务的一次执行，可关联一次 AI 分析作业和多个事件。"""
+
+    __tablename__ = "monitoring_runs"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # MR0001
+    monitoring_task_id: Mapped[str] = mapped_column(
+        ForeignKey("monitoring_tasks.id", ondelete="CASCADE"), index=True
+    )
+    analysis_task_id: Mapped[str | None] = mapped_column(String(16), index=True, nullable=True)
+    event_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    coverage: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    quality: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class AssessmentRecord(Base):
+    """针对一个事件的研判结论与证据快照。"""
+
+    __tablename__ = "assessments"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # AS0001
+    event_id: Mapped[str] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
+    monitoring_run_id: Mapped[str | None] = mapped_column(
+        ForeignKey("monitoring_runs.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    decision: Mapped[str] = mapped_column(String(20), index=True)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    evidence: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    impact: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    missing_information: Mapped[list[str]] = mapped_column(JSON, default=list)
+    priority: Mapped[str] = mapped_column(String(16), default="medium")
+    operator: Mapped[str] = mapped_column(String(64), default="值班员")
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class WorkOrder(Base):
+    """围绕事件或研判结论执行的具体工作，与事件状态相互独立。"""
+
+    __tablename__ = "work_orders"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # WO0001
+    event_id: Mapped[str] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), index=True)
+    assessment_id: Mapped[str | None] = mapped_column(
+        ForeignKey("assessments.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    scenario_run_id: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    title: Mapped[str] = mapped_column(String(128))
+    unit: Mapped[str] = mapped_column(String(64), default="")
+    assignee: Mapped[str] = mapped_column(String(64), default="")
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    priority: Mapped[str] = mapped_column(String(16), default="medium")
+    description: Mapped[str] = mapped_column(Text, default="")
+    due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    feedback: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ReviewRecord(Base):
+    """任务、事件或演练的复盘记录。"""
+
+    __tablename__ = "reviews"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # RV0001
+    entity_type: Mapped[str] = mapped_column(String(20), index=True)
+    entity_id: Mapped[str] = mapped_column(String(32), index=True)
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    findings: Mapped[list[str]] = mapped_column(JSON, default=list)
+    recommendations: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 class SettlementSeries(Base):
@@ -151,6 +317,94 @@ class AppMeta(Base):
     value: Mapped[str] = mapped_column(Text)
 
 
+class OperatorAccount(Base):
+    """演示用操作身份目录；当前版本用于署名与角色提示，不替代正式认证。"""
+
+    __tablename__ = "operator_accounts"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # A0001
+    name: Mapped[str] = mapped_column(String(64))
+    role: Mapped[str] = mapped_column(String(24), index=True)
+    organization: Mapped[str] = mapped_column(String(96))
+    grid_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    contact: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ResponsibilityGrid(Base):
+    """责任网格与属地责任单位。"""
+
+    __tablename__ = "responsibility_grids"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)  # G-JH-01
+    district: Mapped[str] = mapped_column(String(32), index=True)
+    name: Mapped[str] = mapped_column(String(96))
+    organization: Mapped[str] = mapped_column(String(96))
+    owner: Mapped[str] = mapped_column(String(64))
+    contact: Mapped[str] = mapped_column(String(64), default="")
+    bbox: Mapped[list[float]] = mapped_column(JSON, default=list)
+    risk_types: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class EmergencyResource(Base):
+    """应急资源点位的可调度能力；空间点位仍以 Poi 目录为准。"""
+
+    __tablename__ = "emergency_resources"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # P0001
+    name: Mapped[str] = mapped_column(String(128))
+    kind: Mapped[str] = mapped_column(String(24), index=True)
+    longitude: Mapped[float] = mapped_column(Float)
+    latitude: Mapped[float] = mapped_column(Float)
+    capability: Mapped[str] = mapped_column(String(128), default="")
+    capacity: Mapped[int] = mapped_column(Integer, default=0)
+    available: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(16), default="available", index=True)
+    contact: Mapped[str] = mapped_column(String(64), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class NotificationRecord(Base):
+    """站内通知；面向演示角色和目标单位投递。"""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    target: Mapped[str] = mapped_column(String(96), default="")
+    title: Mapped[str] = mapped_column(String(128))
+    body: Mapped[str] = mapped_column(Text, default="")
+    level: Mapped[str] = mapped_column(String(16), default="info", index=True)
+    entity_type: Mapped[str] = mapped_column(String(24), default="")
+    entity_id: Mapped[str] = mapped_column(String(32), default="")
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+
+
+class AuditLog(Base):
+    """跨模块写操作审计；记录请求身份、对象、修改前后值和响应状态。"""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    method: Mapped[str] = mapped_column(String(12))
+    path: Mapped[str] = mapped_column(String(255), index=True)
+    action: Mapped[str] = mapped_column(String(24), default="api_write")
+    entity_type: Mapped[str] = mapped_column(String(24), default="")
+    entity_id: Mapped[str] = mapped_column(String(32), default="")
+    operator_id: Mapped[str] = mapped_column(String(16), default="")
+    operator_name: Mapped[str] = mapped_column(String(64), default="系统")
+    role: Mapped[str] = mapped_column(String(24), default="")
+    status_code: Mapped[int] = mapped_column(Integer, default=200)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    before_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    after_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+
+
 class ScenarioSession(Base):
     """多轮情景推演会话。"""
 
@@ -179,6 +433,55 @@ class ScenarioVersion(Base):
     scenario_type: Mapped[str] = mapped_column(String(16))
     title: Mapped[str] = mapped_column(String(128))
     parameters: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ScenarioTemplate(Base):
+    """可复用的情景假设与参数模板。"""
+
+    __tablename__ = "scenario_templates"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # ST0001
+    name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str] = mapped_column(Text, default="")
+    scenario_type: Mapped[str] = mapped_column(String(16), index=True)
+    parameters: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ScenarioTemplateRevision(Base):
+    """情景模板的不可变修订版本，保留完整假设与参数。"""
+
+    __tablename__ = "scenario_template_revisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    template_id: Mapped[str] = mapped_column(
+        ForeignKey("scenario_templates.id", ondelete="CASCADE"), index=True
+    )
+    version_no: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str] = mapped_column(Text, default="")
+    scenario_type: Mapped[str] = mapped_column(String(16))
+    parameters: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    operator: Mapped[str] = mapped_column(String(64), default="情景模板编辑员")
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ScenarioResourceReservation(Base):
+    """情景会话对应急资源的预留占用。"""
+
+    __tablename__ = "scenario_resource_reservations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("scenario_sessions.id", ondelete="CASCADE"), index=True
+    )
+    resource_id: Mapped[str] = mapped_column(
+        ForeignKey("emergency_resources.id", ondelete="CASCADE"), index=True
+    )
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(16), default="active", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
 

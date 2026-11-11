@@ -93,3 +93,25 @@ def test_traffic_frames_use_requested_level() -> None:
     assert run.frames
     assert max(frame.metrics["tpi"] for frame in run.frames) >= 8
     assert run.data_classification == "simulated"
+
+
+def test_building_frames_use_settlement_rate_and_explicit_limits() -> None:
+    params = ScenarioParameters(
+        location_name="江汉区",
+        longitude=114.271,
+        latitude=30.601,
+        start_time="2026-11-11 10:00",
+        duration_min=60,
+        settlement_rate_mm_month=4.5,
+        people_count=80,
+        available_resource_count=4,
+    )
+    run = MockScenarioProvider().run(
+        ScenarioDraft(scenario_type="building", title="建筑异常", parameters=params),
+        "SR004",
+        "SV004",
+    )
+    assert run.frames
+    assert run.frames[0].metrics["settlement_rate_mm_month"] == 4.5
+    assert run.frames[0].risk_level == "high"
+    assert "未执行结构安全鉴定" in "；".join(run.frames[0].limitations)

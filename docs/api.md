@@ -175,6 +175,10 @@ pending ──► monitoring ──► processing ──► resolved
 ```
 
 ### `GET /api/roads` → GeoJSON `FeatureCollection<LineString>`
+### `GET/PATCH /api/spatial/{entity_type}/{id}`
+
+`entity_type` 为 `building | road`。GET 返回属性和 GeoJSON 几何；PATCH 可提交
+`{ "properties": {...}, "geometry": {...} }`，保存后重新加载地图空间索引。
 properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, speed_limit, speed, tpi, level: TrafficLevel }`
 
 ### `GET /api/pois` → `[{ id, name, kind: "hospital"|"fire_station"|"police"|"school", longitude, latitude }]`
@@ -222,13 +226,44 @@ properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, 
   "size_bytes": 2576980378,
   "records": 1,                // 记录/文件数
   "description": "0.8m 全色 + 3.2m 多光谱融合",
-  "url": null                  // 可下载/预览地址（上传文件有值）
+  "url": null,                 // 可下载/预览地址（上传文件有值）
+  "spatial_extent": { "label": "武汉中心城区", "bbox": [114.15, 30.45, 114.55, 30.72] },
+  "time_start": "2026-10-20 00:00",
+  "time_end": "2026-10-20 08:00",
+  "crs": "EPSG:4326",
+  "quality_score": 88.0,       // 0~100，质量检查得分
+  "quality_notes": ["空间与时相口径已登记"],
+  "version": "2026.10.20",
+  "analysis_status": "ready"   // ready | pending | unavailable | unknown
 }
 ```
 
 ### `GET /api/data` → `DataItem[]`（按 time 倒序）
-### `GET /api/data/stats` → `{ "total": 12, "total_size": "18.6 GB", "by_type": [{ "type": "遥感影像", "count": 3 }] }`
+可选查询参数：`type`、`status`、`analysis_status`、`q`、`time_from`、`time_to`、
+`longitude`、`latitude`、`radius_m`。空间条件按数据资源空间范围与查询圆的扩展边界求交。
+### `GET /api/data/stats` → 总数、总容量、类型分布、`analyzable` 与 `by_analysis_status`
 ### `POST /api/data/upload`（multipart：`files` 多个，`type` 可选）→ `DataItem[]`
+### `GET /api/data/{id}/validations` → `DataValidation[]`
+### `POST /api/data/{id}/validations`
+### `POST /api/data/{id}/auto-check` → 自动预检记录
+
+```json
+{
+  "decision": "pass",          // pass | needs_repair | reject
+  "coordinate_check": true,
+  "time_check": true,
+  "fields_check": true,
+  "notes": ["坐标、时相与字段已核验"],
+  "operator": "数据管理员 周宁"
+}
+```
+
+上传文件默认进入 `analysis_status=pending`，表示已入库但尚未完成坐标、时相与字段校验；
+页面不得仅因文件存在就把它标记为可分析。
+`decision=pass` 要求三项检查全部通过，并将资源更新为 `ready`；`needs_repair` 保持 `pending`，
+`reject` 更新为 `unavailable`。监测任务只能绑定 `ready` 资源，执行前还会再次校验其状态。
+自动预检检查本地文件、空间/时相登记、CSV 字段与重复记录，只生成 `needs_repair` 预检记录，
+仍需人工确认后才能转为 `ready`。
 
 ---
 
@@ -378,12 +413,17 @@ properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, 
 |---|---|---|
 | GET | `/api/scenario/status` | DeepSeek 与提供方可用性 |
 | POST | `/api/scenario/sessions` | 创建多轮情景会话 |
+| GET/POST/PATCH/DELETE | `/api/scenario/templates` · `/api/scenario/templates/{id}` | 情景模板查询、保存、编辑和删除 |
+| GET | `/api/scenario/templates/{id}/revisions` | 完整参数修订历史 |
 | GET | `/api/scenario/sessions/{id}` | 获取消息、参数、版本和最近结果 |
 | POST | `/api/scenario/sessions/{id}/messages` | 自然语言更新、运行或比较 |
 | POST | `/api/scenario/sessions/{id}/runs` | 直接运行当前完整版本 |
+| PUT | `/api/scenario/sessions/{id}/resources` | 选择并预留具体应急资源 |
 | GET | `/api/scenario/runs/{id}` | 获取推演时间帧 |
 | POST | `/api/scenario/sessions/{id}/compare` | 比较两次运行 |
 | POST | `/api/scenario/runs/{id}/report` | 生成结构化推演报告 |
+| GET | `/api/scenario/runs/{id}/export` | 导出推演结果 JSON |
+| POST | `/api/scenario-runs/{id}/dispatch` | 将选定方案转为同事件下的多张处置工单 |
 
 消息请求：
 
@@ -411,5 +451,218 @@ properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, 
 }
 ```
 
-情景类型：`flood | traffic | fire`。数据性质：
+情景类型：`flood | traffic | fire | building`。数据性质：
 `real | professional_analysis | simulated | llm_inference | unknown`。
+
+`POST /api/scenario/sessions` 可传 `{ "event_id": "E0016" }`，从现有事件带入位置、时间、
+可用资源数量和 `source_event_id`；推演帧包含受影响建筑与道路编号。
+
+---
+
+## 12. 业务闭环
+
+现有事件、AI 任务和情景接口保持兼容；以下资源将事件拆成可追溯的任务、运行、研判、工单和复盘链。
+
+### `MonitoringTask`
+
+```jsonc
+{
+  "id": "MT0001",
+  "name": "强降雨道路积水专项监测",
+  "event_type": "flood",
+  "schedule_type": "periodic",          // instant | periodic | special | drill
+  "status": "completed",                // draft | scheduled | running | completed | failed
+  "area_name": "武汉中心城区",
+  "bbox": [114.15, 30.45, 114.55, 30.72],
+  "data_source_ids": ["S-SAT", "S-IOT-WATER"],
+  "rule_config": { "water_level_threshold_cm": 15 },
+  "owner": "防汛值班组",
+  "notify_targets": ["水务排水中心", "属地街道"],
+  "template_key": "flood-road",
+  "start_at": "2026-11-07 15:00:00",
+  "end_at": "2026-11-07 16:20:00",
+  "next_run_at": null,
+  "last_run_at": "2026-11-07 16:20:00",
+  "created_at": "2026-11-07 15:00:00",
+  "updated_at": "2026-11-07 16:20:00"
+}
+```
+
+### `MonitoringRun`
+
+一次业务运行可关联一个 AI `Task` 和多个事件：
+
+```json
+{
+  "id": "MR0001",
+  "monitoring_task_id": "MT0001",
+  "analysis_task_id": "T0003",
+  "event_ids": ["E0027"],
+  "status": "completed",
+  "coverage": { "window_minutes": 120 },
+  "quality": { "data_completeness": 0.92 },
+  "failure_reason": null,
+  "started_at": "2026-11-07 15:00:00",
+  "finished_at": "2026-11-07 16:20:00",
+  "created_at": "2026-11-07 15:00:00"
+}
+```
+
+### `Assessment`
+
+```json
+{
+  "id": "AS0001",
+  "event_id": "E0027",
+  "monitoring_run_id": "MR0001",
+  "decision": "confirmed",              // candidate | needs_review | confirmed | false_alarm
+  "summary": "现场水位与监测序列一致。",
+  "evidence": [{ "kind": "event", "id": "E0027", "url": null }],
+  "impact": { "district": "江汉区", "risk_level": "medium" },
+  "missing_information": [],
+  "priority": "medium",
+  "operator": "值班员 王磊",
+  "created_at": "2026-11-07 15:20:00"
+}
+```
+
+### `WorkOrder`
+
+```json
+{
+  "id": "WO0001",
+  "event_id": "E0027",
+  "assessment_id": "AS0001",
+  "scenario_run_id": null,
+  "title": "积水抽排",
+  "unit": "武汉市水务局排水中心",
+  "assignee": "武汉市水务局排水中心",
+  "status": "verified",
+  "priority": "medium",
+  "description": "清理雨水口并安排移动泵车。",
+  "due_at": null,
+  "feedback": [
+    {
+      "at": "2026-11-07 15:45:00",
+      "operator": "现场处置员",
+      "action": "field_feedback",
+      "note": "积水已降至脚踝以下，雨水口仍有树叶。",
+      "location": { "longitude": 114.2712, "latitude": 30.6011 },
+      "attachments": [{
+        "name": "field.png",
+        "url": "/files/uploads/work-orders/WO0001/field.png",
+        "size_bytes": 182400
+      }]
+    },
+    { "at": "2026-11-07 16:20:00", "action": "verified", "note": "道路恢复通行" }
+  ],
+  "sla": {
+    "accepted_at": "2026-11-07 15:22:00",
+    "started_at": "2026-11-07 15:28:00",
+    "completed_at": "2026-11-07 16:08:00",
+    "verified_at": "2026-11-07 16:20:00",
+    "response_min": 2,
+    "execution_min": 40,
+    "review_min": 12,
+    "elapsed_min": 60,
+    "remaining_min": null,
+    "overdue": false
+  },
+  "created_at": "2026-11-07 15:20:00",
+  "updated_at": "2026-11-07 16:20:00"
+}
+```
+
+工单状态：`pending → accepted → in_progress → completed → verified`；`rejected` 可退回执行，`cancelled` 为终止态。
+
+### `ReviewRecord`
+
+```json
+{
+  "id": "RV0001",
+  "entity_type": "event",
+  "entity_id": "E0027",
+  "status": "confirmed",
+  "summary": "发现、核查、处置与复核流程完整。",
+  "metrics": { "response_min": 8, "resolve_min": 95 },
+  "findings": ["雨水箅子堵塞是主要积水原因"],
+  "recommendations": ["降雨前增加重点路段雨水口巡检"],
+  "created_at": "2026-11-07 17:00:00",
+  "updated_at": "2026-11-07 17:00:00"
+}
+```
+
+接口：
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET/POST | `/api/monitoring-tasks` | 监测任务列表 / 创建 |
+| GET/PATCH | `/api/monitoring-tasks/{id}` | 监测任务详情 / 状态和规则更新 |
+| POST | `/api/monitoring-tasks/{id}/execute` | 立即运行任务并创建真实算法作业与运行记录 |
+| GET/POST/PATCH/DELETE | `/api/task-templates` · `/api/task-templates/{id}` | 任务模板查询、保存、编辑和删除 |
+| GET | `/api/task-templates/{id}/revisions` | 任务模板规则修订历史 |
+| GET/POST | `/api/monitoring-runs` | 运行列表 / 登记运行 |
+| GET/POST | `/api/assessments` | 研判列表 / 创建研判 |
+| GET | `/api/assessments/context?event_id=...&radius_m=300` | 查询周边建筑、道路和设施 |
+| POST | `/api/assessments/candidates/merge` | 合并同类型、1 km / 2 小时内的相近告警 |
+| GET/POST | `/api/work-orders` | 工单列表 / 创建工单 |
+| GET/PATCH | `/api/work-orders/{id}` | 工单详情 / 执行流转和反馈 |
+| POST | `/api/work-orders/{id}/feedback` | multipart 提交现场文字、经纬度和 0~5 张 JPG / PNG / WEBP 照片 |
+| POST | `/api/work-orders/{id}/feedback/{index}/assess` | 将现场反馈转为待补核研判记录 |
+| POST | `/api/work-orders/{id}/resources/use` | 从应急资源库存登记使用并扣减可用数量 |
+| GET/POST | `/api/reviews` | 复盘列表 / 创建复盘 |
+| GET | `/api/reviews/draft?entity_type=event&entity_id=...` | 自动汇总复盘时间线、指标、发现和建议 |
+| GET | `/api/reviews/cases?q=...` | 已确认复盘案例库检索 |
+| PATCH | `/api/reviews/{id}` | 审核并更新复盘 |
+| GET | `/api/reviews/{id}/export` | 导出 Markdown 复盘报告 |
+| POST | `/api/reviews/{id}/apply-template` | 将审核后的规则应用到任务模板并保留修订版本 |
+
+周期任务在 `rule_config.interval_minutes` 中保存执行频率。调度器执行到期的
+`schedule_type=periodic`、`status=scheduled` 任务，并在完成后排入下一次运行。
+
+---
+
+## 13. 公共支撑
+
+公共支撑接口用于演示角色、责任网格、站内通知、写操作审计和 SLA 汇总。当前身份由请求头
+`X-Operator-Id`（如 `A0003`）选择，用于在操作审计中署名；这不是正式登录或权限认证。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/support/accounts` | 演示角色与组织目录 |
+| GET/PATCH | `/api/support/grids` · `/api/support/grids/{id}` | 责任网格查询与责任单位、人员、联系方式维护 |
+| GET/PATCH | `/api/support/emergency-resources` · `/api/support/emergency-resources/{id}` | 应急资源能力、容量、可用状态维护 |
+| GET | `/api/support/service-status` | 数据库、模拟器、调度间隔、任务/数据状态和算法版本 |
+| PATCH | `/api/support/config` | 更新任务节奏、周期扫描间隔和上传上限（仅当前运行实例） |
+| GET | `/api/support/review-stats` | 真实事件、监测任务与演练复盘分类统计 |
+| GET | `/api/support/notifications` | 站内通知，可用 `unread_only=true` |
+| GET | `/api/support/notifications/unread-count` | 未读提醒数 |
+| PATCH | `/api/support/notifications/{id}/read` | 标记单条已读 |
+| PATCH | `/api/support/notifications/read-all` | 全部标记已读 |
+| GET | `/api/support/audit` | 跨模块写操作审计，可按对象和身份筛选 |
+| GET | `/api/support/audit/export` | 导出 UTF-8 BOM CSV 审计台账 |
+| GET | `/api/support/sla-summary` | 工单响应、执行、复核、超时汇总 |
+| GET | `/api/support/sla-summary/export` | 导出 UTF-8 BOM CSV SLA 报表 |
+
+所有非 GET / HEAD / OPTIONS 的 `/api/**` 写请求会记录方法、路径、身份、角色、响应状态、可识别对象
+以及数据库对象的修改前后值；
+审计写入失败不会阻断原业务。读取接口不写入审计。
+
+SLA 汇总的 `trend` 字段按工单创建日返回最近 14 个业务日的工单量、超时量、
+完成量、平均响应和平均执行分钟。
+
+---
+
+## 14. 业务链路
+
+业务链路接口把数据资源、监测任务、运行记录、分析作业、事件、研判、情景会话、
+推演结果、工单和复盘组织为统一有向图。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/traceability/graph` | 完整关系图；可用 `entity_type`、`entity_id` 定位双向链路 |
+| GET | `/api/traceability/export` | 导出包含节点、边和统计信息的完整 JSON |
+
+`limit` 控制页面显示对象数量，默认 240，导出接口最多取 5000。节点包含稳定 `id`、
+业务类型、编号、显示名、阶段、状态、时间和摘要；边包含来源、去向与关系标签。
+图只表达已存在的业务引用，不推断不存在的数据来源或因果关系。

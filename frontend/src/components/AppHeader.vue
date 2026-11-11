@@ -107,6 +107,11 @@ const demoTip = computed(() =>
   align-items: center;
   gap: 12px;
   min-width: 0;
+  overflow: hidden;
+}
+.brand-text {
+  min-width: 0;
+  overflow: hidden;
 }
 .brand-logo {
   flex: none;
@@ -115,12 +120,14 @@ const demoTip = computed(() =>
 }
 .brand-text h1 {
   margin: 0;
+  overflow: hidden;
   font-size: 19px;
   font-weight: 600;
   letter-spacing: 0;
   line-height: 1.15;
   color: var(--ce-text-strong);
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .brand-text p {
   margin: 2px 0 0;
@@ -266,6 +273,7 @@ const demoTip = computed(() =>
   .app-header {
     height: 52px;
     padding: 0 16px;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
   .brand-logo {
     width: 28px;
@@ -275,7 +283,7 @@ const demoTip = computed(() =>
     gap: 8px;
   }
   .brand-text h1 {
-    font-size: 16px;
+    font-size: 15px;
   }
   .brand-text p,
   .demo-badge,

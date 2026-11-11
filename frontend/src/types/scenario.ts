@@ -1,4 +1,4 @@
-export type ScenarioType = 'flood' | 'traffic' | 'fire'
+export type ScenarioType = 'flood' | 'traffic' | 'fire' | 'building'
 export type ScenarioRisk = 'unknown' | 'low' | 'medium' | 'high' | 'critical'
 export type ScenarioDataClass = 'real' | 'professional_analysis' | 'simulated' | 'llm_inference' | 'unknown'
 
@@ -20,10 +20,16 @@ export interface ScenarioParameters {
   traffic_cause?: string | null
   fire_severity?: 'small' | 'medium' | 'large' | null
   danger_radius_m?: number | null
+  settlement_rate_mm_month?: number | null
+  affected_building_id?: string | null
   people_count?: number | null
   population_profile?: 'workday' | 'weekend_day' | 'weekend_night' | null
   response_delay_min?: number | null
   closed_exit_count?: number | null
+  available_resource_count?: number | null
+  resource_types?: string[]
+  resource_ids?: string[]
+  source_event_id?: string | null
   variation_seed?: number | null
 }
 
@@ -63,6 +69,7 @@ export interface ScenarioRun {
   variant_label?: string
   status: string
   provider: string
+  model_version?: string
   data_classification: ScenarioDataClass
   frames: ScenarioFrame[]
   summary: string
@@ -103,6 +110,43 @@ export interface ScenarioVariantsResult {
   variant_runs: ScenarioRun[]
 }
 
+export interface ScenarioTemplate {
+  id: string
+  name: string
+  description: string
+  scenario_type: ScenarioType
+  parameters: ScenarioParameters
+  created_at: string
+  updated_at: string
+}
+
+export interface ScenarioTemplateCreate {
+  name: string
+  description: string
+  scenario_type: ScenarioType
+  parameters: ScenarioParameters
+}
+
+export interface ScenarioTemplatePatch {
+  name?: string
+  description?: string
+  scenario_type?: ScenarioType
+  parameters?: ScenarioParameters
+  operator?: string
+}
+
+export interface ScenarioTemplateRevision {
+  id: number
+  template_id: string
+  version_no: number
+  name: string
+  description: string
+  scenario_type: ScenarioType
+  parameters: ScenarioParameters
+  operator: string
+  created_at: string
+}
+
 export interface ScenarioReport {
   report_title: string
   data_classification: string
@@ -122,5 +166,6 @@ export interface ScenarioReport {
 export const SCENARIO_LABEL: Record<ScenarioType, string> = {
   flood: '强降水与内涝',
   traffic: '交通拥堵',
-  fire: '火灾应急'
+  fire: '火灾应急',
+  building: '建筑异常'
 }

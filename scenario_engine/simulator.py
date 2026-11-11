@@ -73,6 +73,7 @@ def _evacuation_people(
     times: list[int],
     response_delay_min: int,
     closed_exit_count: int,
+    available_resource_count: int,
     seed: int,
 ) -> dict[int, tuple[list[PeopleState], dict[str, int | float]]]:
     if count <= 0:
@@ -109,7 +110,7 @@ def _evacuation_people(
         )
         for i in range(count)
     ]
-    lanes = max(1, min(6, math.ceil(math.sqrt(count) / 4)) - closed_exit_count)
+    lanes = max(1, min(10, math.ceil(math.sqrt(count) / 4) - closed_exit_count + available_resource_count // 2))
     capacity_per_min = lanes * 12
     frames: dict[int, tuple[list[PeopleState], dict[str, int | float]]] = {}
     for minute in times:
@@ -146,6 +147,7 @@ def _evacuation_people(
                 "collision_adjustments": collisions,
                 "response_delay_min": response_delay_min,
                 "closed_exit_count": closed_exit_count,
+                "available_resource_count": available_resource_count,
                 "danger_radius_m": radius,
             },
         )
@@ -194,6 +196,7 @@ class MockScenarioProvider:
                 times,
                 p.response_delay_min or 0,
                 p.closed_exit_count or 0,
+                p.available_resource_count or 0,
                 p.variation_seed or 0,
             )
             for minute in times:
@@ -265,7 +268,7 @@ class MockScenarioProvider:
                 )
             summary = "模拟展示拥堵程度和持续时间的阶段变化。"
 
-        else:
+        elif draft.scenario_type == "fire":
             radius = p.danger_radius_m or {"small": 120, "medium": 240, "large": 420}[p.fire_severity or "medium"]
             times = _time_frames(duration)
             count = min(500, p.people_count or 240)
@@ -278,6 +281,7 @@ class MockScenarioProvider:
                 times,
                 p.response_delay_min or 0,
                 p.closed_exit_count or 0,
+                p.available_resource_count or 0,
                 p.variation_seed or 0,
             )
             for minute in times:
@@ -305,12 +309,61 @@ class MockScenarioProvider:
                 )
             summary = "模拟展示危险区、人员位置和疏散进度。"
 
+        else:
+            rate = max(0.1, p.settlement_rate_mm_month or 2.0)
+            radius = max(30.0, min(500.0, 40 + rate * 25))
+            times = _time_frames(duration)
+            count = min(500, p.people_count or 120)
+            evacuation = _evacuation_people(
+                lon,
+                lat,
+                radius,
+                count,
+                duration,
+                times,
+                p.response_delay_min or 0,
+                p.closed_exit_count or 0,
+                p.available_resource_count or 0,
+                p.variation_seed or 0,
+            )
+            for minute in times:
+                frame_people, evacuation_metrics = evacuation[minute]
+                risk = "critical" if rate >= 8 else "high" if rate >= 4 else "medium" if rate >= 1 else "low"
+                frames.append(
+                    ScenarioFrame(
+                        offset_min=minute,
+                        risk_level=risk,
+                        zones=[
+                            ImpactZone(
+                                id="building-risk-zone",
+                                risk_level=risk,
+                                longitude=lon,
+                                latitude=lat,
+                                radius_m=radius,
+                                polygon=_zone_polygon(lon, lat, radius, int(rate * 100)),
+                                data_classification="simulated",
+                            )
+                        ],
+                        metrics={
+                            "settlement_rate_mm_month": rate,
+                            "inspection_progress": round(min(1.0, minute / max(1, duration * 0.7)), 2),
+                            "affected_building_id": p.affected_building_id,
+                            **evacuation_metrics,
+                        },
+                        people=frame_people,
+                        data_classification="simulated",
+                        limitations=[LIMITATION, "未执行结构安全鉴定或专业沉降预测。"],
+                    )
+                )
+            summary = "模拟展示建筑异常风险范围、人员位置和警戒核查进度。"
+
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return ScenarioRun(
             run_id=run_id,
             version_id=version_id,
             scenario_type=draft.scenario_type,
             provider=self.name,
+            model_version="demo-1.0",
             data_classification="simulated",
             frames=frames,
             summary=summary,

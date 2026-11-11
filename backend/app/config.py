@@ -48,6 +48,7 @@ class Settings:
     sensor_interval: float = 5.0     # 数据源吞吐刷新间隔，秒
     heartbeat_interval: float = 20.0
     lifecycle_interval: float = 45.0  # 事件自动流转检查间隔，秒
+    workflow_interval: float = 15.0  # 周期监测任务到期检查间隔，秒
     task_pacing: float = 0.6         # AI 任务每个阶段的最短展示时长（仅影响进度推送节奏，不影响结果）
     reset_on_start: bool = False
     frontend_dist: Path = REPO_ROOT / "frontend" / "dist"
@@ -75,6 +76,9 @@ class Settings:
             sim_interval=max(3.0, _float("CITYEYE_SIM_INTERVAL", 45.0)),
             traffic_interval=max(1.0, _float("CITYEYE_TRAFFIC_INTERVAL", 10.0)),
             sensor_interval=max(1.0, _float("CITYEYE_SENSOR_INTERVAL", 5.0)),
+            heartbeat_interval=max(5.0, _float("CITYEYE_HEARTBEAT_INTERVAL", 20.0)),
+            lifecycle_interval=max(5.0, _float("CITYEYE_LIFECYCLE_INTERVAL", 45.0)),
+            workflow_interval=max(5.0, _float("CITYEYE_WORKFLOW_INTERVAL", 15.0)),
             task_pacing=max(0.0, _float("CITYEYE_TASK_PACING", 0.6)),
             reset_on_start=_bool("CITYEYE_RESET_ON_START", False),
             frontend_dist=_path("CITYEYE_FRONTEND_DIST", REPO_ROOT / "frontend" / "dist"),

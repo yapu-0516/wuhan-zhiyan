@@ -12,7 +12,15 @@ from typing import Any
 from sqlalchemy import select
 
 from ..context import AppContext, not_found
-from ..models import ScenarioRunRecord, ScenarioSession, ScenarioVersion
+from ..models import (
+    EmergencyResource,
+    Event,
+    ScenarioResourceReservation,
+    ScenarioRunRecord,
+    ScenarioSession,
+    ScenarioTemplate,
+    ScenarioVersion,
+)
 
 _ROOT = Path(__file__).resolve().parents[3]
 if str(_ROOT) not in sys.path:
@@ -31,7 +39,12 @@ from scenario_engine.models import (  # noqa: E402
 )
 from scenario_engine.simulator import MockScenarioProvider  # noqa: E402
 
-_TYPE_TITLE = {"flood": "强降水与内涝情景", "traffic": "交通拥堵情景", "fire": "火灾应急情景"}
+_TYPE_TITLE = {
+    "flood": "强降水与内涝情景",
+    "traffic": "交通拥堵情景",
+    "fire": "火灾应急情景",
+    "building": "建筑异常情景",
+}
 _CITY_LOCATIONS = {
     "江岸区": (114.309, 30.625),
     "江汉区": (114.271, 30.601),
@@ -83,6 +96,9 @@ def _apply_demo_defaults(
         assumptions.append("响应延迟采用演示默认值 3 分钟")
     if parameters.closed_exit_count is None:
         updates["closed_exit_count"] = 0
+    if parameters.available_resource_count is None:
+        updates["available_resource_count"] = 4
+        assumptions.append("未指定可用资源，采用 4 个处置班组 / 设备的演示配置")
     if parameters.variation_seed is None:
         raw = f"{scenario_type}:{parameters.location_name}:{now.isoformat()}"
         updates["variation_seed"] = int(hashlib.sha1(raw.encode("utf-8")).hexdigest()[:8], 16) % 2_147_483_648
@@ -103,7 +119,7 @@ def _apply_demo_defaults(
             assumptions.append("拥堵原因未指定，标记为待核查")
         if parameters.people_count is None:
             updates["people_count"] = 120
-    else:
+    elif scenario_type == "fire":
         if parameters.fire_severity is None and parameters.danger_radius_m is None:
             updates["fire_severity"] = "medium"
             updates["danger_radius_m"] = 240
@@ -111,6 +127,13 @@ def _apply_demo_defaults(
         if parameters.people_count is None:
             updates["people_count"] = 240
             assumptions.append("未指定人数，采用 240 人演示人口")
+    else:
+        if parameters.settlement_rate_mm_month is None:
+            updates["settlement_rate_mm_month"] = 2.0
+            assumptions.append("未指定沉降速率，采用 2.0 mm/月演示数据")
+        if parameters.people_count is None:
+            updates["people_count"] = 120
+            assumptions.append("未指定建筑周边人数，采用 120 人演示人口")
     return parameters.model_copy(update=updates), assumptions
 
 
@@ -119,12 +142,58 @@ class ScenarioService:
         self.ctx = ctx
         self.provider = MockScenarioProvider()
 
-    def create_session(self) -> dict[str, Any]:
+    def create_session(
+        self,
+        event_id: str | None = None,
+        template_id: str | None = None,
+    ) -> dict[str, Any]:
         now = _now()
+        parameters: dict[str, Any] = {}
+        scenario_type: str | None = None
+        title = "未命名情景"
+        if template_id:
+            with self.ctx.session() as s:
+                template = s.get(ScenarioTemplate, template_id)
+                if template is None:
+                    raise not_found(f"情景模板 {template_id} 不存在")
+                title = template.name
+                scenario_type = template.scenario_type
+                parameters = dict(template.parameters or {})
+        elif event_id:
+            with self.ctx.session() as s:
+                event = s.get(Event, event_id)
+                if event is None:
+                    raise not_found(f"事件 {event_id} 不存在")
+            scenario_type = event.event_type if event.event_type in ("fire", "traffic", "flood", "building") else None
+            near_resources = self.ctx.geo.nearby_pois(
+                event.longitude, event.latitude, within_m=3000, limit=50
+            )
+            parameters = {
+                "source_event_id": event.id,
+                "location_name": event.address or event.district,
+                "longitude": event.longitude,
+                "latitude": event.latitude,
+                "start_time": event.timestamp.strftime("%Y-%m-%d %H:%M"),
+                "duration_min": 60,
+                "available_resource_count": max(1, len(near_resources)),
+                "resource_types": sorted({poi.get("kind", "other") for poi, _ in near_resources}),
+            }
+            if event.event_type == "traffic":
+                parameters.update({"congestion_level": "severe", "traffic_cause": "现有交通事件"})
+            elif event.event_type == "fire":
+                parameters.update({"fire_severity": "medium", "danger_radius_m": 240})
+            elif event.event_type == "building":
+                parameters.update({
+                    "settlement_rate_mm_month": 2.0,
+                    "affected_building_id": event.building_id,
+                })
+            title = f"{event.name}情景"
         row = ScenarioSession(
             id=_new_id("SC"),
+            title=title,
+            scenario_type=scenario_type,
             state="initial",
-            parameters={},
+            parameters=parameters,
             messages=[],
             current_version_id=None,
             last_comparison=None,
@@ -134,6 +203,15 @@ class ScenarioService:
         with self.ctx.session() as s:
             s.add(row)
             s.commit()
+        if scenario_type and parameters:
+            version_id = self._save_version(row, scenario_type, title, ScenarioParameters.model_validate(parameters))
+            with self.ctx.session() as s:
+                db = s.get(ScenarioSession, row.id)
+                assert db is not None
+                db.current_version_id = version_id
+                db.state = "ready"
+                db.updated_at = now
+                s.commit()
         return self.get_session(row.id)
 
     def get_row(self, session_id: str) -> ScenarioSession:
@@ -177,7 +255,7 @@ class ScenarioService:
 
     def message(self, session_id: str, text: str, *, auto_run: bool = False) -> dict[str, Any]:
         row = self.get_row(session_id)
-        current_type: ScenarioType | None = row.scenario_type if row.scenario_type in ("flood", "traffic", "fire") else None
+        current_type: ScenarioType | None = row.scenario_type if row.scenario_type in ("flood", "traffic", "fire", "building") else None
         current_params = ScenarioParameters.model_validate(row.parameters or {})
         history = list(row.messages or [])
         with self.ctx.session() as s:
@@ -334,6 +412,78 @@ class ScenarioService:
             s.commit()
         return {"latest_run": latest_run, "variant_runs": variants}
 
+    def set_resources(self, session_id: str, resource_ids: list[str]) -> dict[str, Any]:
+        ids = list(dict.fromkeys(resource_ids))
+        if len(ids) > 20:
+            raise ScenarioAgentError("单个情景最多选择 20 个资源点")
+        row = self.get_row(session_id)
+        params = ScenarioParameters.model_validate(row.parameters or {})
+        with self.ctx.session() as s:
+            reservations = s.scalars(
+                select(ScenarioResourceReservation).where(
+                    ScenarioResourceReservation.session_id == session_id,
+                    ScenarioResourceReservation.status == "active",
+                )
+            ).all()
+            for reservation in reservations:
+                resource = s.get(EmergencyResource, reservation.resource_id)
+                if resource is not None:
+                    resource.available += reservation.quantity
+                    resource.updated_at = _now()
+                reservation.status = "released"
+            resources: list[EmergencyResource] = []
+            for resource_id in ids:
+                resource = s.get(EmergencyResource, resource_id)
+                if resource is None:
+                    raise not_found(f"应急资源 {resource_id} 不存在")
+                if resource.status == "unavailable" or resource.available <= 0:
+                    raise ScenarioAgentError(f"应急资源 {resource.name} 当前不可调度")
+                resources.append(resource)
+            for resource in resources:
+                resource.available -= 1
+                if resource.available == 0:
+                    resource.status = "limited"
+                resource.updated_at = _now()
+                s.add(
+                    ScenarioResourceReservation(
+                        session_id=session_id,
+                        resource_id=resource.id,
+                        quantity=1,
+                        status="active",
+                        created_at=_now(),
+                    )
+                )
+            updated_params = params.model_copy(
+                update={
+                    "resource_ids": ids,
+                    "available_resource_count": len(ids),
+                    "resource_types": sorted({resource.kind for resource in resources}),
+                }
+            )
+            db = s.get(ScenarioSession, session_id)
+            assert db is not None
+            db.parameters = updated_params.model_dump(mode="json")
+            db.updated_at = _now()
+            scenario_type = db.scenario_type
+            title = db.title
+            if scenario_type:
+                db.state = "ready"
+            s.commit()
+        if scenario_type:
+            version_id = self._save_version(
+                row,
+                scenario_type,
+                title,
+                updated_params,
+            )
+            with self.ctx.session() as s:
+                db = s.get(ScenarioSession, session_id)
+                assert db is not None
+                db.current_version_id = version_id
+                db.updated_at = _now()
+                s.commit()
+        return self.get_session(session_id)
+
     def compare(self, session_id: str, left_run_id: str, right_run_id: str) -> dict[str, Any]:
         comparison = self._compare(session_id, [left_run_id, right_run_id], exact=True)
         if comparison is None:
@@ -428,8 +578,25 @@ class ScenarioService:
             parameters=params,
             data_classification="simulated",
         )
-        run = self.provider.run(draft, _new_id("SR"), version_id).model_copy(
+        run = self.provider.run(draft, _new_id("SR"), version_id)
+        frames = []
+        for frame in run.frames:
+            zone = frame.zones[0] if frame.zones else None
+            if zone is not None:
+                radius = zone.radius_m or 100
+                buildings = self.ctx.geo.nearby_buildings(zone.longitude, zone.latitude, radius, limit=30)
+                roads = self.ctx.geo.nearest_roads(zone.longitude, zone.latitude, within_m=radius, k=12)
+                frame = frame.model_copy(
+                    update={
+                        "affected_building_ids": [building["id"] for building, _ in buildings],
+                        "affected_road_ids": [road.id for road, _ in roads],
+                    }
+                )
+            frames.append(frame)
+        run = run.model_copy(
             update={"variant_label": variant_label}
+        ).model_copy(
+            update={"frames": frames}
         )
         with self.ctx.session() as s:
             s.add(
@@ -462,12 +629,14 @@ class ScenarioService:
         adverse_updates: dict[str, Any] = {
             "response_delay_min": min(60, (params.response_delay_min or 3) + 3),
             "closed_exit_count": min(4, (params.closed_exit_count or 0) + 1),
+            "available_resource_count": max(0, (params.available_resource_count or 4) - 1),
             "people_count": min(5000, int((params.people_count or 200) * 1.15)),
             "variation_seed": seed + 1,
         }
         intervention_updates: dict[str, Any] = {
             "response_delay_min": max(0, (params.response_delay_min or 3) - 2),
             "closed_exit_count": max(0, (params.closed_exit_count or 0) - 1),
+            "available_resource_count": min(100, (params.available_resource_count or 4) + 2),
             "variation_seed": seed + 2,
         }
         if scenario_type == "flood" and "rainfall_mm_h" not in explicit_fields:
@@ -483,6 +652,13 @@ class ScenarioService:
         ):
             adverse_updates["danger_radius_m"] = min(3000, (params.danger_radius_m or 240) * 1.2)
             intervention_updates["danger_radius_m"] = max(10, (params.danger_radius_m or 240) * 0.9)
+        elif scenario_type == "building" and "settlement_rate_mm_month" not in explicit_fields:
+            adverse_updates["settlement_rate_mm_month"] = min(
+                100, (params.settlement_rate_mm_month or 2.0) * 1.3
+            )
+            intervention_updates["settlement_rate_mm_month"] = max(
+                0.1, (params.settlement_rate_mm_month or 2.0) * 0.75
+            )
         adverse = params.model_copy(
             update=adverse_updates
         )

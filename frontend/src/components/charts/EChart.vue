@@ -3,7 +3,7 @@
 // 用法：<EChart :option="option" style="height: 200px" />
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import * as echarts from 'echarts/core'
-import { BarChart, LineChart, PieChart, GaugeChart, RadarChart } from 'echarts/charts'
+import { BarChart, LineChart, PieChart, GaugeChart, RadarChart, GraphChart } from 'echarts/charts'
 import {
   GridComponent,
   TooltipComponent,
@@ -23,6 +23,7 @@ echarts.use([
   PieChart,
   GaugeChart,
   RadarChart,
+  GraphChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,

@@ -34,7 +34,30 @@ const routes: RouteRecordRaw[] = [
     path: '/data-management',
     name: 'data-management',
     component: () => import('@/views/DataManagement.vue'),
-    meta: { title: '数据管理' }
+    meta: { title: '数据资源' }
+  },
+  {
+    path: '/system-management',
+    name: 'system-management',
+    component: () => import('@/views/SystemManagement.vue'),
+    meta: { title: '系统管理' }
+  },
+  {
+    path: '/workflow',
+    redirect: '/workflow/tasks'
+  },
+  {
+    path: '/workflow/:section(tasks|assessment|orders|reviews)',
+    name: 'workflow',
+    component: () => import('@/views/WorkflowWorkspace.vue'),
+    props: (route) => ({ section: route.params.section }),
+    meta: { title: '业务闭环' }
+  },
+  {
+    path: '/scenario',
+    name: 'scenario',
+    component: () => import('@/views/ScenarioCenter.vue'),
+    meta: { title: '情景推演' }
   },
   {
     path: '/ai-analysis',

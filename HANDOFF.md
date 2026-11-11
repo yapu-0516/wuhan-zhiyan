@@ -47,6 +47,16 @@
 | 全市概览与资源 | `data/geo/` | 建筑、道路、224 处应急资源 |
 | 全城离线底图 | `frontend/public/basemap/wuhan-city-z13.jpg` | 在线卫星失败后的全城概览 |
 | 离线快照 | `frontend/public/snapshot/` | GitHub Pages/无后端演示 |
+| 业务闭环 | `docs/workflow-refactor.md`、`backend/app/routers/workflow.py` | 数据资源、任务、运行、研判、情景转工单、处置、复盘 |
+| 业务链路 | `backend/app/routers/traceability.py`、`backend/app/services/traceability.py` | 跨对象关系图、按对象定位和完整 JSON 导出 |
+| 公共支撑 | `backend/app/routers/support.py`、`frontend/src/views/SystemManagement.vue` | 演示身份、责任网格、站内提醒、修改前后值审计、SLA 趋势和 CSV 导出 |
+
+业务闭环使用增量表；已有数据库升级时会自动创建新表，并为旧数据资产补充空间、时相、质量和版本字段，
+不会删除既有上传记录。要恢复完整演示种子，调用 `POST /api/demo/reset` 或使用全新的演示数据库。
+周期任务由后端调度器按 `next_run_at` 执行，前端创建周期任务时需设置执行间隔和下次运行时间。
+系统管理中的身份切换只用于演示署名和审计，不是正式认证；前端通过 `X-Operator-Id` 传递当前身份。
+情景模板支持编辑、删除和完整参数修订历史；业务关系图覆盖数据资源、监测任务、运行记录、分析作业、
+事件、研判、情景会话、推演结果、工单和复盘，支持按对象定位与完整链路导出。
 
 不要把 `data/datasets/raw` 整个目录直接提交。这里还包含约 2.9 GB 且与
 CityEye 运行无关的 D-Fire 数据。
@@ -85,6 +95,9 @@ npm run lint
 npm run test -- --run
 npm run build
 ```
+
+当前验收结果：后端 158 项测试、前端 51 项测试、ESLint 与生产构建全部通过；
+一键演示 10 个步骤已在浏览器中完整跑通，控制台无错误。
 
 完整构建后访问 `http://127.0.0.1:8000`。静态模式由
 `.github/workflows/pages.yml` 自动构建，七城区模型会随构建产物发布。

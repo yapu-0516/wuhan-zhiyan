@@ -92,6 +92,18 @@ sequenceDiagram
 → 进度 10/35/70/100 通过 `task.updated` 推送 → 结果（检测框、指标、时序、标注图）落库
 → 若检出且带位置，自动生成 `source=ai_task` 的事件并在三维场景定位。
 
+### 2.3 业务闭环
+
+新业务层在不改变现有事件接口的前提下，把记录组织为：
+
+```text
+MonitoringTask → MonitoringRun → Event → Assessment → WorkOrder → Review
+```
+
+`MonitoringTask` 是业务监测目标，`Task` 仍是具体 AI 分析作业；一个业务任务可执行多次
+`MonitoringRun`。事件是风险对象，工单是核查、处置或复测动作，两者状态分别推进。
+详细字段、状态机和迁移边界见 [workflow-refactor.md](workflow-refactor.md)。
+
 ## 3. 三维场景设计
 
 - **城市底座**：武汉七城区概览建筑与按区精细建筑，按高度拉伸；以单个 `Primitive` +

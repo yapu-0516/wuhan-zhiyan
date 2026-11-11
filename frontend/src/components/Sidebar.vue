@@ -12,6 +12,12 @@ import {
   Van,
   OfficeBuilding,
   Umbrella,
+  List,
+  Search,
+  Tickets,
+  DataAnalysis,
+  MapLocation,
+  Setting,
   Fold,
   Expand,
   Menu,
@@ -35,10 +41,22 @@ const mobileMoreOpen = ref(false)
 
 const navItems = [
   { to: '/dashboard', label: '总览', icon: Location },
-  { to: '/drill', label: '演练', icon: FirstAidKit },
+  { to: '/workflow/tasks', label: '任务', icon: List },
   { to: '/monitoring', label: '监测', icon: Monitor },
-  { to: '/event-center', label: '事件', icon: Warning, badge: true },
-  { to: '/data-management', label: '数据', icon: Files }
+  { to: '/event-center', label: '事件', icon: Warning, badge: true }
+]
+
+const workflowItems = [
+  { to: '/workflow/assessment', label: '风险研判', icon: Search },
+  { to: '/scenario', label: '情景推演', icon: MapLocation },
+  { to: '/workflow/orders', label: '协同处置', icon: Tickets },
+  { to: '/workflow/reviews', label: '复盘评估', icon: DataAnalysis }
+]
+
+const supportItems = [
+  { to: '/drill', label: '应急演练', icon: FirstAidKit },
+  { to: '/data-management', label: '数据资源', icon: Files },
+  { to: '/system-management', label: '系统管理', icon: Setting }
 ]
 
 // AI 分析按风险类型独立成页，互不混排
@@ -48,6 +66,7 @@ const aiItems = [
   { to: '/ai-analysis/building', label: '建筑异常', icon: OfficeBuilding },
   { to: '/ai-analysis/flood', label: '内涝积水', icon: Umbrella }
 ]
+const moreItems = [...workflowItems, ...supportItems, ...aiItems]
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 
@@ -77,6 +96,40 @@ watch(
         }}</span>
       </RouterLink>
 
+      <div class="nav-group-label" title="业务闭环">
+        <span>业务闭环</span>
+      </div>
+      <RouterLink
+        v-for="item in workflowItems"
+        :key="item.to"
+        :to="item.to"
+        class="nav-item nav-item--sub"
+        :class="{ active: isActive(item.to) }"
+        :title="sidebarCollapsed ? item.label : undefined"
+      >
+        <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
+        <span class="nav-text">
+          <span class="nav-label">{{ item.label }}</span>
+        </span>
+      </RouterLink>
+
+      <div class="nav-group-label" title="业务支撑">
+        <span>业务支撑</span>
+      </div>
+      <RouterLink
+        v-for="item in supportItems"
+        :key="item.to"
+        :to="item.to"
+        class="nav-item nav-item--sub"
+        :class="{ active: isActive(item.to) }"
+        :title="sidebarCollapsed ? item.label : undefined"
+      >
+        <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
+        <span class="nav-text">
+          <span class="nav-label">{{ item.label }}</span>
+        </span>
+      </RouterLink>
+
       <div class="nav-group-label" title="AI 分析">
         <span>AI 分析</span>
       </div>
@@ -96,7 +149,7 @@ watch(
       <button
         class="nav-item nav-item--more"
         type="button"
-        aria-label="打开 AI 分析导航"
+        aria-label="打开全部工作区导航"
         :aria-expanded="mobileMoreOpen"
         @click="mobileMoreOpen = true"
       >
@@ -118,15 +171,15 @@ watch(
         <section role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title">
           <header>
             <div>
-              <h2 id="mobile-nav-title">AI 分析</h2>
-              <p>按风险类型进入独立分析页</p>
+              <h2 id="mobile-nav-title">全部工作区</h2>
+              <p>业务闭环与 AI 分析</p>
             </div>
-            <button type="button" aria-label="关闭 AI 分析导航" @click="mobileMoreOpen = false">
+            <button type="button" aria-label="关闭工作区导航" @click="mobileMoreOpen = false">
               <el-icon><Close /></el-icon>
             </button>
           </header>
           <nav>
-            <RouterLink v-for="item in aiItems" :key="item.to" :to="item.to">
+            <RouterLink v-for="item in moreItems" :key="item.to" :to="item.to">
               <el-icon><component :is="item.icon" /></el-icon>
               <span>{{ item.label }}</span>
             </RouterLink>

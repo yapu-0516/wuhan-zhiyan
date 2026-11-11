@@ -74,6 +74,7 @@ const props = withDefaults(
     autoTrack?: boolean
     /** 事件类型过滤 */
     eventTypes?: Partial<EventTypeFilter>
+    gridPrefix?: string
     /** 演示时只显示指定事件；为空时使用事件类型过滤 */
     visibleEventIds?: string[]
     /** 是否显示已办结事件（灰显） */
@@ -91,6 +92,7 @@ const props = withDefaults(
     layers: undefined,
     basemap: undefined,
     eventTypes: undefined,
+    gridPrefix: undefined,
     visibleEventIds: undefined,
     autoTrack: false,
     showResolved: false,
@@ -179,6 +181,7 @@ const tipRoad = computed(() => {
 })
 
 let pendingTarget: { kind: 'event' | 'building'; id: string } | null = null
+let pendingPoint: { lon: number; lat: number } | null = null
 
 // ------------------------------------------------------------------ 场景 API
 function isReady() {
@@ -473,13 +476,17 @@ function alarmBuildingIds(source: CityEvent[]): Set<string> {
 function syncEvents() {
   if (!eventLayer) return
   const visibleIds = props.visibleEventIds?.length ? new Set(props.visibleEventIds) : null
-  const source = visibleIds ? events.value.filter((event) => visibleIds.has(event.id)) : events.value
+  let source = visibleIds ? events.value.filter((event) => visibleIds.has(event.id)) : events.value
+  if (props.gridPrefix) source = source.filter((event) => event.grid.startsWith(`${props.gridPrefix}-`))
   eventLayer.sync(source, { showResolved: props.showResolved, types: typeFilter, selectedId: selectedEventId.value })
   buildings?.setAlarms(alarmBuildingIds(source))
   fineBuildings?.setAlarms(alarmBuildingIds(source))
 }
 
-watch([eventSig, selectedEventId, () => props.showResolved, () => props.visibleEventIds?.join('|')], syncEvents)
+watch(
+  [eventSig, selectedEventId, () => props.showResolved, () => props.visibleEventIds?.join('|'), () => props.gridPrefix],
+  syncEvents
+)
 watch(typeFilter, syncEvents, { deep: true })
 
 // 选中事件被删除时关闭面板
@@ -567,6 +574,15 @@ function handleTarget(t: { kind: 'event' | 'building'; id: string }) {
   else void flyToBuilding(t.id, { open: true })
 }
 
+function handlePoint(lon: number, lat: number) {
+  if (!isReady() || !active.value || !cam) {
+    pendingPoint = { lon, lat }
+    return
+  }
+  pendingPoint = null
+  void cam.flyTo(lon, lat, { range: 1200, pitch: -48, duration: 2 })
+}
+
 watch(
   () => [route.query.eventId, route.query.buildingId] as const,
   ([eid, bid]) => {
@@ -576,8 +592,23 @@ watch(
   { immediate: true }
 )
 
+watch(
+  () => [route.query.lon, route.query.lat] as const,
+  ([lon, lat]) => {
+    const x = Number(lon)
+    const y = Number(lat)
+    if (Number.isFinite(x) && Number.isFinite(y)) handlePoint(x, y)
+  },
+  { immediate: true }
+)
+
 function flushPending() {
-  if (!pendingTarget || !isReady() || !active.value) return
+  if (!isReady() || !active.value) return
+  if (pendingPoint) {
+    handlePoint(pendingPoint.lon, pendingPoint.lat)
+    return
+  }
+  if (!pendingTarget) return
   if (pendingTarget.kind === 'building' && !status.buildingsReady) return
   handleTarget(pendingTarget)
 }
@@ -809,7 +840,7 @@ async function init() {
   status.ready = true
   syncEvents()
 
-  const hasTarget = !!pendingTarget
+  const hasTarget = !!pendingTarget || !!pendingPoint
   if (props.intro && !hasTarget) void cam.intro()
   else cam.jumpHome()
   flushPending()

@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
@@ -25,8 +26,23 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import seed
 from .config import APP_NAME, APP_VERSION, Settings
 from .context import AppContext
-from .routers import data, demo, events, geo, llm, scenario, stats, system, tasks, ws
+from .routers import (
+    data,
+    demo,
+    events,
+    geo,
+    llm,
+    scenario,
+    stats,
+    support,
+    system,
+    tasks,
+    traceability,
+    workflow,
+    ws,
+)
 from .services.simulator import Simulator
+from .services.support import capture_audit_entity, record_http_audit
 
 log = logging.getLogger("cityeye")
 
@@ -66,6 +82,7 @@ def init_data(ctx: AppContext) -> None:
         seed.seed_database(ctx)
     else:
         seed.load_runtime_state(ctx)
+    seed.ensure_support_data(ctx)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -97,6 +114,61 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"],
                        allow_credentials="*" not in settings.cors_origins)
 
+    @app.middleware("http")
+    async def _audit_writes(request: Request, call_next: Any) -> Any:
+        method = request.method.upper()
+        path = request.url.path
+        should_audit = (
+            method not in ("GET", "HEAD", "OPTIONS")
+            and path.startswith("/api/")
+        )
+        operator_id = request.headers.get("X-Operator-Id", "")
+        request_payload: dict[str, Any] = {}
+        if should_audit and "application/json" in request.headers.get("content-type", ""):
+            raw_body = await request.body()
+            if raw_body and len(raw_body) <= 1_000_000:
+                try:
+                    parsed = json.loads(raw_body)
+                    if isinstance(parsed, dict):
+                        request_payload = parsed
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    request_payload = {}
+        before_data = (
+            await asyncio.to_thread(capture_audit_entity, ctx, path)
+            if should_audit
+            else {}
+        )
+        try:
+            response = await call_next(request)
+        except Exception:
+            if should_audit:
+                await asyncio.to_thread(
+                    record_http_audit,
+                    ctx,
+                    method=method,
+                    path=path,
+                    status_code=500,
+                    operator_id=operator_id,
+                    before_data=before_data,
+                    after_data={},
+                )
+            raise
+        if should_audit:
+            after_data = await asyncio.to_thread(capture_audit_entity, ctx, path)
+            if not after_data and response.status_code < 400:
+                after_data = request_payload
+            await asyncio.to_thread(
+                record_http_audit,
+                ctx,
+                method=method,
+                path=path,
+                status_code=response.status_code,
+                operator_id=operator_id,
+                before_data=before_data,
+                after_data=after_data,
+            )
+        return response
+
     @app.exception_handler(RequestValidationError)
     async def _on_validation(_: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(status_code=422, content={"detail": _validation_message(exc)})
@@ -121,6 +193,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ws.router,
         llm.router,
         scenario.router,
+        workflow.router,
+        support.router,
+        traceability.router,
     ):
         app.include_router(r, prefix="/api")
     app.mount("/files/samples", StaticFiles(directory=settings.samples_dir, check_dir=False), name="samples")

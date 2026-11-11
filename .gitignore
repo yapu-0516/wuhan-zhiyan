@@ -66,6 +66,9 @@ frontend/public/models/3d-tiles/
 
 # ---- Codex QA / design review artifacts ----
 .taste-skill/
+qa-*.png
+scenario-page.png
+scenario-result*.png
 
 # ---- Graphify intermediate extraction ----
 .graphify-parts/

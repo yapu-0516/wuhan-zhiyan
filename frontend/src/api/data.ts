@@ -1,6 +1,6 @@
 // 数据接口层 —— docs/api.md §5
-import { request, loadSnapshot, apiState } from './http'
-import type { DataItem, DataStats } from '@/types/api'
+import { jsonBody, request, loadSnapshot, apiState } from './http'
+import type { DataItem, DataStats, DataValidation, DataValidationDecision } from '@/types/api'
 
 /** 获取数据资产清单 GET /api/data */
 export function getDataList(): Promise<DataItem[]> {
@@ -21,4 +21,26 @@ export function uploadData(files: File[], type?: string): Promise<DataItem[]> {
   return request('/data/upload', { method: 'POST', body: fd })
 }
 
-export type { DataItem, DataStats }
+export function getDataValidations(assetId: string): Promise<DataValidation[]> {
+  return request(`/data/${encodeURIComponent(assetId)}/validations`)
+}
+
+export function validateDataAsset(
+  assetId: string,
+  body: {
+    decision: DataValidationDecision
+    coordinate_check: boolean
+    time_check: boolean
+    fields_check: boolean
+    notes: string[]
+    operator: string
+  }
+): Promise<DataValidation> {
+  return request(`/data/${encodeURIComponent(assetId)}/validations`, jsonBody(body, 'POST'))
+}
+
+export function autoCheckDataAsset(assetId: string): Promise<DataValidation> {
+  return request(`/data/${encodeURIComponent(assetId)}/auto-check`, { method: 'POST' })
+}
+
+export type { DataItem, DataStats, DataValidation, DataValidationDecision }

@@ -45,6 +45,7 @@ function isRetryableStatus(status: number) {
 }
 
 const REQUEST_TIMEOUT_MS = 10_000
+const OPERATOR_STORAGE_KEY = 'cityeye.operator.id'
 /** GET 幂等请求的退避重试间隔（共重试 2 次） */
 const RETRY_DELAYS = [300, 900]
 
@@ -80,9 +81,15 @@ export async function request<T>(path: string, init?: RequestInit, fallback?: ()
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (attempt > 0) await sleep(RETRY_DELAYS[attempt - 1])
     const { init: reqInit, done } = withTimeout(init)
+    const headers = new Headers(reqInit.headers)
+    const operatorId =
+      typeof window !== 'undefined' && window.localStorage
+        ? window.localStorage.getItem(OPERATOR_STORAGE_KEY)
+        : ''
+    if (operatorId && !headers.has('X-Operator-Id')) headers.set('X-Operator-Id', operatorId)
     let res: Response
     try {
-      res = await fetch(`${API_BASE}${path}`, reqInit)
+      res = await fetch(`${API_BASE}${path}`, { ...reqInit, headers })
     } catch (e) {
       done()
       const err = e as Error

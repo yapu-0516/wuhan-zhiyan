@@ -14,6 +14,7 @@ import TrendChart from '@/components/dashboard/TrendChart.vue'
 import LiveFeed from '@/components/dashboard/LiveFeed.vue'
 import DistrictRank from '@/components/dashboard/DistrictRank.vue'
 import SensorPanel from '@/components/dashboard/SensorPanel.vue'
+import WorkflowPulse from '@/components/dashboard/WorkflowPulse.vue'
 import SceneToolbar from '@/components/dashboard/SceneToolbar.vue'
 import SceneLegend from '@/components/dashboard/SceneLegend.vue'
 import TaskParsePanel from '@/components/pages/TaskParsePanel.vue'
@@ -24,6 +25,8 @@ import DataErrorNotice from '@/components/pages/DataErrorNotice.vue'
 import { useOverview } from '@/composables/useOverview'
 import { useCityEvents } from '@/composables/useCityEvents'
 import { useDemoBaseline } from '@/composables/useDemoBaseline'
+import { getResponsibilityGrids } from '@/api/support'
+import type { ResponsibilityGrid } from '@/types/support'
 import type { DemoTourHooks } from '@/composables/useDemoTour'
 import { DEFAULT_BASEMAP, type BasemapKey } from '@/config/cesium'
 import {
@@ -89,6 +92,9 @@ const showResolved = ref(false)
 const focus = ref<TourFocus | null>(null)
 const selectedEventId = ref<string | null>(null)
 const monitored = ref<number | undefined>(undefined)
+const grids = ref<ResponsibilityGrid[]>([])
+const selectedGrid = ref('')
+const gridPrefix = computed(() => selectedGrid.value.split('-')[1] || undefined)
 
 const touring = computed(() => viewerRef.value?.tourState?.running ?? false)
 
@@ -403,6 +409,7 @@ const cssVars = computed(() => ({
 
 onMounted(() => {
   resume()
+  void getResponsibilityGrids().then((items) => (grids.value = items)).catch(() => undefined)
   if (rootRef.value) {
     ro = new ResizeObserver((entries) => onResize(entries[0]?.contentRect.width ?? 0))
     ro.observe(rootRef.value)
@@ -430,6 +437,7 @@ onBeforeUnmount(() => {
       :basemap="basemap"
       :auto-track="autoTrack"
       :event-types="eventTypes"
+      :grid-prefix="gridPrefix"
       :visible-event-ids="demoEventIds"
       :show-resolved="showResolved"
       :live-alerts="!calmBaseline && !scenarioOpen && !scenarioMapReview"
@@ -476,6 +484,9 @@ onBeforeUnmount(() => {
     <!-- 右列：事件与感知 -->
     <aside class="hud-col hud-col--right" :class="{ hidden: !rightOpen }">
       <DataErrorNotice v-if="eventsError" :message="eventsError" :busy="eventsLoading" @retry="retryEvents" />
+      <HudPanel title="业务运行" sub="WORKFLOW" class="p-workflow">
+        <WorkflowPulse />
+      </HudPanel>
       <HudPanel title="实时事件流" sub="LIVE" class="p-feed" :focus="focus === 'feed'">
         <div v-if="calmBaseline" class="calm-feed">
           <span class="calm-feed__pulse"><i /></span>
@@ -528,6 +539,20 @@ onBeforeUnmount(() => {
         @crowd="crowdOpen = true"
         @scenario="openScenario"
       />
+      <el-select
+        v-model="selectedGrid"
+        clearable
+        class="grid-filter"
+        placeholder="全部责任网格"
+        aria-label="按责任网格筛选事件"
+      >
+        <el-option
+          v-for="grid in grids"
+          :key="grid.id"
+          :value="grid.id"
+          :label="`${grid.district} · ${grid.name}`"
+        />
+      </el-select>
     </div>
 
     <!-- AI 任务解析弹窗（主界面唯一入口，AI 分析页不再重复） -->
@@ -699,8 +724,12 @@ onBeforeUnmount(() => {
   min-height: 180px;
 }
 /* 右列 */
+.p-workflow {
+  flex: 0 0 auto;
+  min-height: 146px;
+}
 .p-feed {
-  flex: 1.8 1 0;
+  flex: 1.55 1 0;
   min-height: 220px;
 }
 .calm-feed {
@@ -837,6 +866,11 @@ onBeforeUnmount(() => {
   max-width: 100%;
   overflow-x: auto;
 }
+.hud-toolbar :deep(.grid-filter) {
+  flex: none;
+  width: 168px;
+  margin-left: 8px;
+}
 
 .hud-legend {
   position: absolute;
@@ -867,6 +901,9 @@ onBeforeUnmount(() => {
   }
 }
 @media (max-height: 820px) {
+  .p-workflow {
+    display: none;
+  }
   .p-sensor {
     display: none;
   }

@@ -1,15 +1,92 @@
 """城市三维对象接口（docs/api.md §3）：建筑、道路（含实时路况）、应急资源点位。"""
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import select
 
 from ..context import AppContext, get_ctx, not_found
 from ..models import Event, SettlementSeries
-from ..schemas import BuildingDetailOut, PoiOut
+from ..schemas import BuildingDetailOut, PoiOut, SpatialFeatureOut, SpatialFeaturePatch
 from ..services.events import event_to_dict
 
 router = APIRouter(tags=["城市对象"])
+
+
+def _write_geojson(ctx: AppContext, filename: str, features: list[dict]) -> None:
+    path = ctx.settings.geo_dir / filename
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(
+        json.dumps({"type": "FeatureCollection", "features": features}, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    tmp.replace(path)
+    ctx.reload_geo()
+
+
+@router.get(
+    "/spatial/{entity_type}/{entity_id}",
+    response_model=SpatialFeatureOut,
+    summary="查询建筑或道路空间对象",
+)
+def spatial_feature(
+    entity_type: str,
+    entity_id: str,
+    ctx: AppContext = Depends(get_ctx),
+) -> dict:
+    if entity_type == "building":
+        feature = next((f for f in ctx.geo.building_features if f["properties"]["id"] == entity_id), None)
+    elif entity_type == "road":
+        feature = next((f for f in ctx.geo.road_features if f["properties"]["id"] == entity_id), None)
+    else:
+        raise not_found("空间对象类型必须是 building 或 road")
+    if feature is None:
+        raise not_found(f"{entity_type} {entity_id} 不存在")
+    return {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "geometry": feature.get("geometry") or {},
+        "properties": feature.get("properties") or {},
+    }
+
+
+@router.patch(
+    "/spatial/{entity_type}/{entity_id}",
+    response_model=SpatialFeatureOut,
+    summary="维护建筑或道路属性和几何",
+)
+def patch_spatial_feature(
+    entity_type: str,
+    entity_id: str,
+    body: SpatialFeaturePatch,
+    ctx: AppContext = Depends(get_ctx),
+) -> dict:
+    if entity_type == "building":
+        features = ctx.geo.building_features
+        filename = "buildings.geojson"
+    elif entity_type == "road":
+        features = ctx.geo.road_features
+        filename = "roads.geojson"
+    else:
+        raise not_found("空间对象类型必须是 building 或 road")
+    feature = next((f for f in features if f["properties"]["id"] == entity_id), None)
+    if feature is None:
+        raise not_found(f"{entity_type} {entity_id} 不存在")
+    if body.geometry is not None:
+        geometry_type = body.geometry.get("type")
+        expected = "Polygon" if entity_type == "building" else "LineString"
+        if geometry_type != expected:
+            raise not_found(f"{entity_type} 几何类型必须是 {expected}")
+        feature["geometry"] = body.geometry
+    feature["properties"] = {**feature["properties"], **body.properties, "id": entity_id}
+    _write_geojson(ctx, filename, features)
+    return {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "geometry": feature.get("geometry") or {},
+        "properties": feature.get("properties") or {},
+    }
 
 
 @router.get("/buildings", summary="建筑轮廓 GeoJSON（OpenStreetMap，含沉降风险等级）")

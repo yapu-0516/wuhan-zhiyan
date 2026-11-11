@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from fastapi import HTTPException, Request
-from sqlalchemy import Engine
+from sqlalchemy import Engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from .config import Settings
@@ -85,6 +85,72 @@ class AppContext:
     # ------------------------------------------------------------------ 数据库
     def create_schema(self) -> None:
         Base.metadata.create_all(self.engine)
+        self._migrate_data_asset_profile()
+        self._migrate_audit_payload()
+
+    def _migrate_data_asset_profile(self) -> None:
+        """为旧数据库增量补充数据资源画像字段，不删除或重建已有数据。"""
+        columns = {item["name"] for item in inspect(self.engine).get_columns("data_assets")}
+        additions = {
+            "spatial_extent": "JSON NOT NULL DEFAULT '{}'",
+            "time_start": "DATETIME",
+            "time_end": "DATETIME",
+            "crs": "VARCHAR(32) NOT NULL DEFAULT 'EPSG:4326'",
+            "quality_score": "FLOAT NOT NULL DEFAULT 0",
+            "quality_notes": "JSON NOT NULL DEFAULT '[]'",
+            "version": "VARCHAR(32) NOT NULL DEFAULT ''",
+            "analysis_status": "VARCHAR(16) NOT NULL DEFAULT 'unknown'",
+        }
+        missing = {name: ddl for name, ddl in additions.items() if name not in columns}
+        with self.engine.begin() as conn:
+            for name, ddl in missing.items():
+                conn.execute(text(f"ALTER TABLE data_assets ADD COLUMN {name} {ddl}"))
+            extent = json.dumps(
+                {"label": "武汉中心城区", "bbox": list(self.geo.region.get("bbox", []))},
+                ensure_ascii=False,
+            )
+            notes = json.dumps(["旧数据已完成结构迁移，质量与时相口径待复核"], ensure_ascii=False)
+            rows = conn.execute(
+                text(
+                    "SELECT id, type, status, time FROM data_assets "
+                    "WHERE analysis_status = 'unknown'"
+                )
+            ).mappings().all()
+            for row in rows:
+                status = row["status"]
+                analysis_status = "ready" if status == "已入库" else "pending" if status == "采集中" else "unavailable"
+                quality_score = 88 if status == "已入库" else 72 if status == "采集中" else 0
+                conn.execute(
+                    text(
+                        "UPDATE data_assets SET spatial_extent = :extent, "
+                        "time_start = datetime(:time, :start_offset), "
+                        "time_end = :time_end, version = substr(:time, 1, 10), "
+                        "quality_score = :quality_score, quality_notes = :notes, "
+                        "analysis_status = :analysis_status WHERE id = :id"
+                    ),
+                    {
+                        "id": row["id"],
+                        "time": row["time"],
+                        "start_offset": "-365 day" if row["type"] in ("矢量数据", "三维模型") else "-1 day",
+                        "time_end": None if row["type"] == "视频流" else row["time"],
+                        "quality_score": quality_score,
+                        "extent": extent,
+                        "notes": notes,
+                        "analysis_status": analysis_status,
+                    },
+                )
+
+    def _migrate_audit_payload(self) -> None:
+        """为旧审计表补充修改前后值，保留既有审计记录。"""
+        columns = {item["name"] for item in inspect(self.engine).get_columns("audit_logs")}
+        additions = {
+            "before_data": "JSON NOT NULL DEFAULT '{}'",
+            "after_data": "JSON NOT NULL DEFAULT '{}'",
+        }
+        with self.engine.begin() as conn:
+            for name, ddl in additions.items():
+                if name not in columns:
+                    conn.execute(text(f"ALTER TABLE audit_logs ADD COLUMN {name} {ddl}"))
 
     @contextmanager
     def session(self) -> Iterator[Session]:
@@ -144,6 +210,15 @@ class AppContext:
     # ------------------------------------------------------------------ 缓存
     def invalidate_buildings(self) -> None:
         self._buildings_cache = None
+
+    def reload_geo(self) -> None:
+        """空间底图文件修改后重建内存索引和实时路况对象。"""
+        from .geo import GeoRepository
+        from .services.traffic import TrafficState
+
+        self.geo = GeoRepository(self.settings.geo_dir)
+        self.traffic = TrafficState(self.geo)
+        self.invalidate_buildings()
 
     def buildings_json(self) -> bytes:
         if self._buildings_cache is None:

@@ -28,6 +28,7 @@ from sqlalchemy import delete, func, select
 from .. import timeutil
 from ..models import Event, EventLog, Task
 from .events import ACTIVE, STATUS_CN, add_log, default_assignee, event_from_result, event_to_dict, transition
+from .workflow import run_due_monitoring_tasks
 
 if TYPE_CHECKING:
     from ..context import AppContext
@@ -78,6 +79,16 @@ class Simulator:
     def start(self) -> None:
         s = self.ctx.settings
         self._tasks.append(asyncio.create_task(self._loop(s.heartbeat_interval, self._heartbeat), name="heartbeat"))
+        self._tasks.append(
+            asyncio.create_task(
+                self._dynamic_loop(
+                    lambda: self.ctx.settings.workflow_interval,
+                    self._workflow_tick,
+                    initial_delay=min(5.0, s.workflow_interval),
+                ),
+                name="workflow",
+            )
+        )
         if s.simulator:
             self._tasks += [
                 asyncio.create_task(self._loop(s.traffic_interval, self._traffic_tick), name="traffic"),
@@ -104,12 +115,26 @@ class Simulator:
                 log.exception("模拟器任务 %s 执行失败", getattr(fn, "__name__", fn))
             await asyncio.sleep(interval)
 
+    async def _dynamic_loop(self, interval_fn: Any, fn: Any, initial_delay: float | None = None) -> None:
+        await asyncio.sleep(initial_delay if initial_delay is not None else interval_fn())
+        while True:
+            try:
+                await fn()
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001
+                log.exception("模拟器任务 %s 执行失败", getattr(fn, "__name__", fn))
+            await asyncio.sleep(interval_fn())
+
     # ------------------------------------------------------------------ 心跳 / 传感
     async def _heartbeat(self) -> None:
         await self.ctx.hub.broadcast("heartbeat", {})
 
     async def _sensor_tick(self) -> None:
         await self.ctx.hub.broadcast("sensor.tick", {"sources": self.ctx.sources.tick(timeutil.now())})
+
+    async def _workflow_tick(self) -> None:
+        await asyncio.to_thread(run_due_monitoring_tasks, self.ctx)
 
     # ------------------------------------------------------------------ 路况
     async def _traffic_tick(self) -> None:

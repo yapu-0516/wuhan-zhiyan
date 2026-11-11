@@ -64,12 +64,35 @@ export interface DataItem {
   records?: number
   description?: string
   url?: string | null
+  spatial_extent?: { label?: string; bbox?: number[] }
+  time_start?: string | null
+  time_end?: string | null
+  crs?: string
+  quality_score?: number
+  quality_notes?: string[]
+  version?: string
+  analysis_status?: 'ready' | 'pending' | 'unavailable' | 'unknown'
 }
 
 export interface DataStats {
   total: number
   total_size: string
   by_type: { type: string; count: number }[]
+  analyzable: number
+  by_analysis_status: { type: string; count: number }[]
+}
+
+export type DataValidationDecision = 'pass' | 'needs_repair' | 'reject'
+
+export interface DataValidation {
+  id: string
+  asset_id: string
+  decision: DataValidationDecision
+  checks: { coordinate: boolean; time: boolean; fields: boolean }
+  quality_score: number
+  notes: string[]
+  operator: string
+  created_at: string
 }
 
 // ---------- AI 分析任务 ----------
@@ -98,6 +121,11 @@ export interface TaskResult {
   artifacts: TaskArtifact[]
   series?: ({ t: string; v: number } & Record<string, number | string>)[] | null
   event_ids: string[]
+  provenance?: {
+    input_sha256: { name: string; sha256: string }[]
+    algorithm: string
+    algorithm_version: string
+  }
 }
 
 export interface AnalysisTask {
