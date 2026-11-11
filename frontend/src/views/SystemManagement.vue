@@ -52,7 +52,12 @@ const lineageId = ref('')
 const lineageBusy = ref(false)
 const auditDetailVisible = ref(false)
 const auditDetail = ref<AuditLogRecord | null>(null)
-const configForm = reactive({ task_pacing_sec: 0.6, workflow_interval_sec: 15, max_upload_mb: 20 })
+const configForm = reactive({
+  task_pacing_sec: 0.6,
+  workflow_interval_sec: 15,
+  max_upload_mb: 20,
+  work_order_max_attachment_mb: 200
+})
 const configBusy = ref(false)
 const gridEditVisible = ref(false)
 const editingGridId = ref('')
@@ -238,6 +243,7 @@ async function load() {
     configForm.task_pacing_sec = statusRow.task_pacing_sec
     configForm.workflow_interval_sec = statusRow.workflow_interval_sec
     configForm.max_upload_mb = statusRow.max_upload_mb
+    configForm.work_order_max_attachment_mb = statusRow.work_order_max_attachment_mb
   } catch (e) {
     error.value = (e as Error).message || '系统管理数据加载失败'
   } finally {
@@ -803,6 +809,15 @@ onMounted(() => void load())
                 <span>单文件上传上限（MB）</span>
                 <el-input-number v-model="configForm.max_upload_mb" :min="1" :max="500" />
               </label>
+              <label>
+                <span>工单附件单文件上限（MB）</span>
+                <el-input-number
+                  v-model="configForm.work_order_max_attachment_mb"
+                  :min="1"
+                  :max="2048"
+                  :step="10"
+                />
+              </label>
               <el-button type="primary" :loading="configBusy" @click="saveRuntimeConfig">保存本地配置</el-button>
             </div>
           </section>
@@ -1246,7 +1261,7 @@ onMounted(() => void load())
 }
 .runtime-config-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
   align-items: end;
   gap: 10px;
 }

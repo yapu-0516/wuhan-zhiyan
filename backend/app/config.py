@@ -60,6 +60,7 @@ class Settings:
     )
     cors_origins: list[str] = field(default_factory=lambda: ["*"])
     max_upload_mb: float = 20.0
+    work_order_max_attachment_mb: float = 200.0
 
     @property
     def database_kind(self) -> str:
@@ -91,4 +92,7 @@ class Settings:
             ),
             cors_origins=[o.strip() for o in origins.split(",") if o.strip()],
             max_upload_mb=max(1.0, _float("CITYEYE_MAX_UPLOAD_MB", 20.0)),
+            work_order_max_attachment_mb=max(
+                1.0, _float("CITYEYE_WORK_ORDER_ATTACHMENT_MB", 200.0)
+            ),
         )

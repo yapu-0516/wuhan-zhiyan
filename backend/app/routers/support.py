@@ -315,6 +315,7 @@ def service_status(ctx: AppContext = Depends(get_ctx)) -> dict:
         "workflow_interval_sec": ctx.settings.workflow_interval,
         "task_pacing_sec": ctx.settings.task_pacing,
         "max_upload_mb": ctx.settings.max_upload_mb,
+        "work_order_max_attachment_mb": ctx.settings.work_order_max_attachment_mb,
         "task_counts": {str(status): int(count) for status, count in task_rows},
         "run_counts": {str(status): int(count) for status, count in run_rows},
         "overdue_orders": sum(work_order_sla(order)["overdue"] for order in orders),
@@ -336,6 +337,8 @@ def patch_runtime_config(
         replacements["workflow_interval"] = body.workflow_interval_sec
     if body.max_upload_mb is not None:
         replacements["max_upload_mb"] = body.max_upload_mb
+    if body.work_order_max_attachment_mb is not None:
+        replacements["work_order_max_attachment_mb"] = body.work_order_max_attachment_mb
     if replacements:
         ctx.settings = replace(ctx.settings, **replacements)
     return service_status(ctx)

@@ -551,7 +551,9 @@ properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, 
       "attachments": [{
         "name": "field.png",
         "url": "/files/uploads/work-orders/WO0001/field.png",
-        "size_bytes": 182400
+        "size_bytes": 182400,
+        "kind": "image",
+        "mime_type": "image/png"
       }]
     },
     { "at": "2026-11-07 16:20:00", "action": "verified", "note": "道路恢复通行" }
@@ -607,7 +609,7 @@ properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, 
 | POST | `/api/assessments/candidates/merge` | 合并同类型、1 km / 2 小时内的相近告警 |
 | GET/POST | `/api/work-orders` | 工单列表 / 创建工单 |
 | GET/PATCH | `/api/work-orders/{id}` | 工单详情 / 执行流转和反馈 |
-| POST | `/api/work-orders/{id}/feedback` | multipart 提交现场文字、经纬度和 0~5 张 JPG / PNG / WEBP 照片 |
+| POST | `/api/work-orders/{id}/feedback` | multipart 提交现场文字、经纬度和最多 10 个图片、视频、音频、PDF、Office、文本或压缩包附件 |
 | POST | `/api/work-orders/{id}/feedback/{index}/assess` | 将现场反馈转为待补核研判记录 |
 | POST | `/api/work-orders/{id}/resources/use` | 从应急资源库存登记使用并扣减可用数量 |
 | GET/POST | `/api/reviews` | 复盘列表 / 创建复盘 |
@@ -633,7 +635,7 @@ properties：`{ id: "R001", name: "解放大道", highway: "primary", length_m, 
 | GET/PATCH | `/api/support/grids` · `/api/support/grids/{id}` | 责任网格查询与责任单位、人员、联系方式维护 |
 | GET/PATCH | `/api/support/emergency-resources` · `/api/support/emergency-resources/{id}` | 应急资源能力、容量、可用状态维护 |
 | GET | `/api/support/service-status` | 数据库、模拟器、调度间隔、任务/数据状态和算法版本 |
-| PATCH | `/api/support/config` | 更新任务节奏、周期扫描间隔和上传上限（仅当前运行实例） |
+| PATCH | `/api/support/config` | 更新任务节奏、周期扫描间隔、普通上传与工单附件上限（仅当前运行实例） |
 | GET | `/api/support/review-stats` | 真实事件、监测任务与演练复盘分类统计 |
 | GET | `/api/support/notifications` | 站内通知，可用 `unread_only=true` |
 | GET | `/api/support/notifications/unread-count` | 未读提醒数 |

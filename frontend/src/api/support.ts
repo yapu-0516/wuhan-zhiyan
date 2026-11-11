@@ -100,6 +100,7 @@ export function patchRuntimeConfig(body: {
   task_pacing_sec: number
   workflow_interval_sec: number
   max_upload_mb: number
+  work_order_max_attachment_mb: number
 }): Promise<ServiceStatus> {
   return request('/support/config', jsonBody(body, 'PATCH'))
 }

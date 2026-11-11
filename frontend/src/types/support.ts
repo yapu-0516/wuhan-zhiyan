@@ -133,6 +133,7 @@ export interface ServiceStatus {
   workflow_interval_sec: number
   task_pacing_sec: number
   max_upload_mb: number
+  work_order_max_attachment_mb: number
   task_counts: Record<string, number>
   run_counts: Record<string, number>
   overdue_orders: number

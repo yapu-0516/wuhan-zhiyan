@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage, type UploadUserFile } from 'element-plus'
-import { Location, Plus, UploadFilled } from '@element-plus/icons-vue'
+import { ElMessage, type UploadFile, type UploadFiles, type UploadUserFile } from 'element-plus'
+import { Document, Location, Plus, UploadFilled } from '@element-plus/icons-vue'
 import {
   assessWorkOrderFeedback,
   createWorkOrder,
@@ -9,7 +9,7 @@ import {
   useWorkOrderResource,
   uploadWorkOrderFeedback
 } from '@/api/workflow'
-import { getEmergencyResources } from '@/api/support'
+import { getEmergencyResources, getServiceStatus } from '@/api/support'
 import { fileUrl } from '@/config/api'
 import { useOperator } from '@/composables/useOperator'
 import type { Assessment, WorkOrder, WorkOrderCreate, WorkOrderSla, WorkOrderStatus } from '@/types/workflow'
@@ -21,7 +21,12 @@ import type { EmergencyResource } from '@/types/support'
 const props = defineProps<{ events: CityEvent[]; assessments: Assessment[]; orders: WorkOrder[] }>()
 const emit = defineEmits<{ (e: 'refresh'): void }>()
 const { currentName, load: loadOperator } = useOperator()
-onMounted(() => void loadOperator())
+onMounted(() => {
+  void loadOperator()
+  void getServiceStatus()
+    .then((status) => (attachmentMaxMb.value = status.work_order_max_attachment_mb))
+    .catch(() => undefined)
+})
 
 const filter = ref<'all' | WorkOrderStatus>('all')
 const selectedId = ref('')
@@ -38,6 +43,7 @@ const feedbackOperator = ref('现场处置人员')
 const feedbackLongitude = ref<number | null>(null)
 const feedbackLatitude = ref<number | null>(null)
 const feedbackFiles = ref<UploadUserFile[]>([])
+const attachmentMaxMb = ref(200)
 const transferTarget = ref('')
 const transferNote = ref('')
 const resourceForm = reactive({
@@ -70,7 +76,14 @@ const fieldFeedbackCount = computed(
   () => (selected.value?.feedback ?? []).filter((item) => item.action === 'field_feedback').length
 )
 
-type FeedbackAttachment = { name: string; url: string }
+type AttachmentKind = 'image' | 'video' | 'audio' | 'document' | 'archive' | 'other'
+type FeedbackAttachment = {
+  name: string
+  url: string
+  size_bytes?: number
+  kind?: AttachmentKind
+  mime_type?: string
+}
 type FeedbackItem = {
   at?: string
   operator?: string
@@ -81,6 +94,15 @@ type FeedbackItem = {
   attachments?: FeedbackAttachment[]
 }
 const feedbackItems = computed(() => (selected.value?.feedback ?? []) as FeedbackItem[])
+const MAX_FEEDBACK_ATTACHMENTS = 10
+const ATTACHMENT_SUFFIXES = new Set([
+  '.jpg', '.jpeg', '.png', '.webp', '.gif',
+  '.mp4', '.webm', '.mov', '.m4v',
+  '.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac',
+  '.pdf', '.txt', '.csv', '.json', '.doc', '.docx',
+  '.xls', '.xlsx', '.ppt', '.pptx', '.zip', '.7z', '.rar'
+])
+const ATTACHMENT_ACCEPT = [...ATTACHMENT_SUFFIXES].join(',')
 
 watch(
   () => filtered.value,
@@ -261,7 +283,7 @@ async function submitFeedback() {
   if (!selected.value || feedbackBusy.value) return
   const files = feedbackFiles.value.flatMap((item) => (item.raw ? [item.raw] : []))
   if (!feedbackNote.value.trim() && !files.length) {
-    ElMessage.warning('请填写现场情况或至少上传一张照片')
+    ElMessage.warning('请填写现场情况或至少上传一个附件')
     return
   }
   feedbackBusy.value = true
@@ -317,6 +339,75 @@ function deadlineText(): string {
 
 function feedbackAttachments(item: FeedbackItem): FeedbackAttachment[] {
   return item.attachments ?? []
+}
+
+function fileSuffix(name: string): string {
+  const index = name.lastIndexOf('.')
+  return index >= 0 ? name.slice(index).toLowerCase() : ''
+}
+
+function attachmentKind(item: FeedbackAttachment): AttachmentKind {
+  if (item.kind) return item.kind
+  const suffix = fileSuffix(item.name)
+  if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(suffix)) return 'image'
+  if (['.mp4', '.webm', '.mov', '.m4v'].includes(suffix)) return 'video'
+  if (['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'].includes(suffix)) return 'audio'
+  if (['.zip', '.7z', '.rar'].includes(suffix)) return 'archive'
+  if (['.pdf', '.txt', '.csv', '.json', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'].includes(suffix)) {
+    return 'document'
+  }
+  return 'other'
+}
+
+function attachmentKindLabel(item: FeedbackAttachment): string {
+  return {
+    image: '图片',
+    video: '视频',
+    audio: '音频',
+    document: '文档',
+    archive: '压缩包',
+    other: '文件'
+  }[attachmentKind(item)]
+}
+
+function attachmentSize(bytes?: number): string {
+  if (bytes === undefined) return '大小未知'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+}
+
+function imageAttachments(item: FeedbackItem): FeedbackAttachment[] {
+  return feedbackAttachments(item).filter((entry) => attachmentKind(entry) === 'image')
+}
+
+function onAttachmentChange(file: UploadFile, files: UploadFiles): void {
+  const raw = file.raw
+  if (!raw) return
+  const suffix = fileSuffix(raw.name)
+  if (!ATTACHMENT_SUFFIXES.has(suffix)) {
+    feedbackFiles.value = feedbackFiles.value.filter((item) => item.uid !== file.uid)
+    ElMessage.warning(`${raw.name}：不支持该文件类型`)
+    return
+  }
+  if (raw.size <= 0) {
+    feedbackFiles.value = feedbackFiles.value.filter((item) => item.uid !== file.uid)
+    ElMessage.warning(`${raw.name}：文件为空`)
+    return
+  }
+  if (raw.size > attachmentMaxMb.value * 1024 * 1024) {
+    feedbackFiles.value = feedbackFiles.value.filter((item) => item.uid !== file.uid)
+    ElMessage.warning(`${raw.name} 超过单文件 ${attachmentMaxMb.value} MB 的限制`)
+    return
+  }
+  if (files.length > MAX_FEEDBACK_ATTACHMENTS) {
+    feedbackFiles.value = files.slice(0, MAX_FEEDBACK_ATTACHMENTS)
+  }
+}
+
+function onAttachmentExceed(): void {
+  ElMessage.warning(`单次最多上传 ${MAX_FEEDBACK_ATTACHMENTS} 个附件`)
 }
 </script>
 
@@ -435,15 +526,56 @@ function feedbackAttachments(item: FeedbackItem): FeedbackAttachment[] {
                 <el-icon><Location /></el-icon>
                 {{ item.location.longitude.toFixed(5) }}, {{ item.location.latitude.toFixed(5) }}
               </div>
-              <div v-if="feedbackAttachments(item).length" class="feedback__photos">
-                <el-image
-                  v-for="photo in feedbackAttachments(item)"
-                  :key="photo.url"
-                  :src="fileUrl(photo.url)"
-                  :preview-src-list="feedbackAttachments(item).map((entry) => fileUrl(entry.url))"
-                  fit="cover"
-                  preview-teleported
-                />
+              <div v-if="feedbackAttachments(item).length" class="feedback__attachments">
+                <article
+                  v-for="(attachment, attachmentIndex) in feedbackAttachments(item)"
+                  :key="attachment.url"
+                  class="feedback-attachment"
+                >
+                  <el-image
+                    v-if="attachmentKind(attachment) === 'image'"
+                    class="feedback-attachment__image"
+                    :src="fileUrl(attachment.url)"
+                    :preview-src-list="imageAttachments(item).map((entry) => fileUrl(entry.url))"
+                    :initial-index="
+                      imageAttachments(item).findIndex((entry) => entry.url === attachment.url)
+                    "
+                    fit="cover"
+                    preview-teleported
+                  />
+                  <video
+                    v-else-if="attachmentKind(attachment) === 'video'"
+                    class="feedback-attachment__video"
+                    :src="fileUrl(attachment.url)"
+                    controls
+                    preload="metadata"
+                  />
+                  <audio
+                    v-else-if="attachmentKind(attachment) === 'audio'"
+                    class="feedback-attachment__audio"
+                    :src="fileUrl(attachment.url)"
+                    controls
+                    preload="metadata"
+                  />
+                  <span v-else class="feedback-attachment__icon">
+                    <el-icon>
+                      <Document />
+                    </el-icon>
+                  </span>
+                  <div class="feedback-attachment__meta">
+                    <b>{{ attachment.name }}</b>
+                    <small>{{ attachmentKindLabel(attachment) }} · {{ attachmentSize(attachment.size_bytes) }}</small>
+                    <a
+                      :href="fileUrl(attachment.url)"
+                      :download="attachment.name"
+                      :aria-label="`下载附件 ${attachment.name}`"
+                      @click.stop
+                    >
+                      下载
+                    </a>
+                  </div>
+                  <i class="feedback-attachment__index">{{ attachmentIndex + 1 }}</i>
+                </article>
               </div>
             </div>
           </section>
@@ -564,17 +696,24 @@ function feedbackAttachments(item: FeedbackItem): FeedbackAttachment[] {
           </div>
         </el-form-item>
       </div>
-      <el-form-item label="现场照片（最多 5 张）">
+      <el-form-item :label="`现场附件（最多 ${MAX_FEEDBACK_ATTACHMENTS} 个）`">
         <el-upload
           v-model:file-list="feedbackFiles"
           class="feedback-upload"
-          accept=".jpg,.jpeg,.png,.webp"
-          list-type="picture-card"
+          :accept="ATTACHMENT_ACCEPT"
           :auto-upload="false"
-          :limit="5"
+          :limit="MAX_FEEDBACK_ATTACHMENTS"
+          :on-change="onAttachmentChange"
+          :on-exceed="onAttachmentExceed"
           multiple
         >
-          <el-icon><UploadFilled /></el-icon>
+          <el-button :icon="UploadFilled">选择图片、视频、音频或文件</el-button>
+          <template #tip>
+            <div class="feedback-upload__tip">
+              单文件不超过 {{ attachmentMaxMb }} MB，本次合计不超过 500 MB；支持图片、视频、音频、
+              PDF、Office、文本和常见压缩包。
+            </div>
+          </template>
         </el-upload>
       </el-form-item>
     </el-form>
@@ -823,17 +962,75 @@ function feedbackAttachments(item: FeedbackItem): FeedbackAttachment[] {
   color: var(--ce-text-faint);
   font: 11px var(--ce-font-num);
 }
-.feedback__photos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 7px;
+.feedback__attachments {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
 }
-.feedback__photos :deep(.el-image) {
-  width: 64px;
-  height: 48px;
+.feedback-attachment {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  padding: 6px;
   border: 1px solid var(--ce-divider);
-  border-radius: 3px;
+  background: rgba(7, 16, 25, 0.42);
+}
+.feedback-attachment__image,
+.feedback-attachment__video {
+  width: 96px;
+  height: 62px;
+  border-radius: 2px;
+}
+.feedback-attachment__audio {
+  width: 96px;
+  height: 34px;
+  align-self: center;
+}
+.feedback-attachment__icon {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 62px;
+  border: 1px solid var(--ce-divider);
+  color: var(--ce-accent);
+  font-size: 23px;
+}
+.feedback-attachment__meta {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 3px;
+}
+.feedback-attachment__meta b,
+.feedback-attachment__meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.feedback-attachment__meta b {
+  color: var(--ce-text-strong);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.feedback-attachment__meta small {
+  color: var(--ce-text-faint);
+  font-size: 10.5px;
+}
+.feedback-attachment__meta a {
+  justify-self: start;
+  color: var(--ce-accent);
+  font-size: 10.5px;
+  text-decoration: none;
+}
+.feedback-attachment__index {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  color: var(--ce-text-faint);
+  font: 9px var(--ce-font-num);
+  font-style: normal;
 }
 .coordinate-row {
   display: grid;
@@ -859,10 +1056,14 @@ function feedbackAttachments(item: FeedbackItem): FeedbackAttachment[] {
 .feedback-upload {
   width: 100%;
 }
-.feedback-upload :deep(.el-upload--picture-card),
+.feedback-upload__tip {
+  margin-top: 5px;
+  color: var(--ce-text-faint);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
 .feedback-upload :deep(.el-upload-list__item) {
-  width: 82px;
-  height: 62px;
+  color: var(--ce-text-dim);
 }
 .actions {
   display: flex;

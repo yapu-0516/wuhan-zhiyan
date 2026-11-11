@@ -89,11 +89,17 @@ def test_write_requests_are_audited_with_current_demo_operator(client, ctx):
     assert "by_entity_type" in review_stats.json()
     updated = client.patch(
         "/api/support/config",
-        json={"task_pacing_sec": 0, "workflow_interval_sec": 30, "max_upload_mb": 25},
+        json={
+            "task_pacing_sec": 0,
+            "workflow_interval_sec": 30,
+            "max_upload_mb": 25,
+            "work_order_max_attachment_mb": 300,
+        },
     )
     assert updated.status_code == 200
     assert updated.json()["workflow_interval_sec"] == 30
     assert updated.json()["max_upload_mb"] == 25
+    assert updated.json()["work_order_max_attachment_mb"] == 300
 
 
 def test_audit_records_before_and_after_values_for_updates(client):

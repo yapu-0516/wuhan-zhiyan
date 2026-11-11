@@ -542,6 +542,7 @@ class ServiceStatusOut(BaseModel):
     workflow_interval_sec: float
     task_pacing_sec: float
     max_upload_mb: float
+    work_order_max_attachment_mb: float
     task_counts: dict[str, int]
     run_counts: dict[str, int]
     overdue_orders: int
@@ -554,6 +555,7 @@ class RuntimeConfigPatch(BaseModel):
     task_pacing_sec: float | None = Field(default=None, ge=0, le=10)
     workflow_interval_sec: float | None = Field(default=None, ge=5, le=3600)
     max_upload_mb: float | None = Field(default=None, ge=1, le=500)
+    work_order_max_attachment_mb: float | None = Field(default=None, ge=1, le=2048)
 
 
 class ReviewStatsOut(BaseModel):

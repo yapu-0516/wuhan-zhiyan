@@ -479,3 +479,48 @@ def test_work_order_field_feedback_location_photo_and_sla(client, ctx):
         f"/api/work-orders/{order['id']}/feedback",
         data={"note": "复核后再次反馈"},
     ).status_code == 400
+
+
+def test_work_order_feedback_supports_media_documents_and_size_limits(client):
+    order = next(item for item in client.get("/api/work-orders").json() if item["id"] == "WO0003")
+    response = client.post(
+        f"/api/work-orders/{order['id']}/feedback",
+        data={"note": "回传现场视频、语音和核查报告", "operator": "现场处置员"},
+        files=[
+            ("files", ("scene.mp4", b"demo-video", "video/mp4")),
+            ("files", ("voice.mp3", b"demo-audio", "audio/mpeg")),
+            ("files", ("check.pdf", b"demo-pdf", "application/pdf")),
+        ],
+    )
+    assert response.status_code == 200
+    attachments = response.json()["feedback"][-1]["attachments"]
+    assert [item["kind"] for item in attachments] == ["video", "audio", "document"]
+    assert [item["mime_type"] for item in attachments] == ["video/mp4", "audio/mpeg", "application/pdf"]
+    assert all(item["size_bytes"] > 0 and item["url"].startswith("/files/") for item in attachments)
+    for item in attachments:
+        served = client.get(item["url"])
+        assert served.status_code == 200 and served.content
+
+    unsupported = client.post(
+        f"/api/work-orders/{order['id']}/feedback",
+        data={"note": "不支持的附件"},
+        files=[("files", ("payload.exe", b"not-allowed", "application/octet-stream"))],
+    )
+    assert unsupported.status_code == 400
+    assert "不支持的文件类型" in unsupported.json()["detail"]
+
+    updated = client.patch(
+        "/api/support/config",
+        json={"work_order_max_attachment_mb": 1},
+    )
+    assert updated.status_code == 200
+    try:
+        too_large = client.post(
+            f"/api/work-orders/{order['id']}/feedback",
+            data={"note": "超大附件"},
+            files=[("files", ("large.mp4", b"x" * (1024 * 1024 + 1), "video/mp4"))],
+        )
+        assert too_large.status_code == 400
+        assert "超过大小限制" in too_large.json()["detail"]
+    finally:
+        client.patch("/api/support/config", json={"work_order_max_attachment_mb": 200})

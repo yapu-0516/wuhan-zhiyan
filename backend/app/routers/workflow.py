@@ -76,11 +76,17 @@ from ..services.workflow import (
 )
 from ..services.tasks import task_to_dict as analysis_task_to_dict
 from ..services.events import add_log, event_to_dict, transition
-from ..services.uploads import remove, save_uploads
+from ..services.uploads import (
+    ATTACHMENT_SUFFIXES,
+    attachment_metadata,
+    remove,
+    save_uploads,
+)
 
 router = APIRouter(tags=["业务闭环"])
 
-IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_WORK_ORDER_ATTACHMENTS = 10
+MAX_WORK_ORDER_TOTAL_BYTES = 500 * (1 << 20)
 
 
 def _optional_coordinate(raw: str | None, name: str, low: float, high: float) -> float | None:
@@ -452,7 +458,11 @@ def post_work_order(body: WorkOrderCreate, ctx: AppContext = Depends(get_ctx)) -
         return order_to_dict(create_work_order(ctx, s, body))
 
 
-@router.post("/work-orders/{order_id}/feedback", response_model=WorkOrderOut, summary="提交现场文字、定位与照片")
+@router.post(
+    "/work-orders/{order_id}/feedback",
+    response_model=WorkOrderOut,
+    summary="提交现场文字、定位、图片、视频、音频和文件",
+)
 def post_work_order_feedback(
     order_id: str,
     note: str = Form(default=""),
@@ -463,11 +473,18 @@ def post_work_order_feedback(
     ctx: AppContext = Depends(get_ctx),
 ) -> dict:
     uploads = files or []
-    if len(uploads) > 5:
-        raise bad_request("单次最多提交 5 张现场照片")
-    invalid = [f.filename or "未命名文件" for f in uploads if Path(f.filename or "").suffix.lower() not in IMAGE_SUFFIXES]
+    if len(uploads) > MAX_WORK_ORDER_ATTACHMENTS:
+        raise bad_request(f"单次最多提交 {MAX_WORK_ORDER_ATTACHMENTS} 个现场附件")
+    invalid = [
+        f.filename or "未命名文件"
+        for f in uploads
+        if Path(f.filename or "").suffix.lower() not in ATTACHMENT_SUFFIXES
+    ]
     if invalid:
-        raise bad_request(f"现场附件仅支持 JPG / PNG / WEBP：{', '.join(invalid)}")
+        raise bad_request(
+            "现场附件包含不支持的文件类型："
+            f"{', '.join(invalid)}；支持图片、视频、音频、PDF、Office、文本和常见压缩包"
+        )
     lon = _optional_coordinate(longitude, "经度", -180, 180)
     lat = _optional_coordinate(latitude, "纬度", -90, 90)
     if (lon is None) != (lat is None):
@@ -481,17 +498,22 @@ def post_work_order_feedback(
         saved = save_uploads(
             uploads,
             ctx.uploads_dir / "work-orders" / row.id,
-            int(ctx.settings.max_upload_mb * (1 << 20)),
+            int(ctx.settings.work_order_max_attachment_mb * (1 << 20)),
+            max_total_bytes=MAX_WORK_ORDER_TOTAL_BYTES,
         )
         paths = [path for _, path, _ in saved]
-        attachments = [
-            {
-                "name": name,
-                "url": ctx.url_for(path),
-                "size_bytes": size,
-            }
-            for name, path, size in saved
-        ]
+        attachments = []
+        for name, path, size in saved:
+            metadata = attachment_metadata(name)
+            attachments.append(
+                {
+                    "name": name,
+                    "url": ctx.url_for(path),
+                    "size_bytes": size,
+                    "kind": metadata["kind"],
+                    "mime_type": metadata["mime_type"],
+                }
+            )
         try:
             updated = add_work_order_feedback(
                 s,

@@ -143,7 +143,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 
 项目已使用 Graphify 生成持久化代码知识图谱，覆盖前端、后端、大模型、情景引擎、算法和数据处理代码：
 
-- 3952 个节点、9627 条关系边、160 个社区
+- 3967 个节点、9627 条关系边、163 个社区
 - [交互式代码图](graphify-out/graph.html)
 - [调用流程与架构图](graphify-out/CALLFLOW.html)
 - [图谱审计报告](graphify-out/GRAPH_REPORT.md)
@@ -209,7 +209,7 @@ flowchart LR
 | GET · POST | `/api/scenario/status` · `/api/scenario/sessions` · `/api/scenario/runs/{id}` | 情景会话、参数版本、模拟推演、对比与报告 |
 | GET · POST | `/api/monitoring-tasks` · `/api/monitoring-runs` · `/api/assessments` · `/api/work-orders` · `/api/reviews` | 业务监测任务、研判、协同工单与复盘闭环 |
 | POST | `/api/monitoring-tasks/{id}/execute` · `/api/scenario-runs/{id}/dispatch` | 立即运行任务；将确认的推演方案转为处置工单 |
-| POST | `/api/work-orders/{id}/feedback` | 提交现场反馈、经纬度与最多 5 张照片 |
+| POST | `/api/work-orders/{id}/feedback` | 提交现场反馈、经纬度与最多 10 个图片/视频/音频/PDF/Office/压缩包附件 |
 | POST | `/api/work-orders/{id}/feedback/{index}/assess` | 将现场反馈转入新一轮研判 |
 | GET · PATCH | `/api/support/accounts` · `/api/support/grids` · `/api/support/notifications` · `/api/support/audit` · `/api/support/sla-summary` | 公共支撑：身份、网格、提醒、审计和 SLA |
 | GET | `/api/traceability/graph` · `/api/traceability/export` | 统一业务关系图、按对象定位链路和完整 JSON 导出 |
@@ -228,6 +228,7 @@ flowchart LR
 | `CITYEYE_RESET_ON_START` | `false` | 启动时重置演示数据 |
 | `CITYEYE_FRONTEND_DIST` | `frontend/dist` | 托管的前端构建目录 |
 | `CITYEYE_MAX_UPLOAD_MB` | `20` | 单文件上传大小上限（MB） |
+| `CITYEYE_WORK_ORDER_ATTACHMENT_MB` | `200` | 工单现场附件单文件上限（MB）；单次合计最多 500 MB |
 | `CITYEYE_FINE_BUILDINGS_PATH` | `data/datasets/derived/buildings/wuhan_demo_buildings.geojson` | 精细建筑兼容入口；七城区分块位于同目录 `districts/` |
 | `VITE_USE_MOCK` | `false` | 前端强制使用离线快照 |
 | `VITE_BASEMAP` | `satellite` | 底图：`satellite` / `dark` / `offline` |
