@@ -500,6 +500,9 @@ def test_work_order_feedback_supports_media_documents_and_size_limits(client):
     for item in attachments:
         served = client.get(item["url"])
         assert served.status_code == 200 and served.content
+    ranged = client.get(attachments[0]["url"], headers={"Range": "bytes=0-3"})
+    assert ranged.status_code == 206
+    assert ranged.content == b"demo"
 
     unsupported = client.post(
         f"/api/work-orders/{order['id']}/feedback",
@@ -508,6 +511,16 @@ def test_work_order_feedback_supports_media_documents_and_size_limits(client):
     )
     assert unsupported.status_code == 400
     assert "不支持的文件类型" in unsupported.json()["detail"]
+    too_many = client.post(
+        f"/api/work-orders/{order['id']}/feedback",
+        data={"note": "附件数量超限"},
+        files=[
+            ("files", (f"attachment-{index}.txt", b"x", "text/plain"))
+            for index in range(11)
+        ],
+    )
+    assert too_many.status_code == 400
+    assert "最多提交 10 个" in too_many.json()["detail"]
 
     updated = client.patch(
         "/api/support/config",

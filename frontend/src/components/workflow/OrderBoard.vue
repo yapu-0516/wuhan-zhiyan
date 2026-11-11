@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage, type UploadFile, type UploadFiles, type UploadUserFile } from 'element-plus'
+import { ElMessage, type UploadFile, type UploadUserFile } from 'element-plus'
 import { Document, Location, Plus, UploadFilled } from '@element-plus/icons-vue'
 import {
   assessWorkOrderFeedback,
@@ -42,7 +42,8 @@ const feedbackNote = ref('')
 const feedbackOperator = ref('现场处置人员')
 const feedbackLongitude = ref<number | null>(null)
 const feedbackLatitude = ref<number | null>(null)
-const feedbackFiles = ref<UploadUserFile[]>([])
+const feedbackUploadList = ref<UploadUserFile[]>([])
+const selectedFeedbackAttachments = ref<Array<{ uid: number; file: File }>>([])
 const attachmentMaxMb = ref(200)
 const transferTarget = ref('')
 const transferNote = ref('')
@@ -275,13 +276,14 @@ function openFeedback() {
   feedbackOperator.value = currentName.value || selected.value.assignee || '现场处置人员'
   feedbackLongitude.value = relatedEvent.value?.longitude ?? null
   feedbackLatitude.value = relatedEvent.value?.latitude ?? null
-  feedbackFiles.value = []
+  feedbackUploadList.value = []
+  selectedFeedbackAttachments.value = []
   feedbackVisible.value = true
 }
 
 async function submitFeedback() {
   if (!selected.value || feedbackBusy.value) return
-  const files = feedbackFiles.value.flatMap((item) => (item.raw ? [item.raw] : []))
+  const files = selectedFeedbackAttachments.value.map((item) => item.file)
   if (!feedbackNote.value.trim() && !files.length) {
     ElMessage.warning('请填写现场情况或至少上传一个附件')
     return
@@ -382,32 +384,41 @@ function imageAttachments(item: FeedbackItem): FeedbackAttachment[] {
   return feedbackAttachments(item).filter((entry) => attachmentKind(entry) === 'image')
 }
 
-function onAttachmentChange(file: UploadFile, files: UploadFiles): void {
+function onAttachmentChange(file: UploadFile): void {
   const raw = file.raw
   if (!raw) return
   const suffix = fileSuffix(raw.name)
   if (!ATTACHMENT_SUFFIXES.has(suffix)) {
-    feedbackFiles.value = feedbackFiles.value.filter((item) => item.uid !== file.uid)
     ElMessage.warning(`${raw.name}：不支持该文件类型`)
     return
   }
   if (raw.size <= 0) {
-    feedbackFiles.value = feedbackFiles.value.filter((item) => item.uid !== file.uid)
     ElMessage.warning(`${raw.name}：文件为空`)
     return
   }
   if (raw.size > attachmentMaxMb.value * 1024 * 1024) {
-    feedbackFiles.value = feedbackFiles.value.filter((item) => item.uid !== file.uid)
     ElMessage.warning(`${raw.name} 超过单文件 ${attachmentMaxMb.value} MB 的限制`)
     return
   }
-  if (files.length > MAX_FEEDBACK_ATTACHMENTS) {
-    feedbackFiles.value = files.slice(0, MAX_FEEDBACK_ATTACHMENTS)
+  if (selectedFeedbackAttachments.value.length >= MAX_FEEDBACK_ATTACHMENTS) {
+    ElMessage.warning(`单次最多上传 ${MAX_FEEDBACK_ATTACHMENTS} 个附件`)
+    return
+  }
+  const duplicate = selectedFeedbackAttachments.value.some(
+    (item) =>
+      item.file.name === raw.name &&
+      item.file.size === raw.size &&
+      item.file.lastModified === raw.lastModified
+  )
+  if (!duplicate) {
+    selectedFeedbackAttachments.value.push({ uid: file.uid, file: raw })
   }
 }
 
-function onAttachmentExceed(): void {
-  ElMessage.warning(`单次最多上传 ${MAX_FEEDBACK_ATTACHMENTS} 个附件`)
+function removeSelectedAttachment(uid: number): void {
+  selectedFeedbackAttachments.value = selectedFeedbackAttachments.value.filter(
+    (item) => item.uid !== uid
+  )
 }
 </script>
 
@@ -580,7 +591,7 @@ function onAttachmentExceed(): void {
             </div>
           </section>
         </div>
-        <footer class="actions">
+        <div class="actions">
           <el-button
             :disabled="selected.status === 'verified' || selected.status === 'cancelled'"
             @click="openTransfer"
@@ -606,7 +617,7 @@ function onAttachmentExceed(): void {
             @click="advance(status)"
             >{{ ORDER_STATUS_META[status].label }}</el-button
           >
-        </footer>
+        </div>
       </template>
       <el-empty v-else description="选择一张工单查看执行情况" />
     </aside>
@@ -698,13 +709,12 @@ function onAttachmentExceed(): void {
       </div>
       <el-form-item :label="`现场附件（最多 ${MAX_FEEDBACK_ATTACHMENTS} 个）`">
         <el-upload
-          v-model:file-list="feedbackFiles"
+          v-model:file-list="feedbackUploadList"
           class="feedback-upload"
           :accept="ATTACHMENT_ACCEPT"
           :auto-upload="false"
-          :limit="MAX_FEEDBACK_ATTACHMENTS"
+          :show-file-list="false"
           :on-change="onAttachmentChange"
-          :on-exceed="onAttachmentExceed"
           multiple
         >
           <el-button :icon="UploadFilled">选择图片、视频、音频或文件</el-button>
@@ -715,6 +725,16 @@ function onAttachmentExceed(): void {
             </div>
           </template>
         </el-upload>
+        <div v-if="selectedFeedbackAttachments.length" class="feedback-upload__selection">
+          <article v-for="item in selectedFeedbackAttachments" :key="item.uid">
+            <el-icon><Document /></el-icon>
+            <span>
+              <b>{{ item.file.name }}</b>
+              <small>{{ attachmentSize(item.file.size) }}</small>
+            </span>
+            <el-button link type="danger" @click="removeSelectedAttachment(item.uid)">移除</el-button>
+          </article>
+        </div>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -1058,12 +1078,47 @@ function onAttachmentExceed(): void {
 }
 .feedback-upload__tip {
   margin-top: 5px;
-  color: var(--ce-text-faint);
-  font-size: 10.5px;
+  color: var(--ce-text-dim);
+  font-size: 11px;
   line-height: 1.55;
 }
-.feedback-upload :deep(.el-upload-list__item) {
-  color: var(--ce-text-dim);
+.feedback-upload__selection {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  margin-top: 8px;
+}
+.feedback-upload__selection article {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid var(--ce-divider);
+  background: rgba(7, 16, 25, 0.36);
+}
+.feedback-upload__selection .el-icon {
+  color: var(--ce-accent);
+}
+.feedback-upload__selection span {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+.feedback-upload__selection b,
+.feedback-upload__selection small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.feedback-upload__selection b {
+  color: var(--ce-text-strong);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.feedback-upload__selection small {
+  color: var(--ce-text-faint);
+  font-size: 10px;
 }
 .actions {
   display: flex;
