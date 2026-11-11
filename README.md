@@ -143,7 +143,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 
 项目已使用 Graphify 生成持久化代码知识图谱，覆盖前端、后端、大模型、情景引擎、算法和数据处理代码：
 
-- 3967 个节点、9627 条关系边、163 个社区
+- 3968 个节点、9628 条关系边、167 个社区
 - [交互式代码图](graphify-out/graph.html)
 - [调用流程与架构图](graphify-out/CALLFLOW.html)
 - [图谱审计报告](graphify-out/GRAPH_REPORT.md)
