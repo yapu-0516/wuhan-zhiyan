@@ -92,6 +92,12 @@ async function refresh() {
   ElMessage.success('数据清单已刷新')
 }
 
+function timestampValue(value: string | null | undefined): number | null {
+  if (!value) return null
+  const parsed = Date.parse(value.replace(' ', 'T'))
+  return Number.isNaN(parsed) ? null : parsed
+}
+
 onMounted(() => {
   void loadOperator()
   void load()
@@ -149,12 +155,14 @@ const filtered = computed(() => {
     if (statusFilter.value && d.status !== statusFilter.value) return false
     if (analysisFilter.value && (d.analysis_status ?? 'unknown') !== analysisFilter.value) return false
     if (timeRange.value?.length === 2) {
-      const from = Date.parse(timeRange.value[0].replace(' ', 'T'))
-      const to = Date.parse(timeRange.value[1].replace(' ', 'T'))
-      const start = d.time_start ? Date.parse(d.time_start.replace(' ', 'T')) : null
-      const end = d.time_end ? Date.parse(d.time_end.replace(' ', 'T')) : null
-      if (start !== null && start > to) return false
-      if (end !== null && end < from) return false
+      const from = timestampValue(timeRange.value[0])
+      const to = timestampValue(timeRange.value[1])
+      const start = timestampValue(d.time_start)
+      const end = timestampValue(d.time_end)
+      if (from !== null && to !== null) {
+        if (start !== null && start > to) return false
+        if (end !== null && end < from) return false
+      }
     }
     if (
       locationLongitude.value !== null &&
@@ -208,6 +216,14 @@ async function loadValidations(assetId: string) {
   } catch {
     validations.value = []
   }
+}
+
+async function reloadDetail() {
+  const assetId = detailRow.value?.id
+  await load(true)
+  const updated = assetId ? list.value.find((item) => item.id === assetId) : undefined
+  if (updated) detailRow.value = updated
+  await loadValidations(assetId ?? '')
 }
 
 function openDetail(row: DataItem) {
@@ -294,12 +310,10 @@ async function submitValidation() {
       notes: validationForm.notes.split('\n').map((item) => item.trim()).filter(Boolean),
       operator: validationForm.operator.trim() || currentName.value || '数据管理员'
     })
-    await load(true)
-    detailRow.value = list.value.find((item) => item.id === detailRow.value?.id) ?? detailRow.value
-    await loadValidations(detailRow.value?.id ?? '')
+    await reloadDetail()
     ElMessage.success('数据校验已完成，可分析状态已更新')
   } catch (error) {
-    ElMessage.error((error as Error).message || '数据校验失败')
+    ElMessage.error(errMsg(error, '数据校验失败'))
   } finally {
     validationBusy.value = false
   }
@@ -310,12 +324,10 @@ async function autoCheck() {
   autoChecking.value = true
   try {
     await autoCheckDataAsset(detailRow.value.id)
-    await load(true)
-    detailRow.value = list.value.find((item) => item.id === detailRow.value?.id) ?? detailRow.value
-    await loadValidations(detailRow.value?.id ?? '')
+    await reloadDetail()
     ElMessage.success('自动预检完成，请人工确认结论')
   } catch (error) {
-    ElMessage.error((error as Error).message || '自动预检失败')
+    ElMessage.error(errMsg(error, '自动预检失败'))
   } finally {
     autoChecking.value = false
   }
@@ -326,7 +338,7 @@ async function loadEmergencyResources() {
   try {
     resourceRows.value = await getEmergencyResources(resourceKind.value || undefined, resourceStatus.value || undefined)
   } catch (error) {
-    ElMessage.error((error as Error).message || '应急资源加载失败')
+    ElMessage.error(errMsg(error, '应急资源加载失败'))
   } finally {
     resourceLoading.value = false
   }
@@ -350,7 +362,7 @@ async function saveEmergencyResource(row: EmergencyResource) {
     resourceRows.value = resourceRows.value.map((item) => (item.id === updated.id ? updated : item))
     ElMessage.success(`${updated.name} 状态已更新`)
   } catch (error) {
-    ElMessage.error((error as Error).message || '资源状态更新失败')
+    ElMessage.error(errMsg(error, '资源状态更新失败'))
   }
 }
 

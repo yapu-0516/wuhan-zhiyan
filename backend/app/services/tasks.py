@@ -1,13 +1,9 @@
-"""AI 分析任务：创建 → 线程池异步执行真实算法 → 分阶段推送进度 → 保存结果 →（检出且有位置时）生成事件。
-
-阶段与进度：10 加载输入 → 35 算法推理 → 70 生成结论 → 100 完成。
-task_pacing 只控制每个阶段推送后的最短停顿，便于前端展示进度，不影响算法结果。
-"""
+"""分析任务从入队、执行、推送进度到生成事件的完整流程。"""
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
-import hashlib
 from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any

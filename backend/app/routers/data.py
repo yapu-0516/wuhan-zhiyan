@@ -1,19 +1,20 @@
-"""数据资产接口（docs/api.md §5）。"""
+"""数据资产查询、上传和校验接口。"""
 from __future__ import annotations
 
-from collections import Counter
 import csv
-from datetime import datetime
 import math
+from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy import or_, select
+from sqlalchemy.orm import Session
 
 from .. import timeutil
 from ..context import AppContext, bad_request, get_ctx, not_found
 from ..models import DataAsset, DataValidationRecord
-from ..schemas import DataItemOut, DataStatsOut, DataValidationCreate, DataValidationOut
+from ..schemas import DataItemOut, DataStatsOut, DataValidationCreate, DataValidationDecision, DataValidationOut
 from ..services.events import next_id
 from ..services.uploads import human_size, save_uploads
 
@@ -57,6 +58,56 @@ def validation_to_dict(row: DataValidationRecord) -> dict:
         "operator": row.operator,
         "created_at": timeutil.fmt(row.created_at),
     }
+
+
+def _validation_state(
+    decision: DataValidationDecision, checks: dict[str, bool], *, automatic: bool = False
+) -> tuple[str, float]:
+    passed = sum(checks.values())
+    if automatic:
+        return "pending", round(passed / len(checks) * 100, 1)
+    if decision == "pass":
+        return "ready", 100.0
+    if decision == "reject":
+        return "unavailable", 0.0
+    return "pending", round(55 + passed * 10, 1)
+
+
+def _default_validation_notes(decision: DataValidationDecision) -> list[str]:
+    if decision == "pass":
+        return ["坐标、时相与字段校验通过"]
+    if decision == "needs_repair":
+        return ["校验未通过，仍需修复或补全"]
+    return ["校验判定为不可用"]
+
+
+def _store_validation(
+    session: Session,
+    asset: DataAsset,
+    *,
+    decision: DataValidationDecision,
+    checks: dict[str, bool],
+    analysis_status: str,
+    quality_score: float,
+    notes: list[str],
+    operator: str,
+    now: datetime,
+) -> DataValidationRecord:
+    row = DataValidationRecord(
+        id=next_id(session, DataValidationRecord.id, "DV"),
+        asset_id=asset.id,
+        decision=decision,
+        checks=checks,
+        quality_score=quality_score,
+        notes=notes,
+        operator=operator,
+        created_at=now,
+    )
+    session.add(row)
+    asset.analysis_status = analysis_status
+    asset.quality_score = quality_score
+    asset.quality_notes = notes
+    return row
 
 
 @router.get("", response_model=list[DataItemOut], summary="数据资产清单（按获取时间倒序）")
@@ -218,38 +269,23 @@ def validate_data_asset(
     passed = sum(checks.values())
     if body.decision == "pass" and passed != 3:
         raise bad_request("校验通过前必须完成坐标、时相和字段三项检查")
-    if body.decision == "pass":
-        analysis_status = "ready"
-        quality_score = 100.0
-    elif body.decision == "reject":
-        analysis_status = "unavailable"
-        quality_score = 0.0
-    else:
-        analysis_status = "pending"
-        quality_score = round(55 + passed * 10, 1)
+    analysis_status, quality_score = _validation_state(body.decision, checks)
     now = timeutil.now()
     with ctx.session() as s:
         asset = s.get(DataAsset, asset_id)
         if asset is None:
             raise not_found(f"数据资源 {asset_id} 不存在")
         with ctx.id_lock:
-            row = DataValidationRecord(
-                id=next_id(s, DataValidationRecord.id, "DV"),
-                asset_id=asset.id,
+            row = _store_validation(
+                s,
+                asset,
                 decision=body.decision,
                 checks=checks,
+                analysis_status=analysis_status,
                 quality_score=quality_score,
-                notes=body.notes,
+                notes=body.notes or _default_validation_notes(body.decision),
                 operator=body.operator.strip() or "数据管理员",
-                created_at=now,
-            )
-            s.add(row)
-            asset.analysis_status = analysis_status
-            asset.quality_score = quality_score
-            asset.quality_notes = body.notes or (
-                ["坐标、时相与字段校验通过"] if body.decision == "pass"
-                else ["校验未通过，仍需修复或补全"] if body.decision == "needs_repair"
-                else ["校验判定为不可用"]
+                now=now,
             )
             s.commit()
         return validation_to_dict(row)
@@ -311,25 +347,20 @@ def auto_check_data_asset(asset_id: str, ctx: AppContext = Depends(get_ctx)) -> 
             except Exception as exc:  # noqa: BLE001
                 checks["fields"] = False
                 notes.append(f"CSV 解析失败：{exc}")
-        passed = all(checks.values())
-        decision = "needs_repair"
-        analysis_status = "pending"
-        quality_score = round(sum(checks.values()) / 3 * 100, 1)
+        decision: DataValidationDecision = "needs_repair"
+        analysis_status, quality_score = _validation_state(decision, checks, automatic=True)
         now = timeutil.now()
         with ctx.id_lock:
-            row = DataValidationRecord(
-                id=next_id(s, DataValidationRecord.id, "DV"),
-                asset_id=asset.id,
+            row = _store_validation(
+                s,
+                asset,
                 decision=decision,
                 checks=checks,
+                analysis_status=analysis_status,
                 quality_score=quality_score,
                 notes=notes,
                 operator="系统自动预检",
-                created_at=now,
+                now=now,
             )
-            s.add(row)
-            asset.analysis_status = analysis_status
-            asset.quality_score = quality_score
-            asset.quality_notes = notes
             s.commit()
         return validation_to_dict(row)

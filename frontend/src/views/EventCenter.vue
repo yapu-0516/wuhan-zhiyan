@@ -34,20 +34,26 @@ function queryText(v: unknown): string {
   return ''
 }
 
+function filterValue<T extends string>(value: unknown, allowed: readonly T[]): T | null {
+  const text = queryText(value)
+  return allowed.includes(text as T) ? (text as T) : null
+}
+
 function initialType(): EventType | '' {
-  const t = queryText(route.query.type)
-  return EVENT_TYPES.includes(t as EventType) ? (t as EventType) : ''
+  return filterValue(route.query.type, EVENT_TYPES) ?? ''
+}
+
+function initialStatus(): StatusFilter {
+  return filterValue(route.query.status, STATUS_VALUES) ?? 'all'
+}
+
+function initialSeverity(): Severity | '' {
+  return filterValue(route.query.sev, SEVERITY_VALUES) ?? ''
 }
 
 const typeFilter = ref<EventType | ''>(initialType())
-const statusFilter = ref<StatusFilter>(
-  STATUS_VALUES.includes(queryText(route.query.status) as StatusFilter)
-    ? (queryText(route.query.status) as StatusFilter)
-    : 'all'
-)
-const severityFilter = ref<Severity | ''>(
-  SEVERITY_VALUES.includes(queryText(route.query.sev) as Severity) ? (queryText(route.query.sev) as Severity) : ''
-)
+const statusFilter = ref<StatusFilter>(initialStatus())
+const severityFilter = ref<Severity | ''>(initialSeverity())
 const keyword = ref(queryText(route.query.kw))
 const activeOnly = ref(queryText(route.query.active) === '1')
 const todayOnly = ref(queryText(route.query.today) === '1')
@@ -83,10 +89,8 @@ function syncQuery() {
 /** URL query → 筛选状态（浏览器前进/后退、外部链接） */
 function applyQuery() {
   const nextType = initialType()
-  const status = queryText(route.query.status)
-  const nextStatus = STATUS_VALUES.includes(status as StatusFilter) ? (status as StatusFilter) : 'all'
-  const sev = queryText(route.query.sev)
-  const nextSev = SEVERITY_VALUES.includes(sev as Severity) ? (sev as Severity) : ''
+  const nextStatus = initialStatus()
+  const nextSev = initialSeverity()
   const nextKw = queryText(route.query.kw)
   const nextActive = queryText(route.query.active) === '1'
   const nextToday = queryText(route.query.today) === '1'

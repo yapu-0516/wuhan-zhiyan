@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 EventType = Literal["fire", "traffic", "building", "flood"]
+ScenarioType = EventType
 EventStatus = Literal["pending", "monitoring", "processing", "resolved"]
 Severity = Literal["low", "medium", "high", "critical"]
 EventSource = Literal["drone", "satellite", "video", "sensor", "citizen", "ai_task"]
@@ -223,13 +224,13 @@ class ReviewDraftOut(BaseModel):
 
 
 class ScenarioRequest(BaseModel):
-    scenario: Literal["fire", "traffic", "building", "flood", "random"] = "random"
+    scenario: EventType | Literal["random"] = "random"
 
 
 class ScenarioTemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     description: str = Field(default="", max_length=1000)
-    scenario_type: Literal["flood", "traffic", "fire", "building"]
+    scenario_type: ScenarioType
     parameters: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -242,7 +243,7 @@ class ScenarioTemplateOut(ScenarioTemplateCreate):
 class ScenarioTemplatePatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=128)
     description: str | None = Field(default=None, max_length=1000)
-    scenario_type: Literal["flood", "traffic", "fire", "building"] | None = None
+    scenario_type: ScenarioType | None = None
     parameters: dict[str, Any] | None = None
     operator: str = Field(default="情景模板编辑员", max_length=64)
 
@@ -253,7 +254,7 @@ class ScenarioTemplateRevisionOut(BaseModel):
     version_no: int
     name: str
     description: str
-    scenario_type: Literal["flood", "traffic", "fire", "building"]
+    scenario_type: ScenarioType
     parameters: dict[str, Any]
     operator: str
     created_at: str

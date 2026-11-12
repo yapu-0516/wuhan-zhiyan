@@ -4,6 +4,7 @@ from __future__ import annotations
 import mimetypes
 import re
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
 
 from fastapi import UploadFile
@@ -100,7 +101,7 @@ def save_uploads(
     return saved
 
 
-def remove(paths) -> None:  # noqa: ANN001 - 任意可迭代路径
+def remove(paths: Iterable[Path | str]) -> None:
     for p in paths:
         Path(p).unlink(missing_ok=True)
 

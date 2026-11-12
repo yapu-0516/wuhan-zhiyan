@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 监测数据源卡片：状态 / 设备在线率 / 实时吞吐 + 迷你折线 / 覆盖范围 / 最近活跃
+// 单个监测数据源的运行状态和最近吞吐。
 import { computed } from 'vue'
 import AnimatedNumber from '../common/AnimatedNumber.vue'
 import Sparkline from './Sparkline.vue'

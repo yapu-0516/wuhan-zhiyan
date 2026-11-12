@@ -1,8 +1,4 @@
-// 城市运行总览数据：GET /api/stats/overview
-// - 事件实时变化（revision）后防抖 1.5s 刷新，另每 30s 定时刷新；
-// - WS traffic.updated 实时更新全路网 TPI；
-// - 离线模式：快照总览为底，今日/已办结按真实当天由本地事件推导，趋势沿用快照并标注截止时间；
-// - 总览接口与快照均不可用时，完全由本地事件推导。
+// 总览数据优先取接口；离线或接口失败时，用事件和快照补出可展示的统计。
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { getOverview } from '@/api/stats'
 import { apiState, nowString } from '@/api/http'

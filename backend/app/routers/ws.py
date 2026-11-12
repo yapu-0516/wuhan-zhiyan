@@ -6,6 +6,7 @@ import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from .. import timeutil
+from ..services.realtime import envelope
 
 router = APIRouter()
 
@@ -16,11 +17,16 @@ async def ws_endpoint(ws: WebSocket) -> None:
     hub = ctx.hub
     await hub.connect(ws)
     try:
-        await ws.send_text(json.dumps({
-            "type": "hello",
-            "data": {"server_time": timeutil.fmt(timeutil.now()), "demo_mode": ctx.settings.demo_mode, "clients": hub.client_count},
-            "ts": timeutil.fmt(timeutil.now()),
-        }, ensure_ascii=False))
+        await ws.send_text(
+            envelope(
+                "hello",
+                {
+                    "server_time": timeutil.fmt(timeutil.now()),
+                    "demo_mode": ctx.settings.demo_mode,
+                    "clients": hub.client_count,
+                },
+            )
+        )
         while True:
             raw = await ws.receive_text()
             try:
@@ -28,7 +34,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
             except ValueError:
                 continue
             if isinstance(msg, dict) and msg.get("type") == "ping":
-                await ws.send_text(json.dumps({"type": "pong", "ts": timeutil.fmt(timeutil.now())}))
+                await ws.send_text(envelope("pong", None))
     except WebSocketDisconnect:
         pass
     finally:

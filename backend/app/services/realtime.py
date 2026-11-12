@@ -1,7 +1,6 @@
 """WebSocket 广播中心。
 
-消息格式 {"type", "data", "ts"}（docs/api.md §9）。publish() 线程安全：AI 任务线程、同步路由处理函数
-均可调用，消息被调度到事件循环中统一发送；单个客户端发送失败或超时即被移除，不影响其他客户端。
+后台线程通过 publish 投递消息；连接失败或超时的客户端会被单独移除。
 """
 from __future__ import annotations
 

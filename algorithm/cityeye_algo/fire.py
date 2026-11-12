@@ -56,7 +56,6 @@ class FireDetector:
     def analyze(self, inputs: Sequence[Path], out_dir: Path, prefix: str, **_: Any) -> AnalysisResult:
         return self.analyze_image(Path(inputs[0]), out_dir / f"{prefix}_annotated.jpg")
 
-    # ------------------------------------------------------------------ 主流程
     def analyze_image(self, path: Path, out_path: Path) -> AnalysisResult:
         t0 = time.perf_counter()
         p = self.p
@@ -157,7 +156,6 @@ class FireDetector:
             level=None,
         )
 
-    # ------------------------------------------------------------------ 烟雾
     def _smoke(
         self, rgb: np.ndarray, S: np.ndarray, V: np.ndarray, flame: np.ndarray, n_px: int
     ) -> tuple[float, list[ip.Region]]:

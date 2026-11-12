@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 核心指标：今日事件 / 待处置 / 处置率 / 平均响应
+// 总览核心指标。
 import AnimatedNumber from '../common/AnimatedNumber.vue'
 
 defineProps<{

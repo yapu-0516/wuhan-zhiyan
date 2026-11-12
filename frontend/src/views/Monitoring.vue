@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// 城市监测 —— 监测区域总览 / 数据源实时吞吐 / 实时路况 / 建筑安全监测
-// 实时数据来自 WebSocket：sensor.tick（数据源吞吐）、traffic.updated（路网路况）。
+// 城市监测页面，实时更新数据源吞吐和路网状态。
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getBuildings, getRoads } from '@/api/geo'
@@ -58,7 +57,6 @@ async function load() {
   loading.value = false
 }
 
-// ---------- 实时订阅 ----------
 const unsubs: (() => void)[] = []
 let clock: number | undefined
 

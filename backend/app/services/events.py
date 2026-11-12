@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from cityeye_algo import AnalysisResult
+from cityeye_algo import AnalysisResult, TYPE_CN
 from cityeye_algo.flood import FLOOD_LEVEL_CN
 from cityeye_algo.traffic import LEVEL_CN
 from fastapi import HTTPException
@@ -26,7 +26,6 @@ STATUS_TRANSITIONS: dict[str, tuple[str, ...]] = {
     "resolved": ("processing",),
 }
 STATUS_CN = {"pending": "待核查", "monitoring": "监测中", "processing": "处置中", "resolved": "已办结"}
-TYPE_CN = {"fire": "火灾", "traffic": "交通拥堵", "building": "建筑异常", "flood": "内涝积水"}
 ACTIVE = ("pending", "monitoring", "processing")
 
 _UNIT_BY_TYPE = {
@@ -42,8 +41,6 @@ def default_assignee(event_type: str, district: str) -> str:
     d = district or "江岸区"
     return _UNIT_BY_TYPE[event_type].format(d=d, s=d.removesuffix("区"))
 
-
-# ------------------------------------------------------------------ 序列化
 
 def event_to_dict(e: Event) -> dict[str, Any]:
     return {
@@ -99,8 +96,6 @@ def add_log(
     return entry
 
 
-# ------------------------------------------------------------------ 创建
-
 def create_event(
     ctx: "AppContext",
     session: Session,
@@ -147,8 +142,6 @@ def create_event(
     return e
 
 
-# ------------------------------------------------------------------ 流转
-
 def apply_patch(session: Session, e: Event, patch: EventPatch, now: datetime | None = None) -> Event:
     """按状态机更新事件并写日志；非法流转抛出 409。"""
     now = now or timeutil.now()
@@ -182,8 +175,6 @@ def transition(session: Session, e: Event, to_status: str, operator: str, note: 
     """系统内部流转（模拟器自动派单 / 办结），同样遵守状态机。"""
     apply_patch(session, e, EventPatch(status=to_status, assignee=assignee, operator=operator, note=note), now)  # type: ignore[arg-type]
 
-
-# ------------------------------------------------------------------ 由算法结果生成事件
 
 def severity_for(event_type: str, r: AnalysisResult) -> str:
     """算法指标 → 事件等级（Ⅳ low / Ⅲ medium / Ⅱ high / Ⅰ critical）。"""

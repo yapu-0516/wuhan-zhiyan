@@ -72,12 +72,18 @@ def overview(ctx: "AppContext", session: Session) -> dict[str, Any]:
     avg_response = round(sum(gaps) / len(gaps), 1) if gaps else 0.0
 
     start = now.replace(minute=0, second=0) - timedelta(hours=23)
-    trend = []
-    for h in range(24):
-        h0 = start + timedelta(hours=h)
-        h1 = h0 + timedelta(hours=1)
-        c = Counter(r.event_type for r in rows if h0 <= r.timestamp < h1)
-        trend.append({"time": h0.strftime("%H:00"), **{t: c.get(t, 0) for t in TYPES}})
+    hourly = [Counter() for _ in range(24)]
+    for row in rows:
+        index = int((row.timestamp - start).total_seconds() // 3600)
+        if 0 <= index < len(hourly):
+            hourly[index][row.event_type] += 1
+    trend = [
+        {
+            "time": (start + timedelta(hours=index)).strftime("%H:00"),
+            **{event_type: hourly[index].get(event_type, 0) for event_type in TYPES},
+        }
+        for index in range(24)
+    ]
 
     risk = Counter(session.scalars(select(SettlementSeries.risk_level)).all())
     city_tpi = ctx.traffic.city_tpi()
