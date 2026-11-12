@@ -29,6 +29,7 @@ from .context import AppContext
 from .routers import (
     data,
     demo,
+    drills,
     events,
     geo,
     llm,
@@ -193,6 +194,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ws.router,
         llm.router,
         scenario.router,
+        drills.router,
         workflow.router,
         support.router,
         traceability.router,

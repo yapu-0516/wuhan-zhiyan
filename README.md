@@ -120,7 +120,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 | **数据资源** | 空间数据资产清单与时空检索、地图定位、人工校验/自动预检；同时维护医院/消防/派出所/学校的容量、可用数量和调度状态 |
 | **AI 分析** | 4 类分析 × 18 份示例数据或自有数据上传；实时进度；标注结果图、检测框、指标、时序与预测曲线；检出即生成事件并可在三维场景定位 |
 | **虚拟人群仿真** | Three.js 低模人物叠加 Cesium 城市场景；支持人员类型、1—1000 人批量分布、单人路径运动、区域聚集、危险区疏散、实时统计与性能测试 |
-| **应急演练** | 独立平静基线页面：按火灾、交通、积水或建筑异常固定场景推演，支持 1/4/8 倍速、动态风险场、四出口、风险加权路径、出口排队、过程时间线和完成摘要 |
+| **应急演练** | 独立平静基线页面：支持固定场景、现有事件和情景会话带入，1/4/8 倍速、动态风险场、四出口、风险加权路径、出口排队、过程时间线和完成摘要；运行结果写入情景版本并自动生成演练复盘草稿 |
 | **智能情景推演** | 可从现有事件或情景模板创建，四种场景均可推演；支持模板编辑、删除与参数修订历史，从应急库存预留资源、受影响建筑/道路、三维回放、三方案对比、报告与结果导出、选定方案转工单 |
 | **监测任务** | 即时、周期、专项与演练任务配置；可保存和复用任务模板；立即运行真实算法；周期任务按到期时间自动启动并保留运行结果与失败原因 |
 | **风险研判** | 统一事件证据、地点、周边建筑/道路/设施、相近告警关联、缺失信息和多轮研判结论 |
@@ -143,7 +143,7 @@ cd frontend && VITE_USE_MOCK=true npm run build   # 产物在 frontend/dist，�
 
 项目已使用 Graphify 生成持久化代码知识图谱，覆盖前端、后端、大模型、情景引擎、算法和数据处理代码：
 
-- 3968 个节点、9628 条关系边、167 个社区
+- 4047 个节点、9842 条关系边、175 个社区
 - [交互式代码图](graphify-out/graph.html)
 - [调用流程与架构图](graphify-out/CALLFLOW.html)
 - [图谱审计报告](graphify-out/GRAPH_REPORT.md)
@@ -208,6 +208,7 @@ flowchart LR
 | GET · POST | `/api/llm/status` · `/api/llm/parse-task` · `/api/llm/chat` · `/api/llm/report` | 大模型状态、任务解析、多轮治理问答和事件研判报告 |
 | GET · POST | `/api/scenario/status` · `/api/scenario/sessions` · `/api/scenario/runs/{id}` | 情景会话、参数版本、模拟推演、对比与报告 |
 | GET · POST | `/api/monitoring-tasks` · `/api/monitoring-runs` · `/api/assessments` · `/api/work-orders` · `/api/reviews` | 业务监测任务、研判、协同工单与复盘闭环 |
+| GET · POST · PATCH | `/api/drills/runs` · `/api/drills/runs/{id}` | 演练运行、回放帧、情景版本关联和演练复盘草稿 |
 | POST | `/api/monitoring-tasks/{id}/execute` · `/api/scenario-runs/{id}/dispatch` | 立即运行任务；将确认的推演方案转为处置工单 |
 | POST | `/api/work-orders/{id}/feedback` | 提交现场反馈、经纬度与最多 10 个图片/视频/音频/PDF/Office/压缩包附件 |
 | POST | `/api/work-orders/{id}/feedback/{index}/assess` | 将现场反馈转入新一轮研判 |

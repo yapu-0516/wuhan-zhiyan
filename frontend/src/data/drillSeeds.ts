@@ -26,6 +26,8 @@ export interface DrillSeed {
   responseLabel: string
   responseMix: Array<{ type: 'firefighter' | 'rescuer'; count: number }>
   metrics: DrillMetric[]
+  scenarioSessionId?: string
+  scenarioParameters?: Record<string, unknown>
 }
 
 /**

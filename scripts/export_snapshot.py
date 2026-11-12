@@ -69,6 +69,7 @@ def main() -> None:
                 "monitoring_tasks.json": get("/monitoring-tasks"),
                 "task_templates.json": get("/task-templates"),
                 "scenario_templates.json": get("/scenario/templates"),
+                "drills.json": get("/drills/runs"),
                 "monitoring_runs.json": get("/monitoring-runs"),
                 "assessments.json": get("/assessments"),
                 "work_orders.json": get("/work-orders"),

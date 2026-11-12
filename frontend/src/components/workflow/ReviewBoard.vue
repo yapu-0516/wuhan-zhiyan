@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { CircleCheck, Download, Plus, Promotion } from '@element-plus/icons-vue'
 import {
@@ -11,6 +12,7 @@ import {
   reviewExportUrl,
   updateReview
 } from '@/api/workflow'
+import { getDrillRuns } from '@/api/drills'
 import type {
   MonitoringTask,
   MonitoringTaskTemplate,
@@ -20,10 +22,12 @@ import type {
   ReviewRecord,
   ReviewStatus
 } from '@/types/workflow'
+import type { DrillRun } from '@/types/workflow'
 import type { CityEvent } from '@/types/event'
 
 const props = defineProps<{ reviews: ReviewRecord[]; events: CityEvent[]; tasks: MonitoringTask[] }>()
 const emit = defineEmits<{ (e: 'refresh'): void }>()
+const route = useRoute()
 
 const selectedId = ref('')
 const createVisible = ref(false)
@@ -37,6 +41,7 @@ const approvalBusy = ref(false)
 const applyVisible = ref(false)
 const applyBusy = ref(false)
 const templates = ref<MonitoringTaskTemplate[]>([])
+const drills = ref<DrillRun[]>([])
 const applyTemplateId = ref('')
 const applyRuleJson = ref('')
 const displayed = computed(() => (caseMode.value ? cases.value : props.reviews))
@@ -54,18 +59,20 @@ const form = reactive({
 const entityOptions = computed(() =>
   form.entity_type === 'event'
     ? props.events.map((item) => ({ id: item.id, label: `${item.id} ${item.name}` }))
-    : props.tasks.map((item) => ({ id: item.id, label: `${item.id} ${item.name}` }))
+    : form.entity_type === 'monitoring_task'
+      ? props.tasks.map((item) => ({ id: item.id, label: `${item.id} ${item.name}` }))
+      : drills.value.map((item) => ({ id: item.id, label: `${item.id} ${item.title}` }))
 )
 
 function entityLabel(type: ReviewEntityType, id: string): string {
   if (type === 'event') return props.events.find((item) => item.id === id)?.name ?? id
   if (type === 'monitoring_task') return props.tasks.find((item) => item.id === id)?.name ?? id
-  return id
+  return drills.value.find((item) => item.id === id)?.title ?? id
 }
 
 function openCreate() {
   form.entity_type = 'event'
-  form.entity_id = props.events[0]?.id ?? props.tasks[0]?.id ?? ''
+  form.entity_id = props.events[0]?.id ?? props.tasks[0]?.id ?? drills.value[0]?.id ?? ''
   form.status = 'draft'
   form.summary = ''
   form.findings = ''
@@ -78,7 +85,12 @@ function openCreate() {
 
 function switchType(type: ReviewEntityType) {
   form.entity_type = type
-  form.entity_id = type === 'event' ? (props.events[0]?.id ?? '') : (props.tasks[0]?.id ?? '')
+  form.entity_id =
+    type === 'event'
+      ? (props.events[0]?.id ?? '')
+      : type === 'monitoring_task'
+        ? (props.tasks[0]?.id ?? '')
+        : (drills.value[0]?.id ?? '')
   draft.value = null
 }
 
@@ -212,7 +224,24 @@ async function applyRule() {
 
 onMounted(() => {
   void getTaskTemplates().then((items) => (templates.value = items)).catch(() => undefined)
+  void getDrillRuns()
+    .then((items) => {
+      drills.value = items
+      applyReviewQuery()
+    })
+    .catch(() => undefined)
 })
+
+function applyReviewQuery() {
+  const requestedReview = Array.isArray(route.query.reviewId)
+    ? route.query.reviewId[0]
+    : route.query.reviewId
+  if (requestedReview && props.reviews.some((item) => item.id === requestedReview)) {
+    selectedId.value = requestedReview
+  }
+}
+
+watch(() => props.reviews, applyReviewQuery, { immediate: true })
 </script>
 
 <template>
@@ -321,16 +350,14 @@ onMounted(() => {
           </el-select>
         </el-form-item>
       </div>
-      <el-form-item :label="form.entity_type === 'drill' ? '演练编号' : '关联记录'" required>
+      <el-form-item :label="form.entity_type === 'drill' ? '演练记录' : '关联记录'" required>
         <el-select
-          v-if="form.entity_type !== 'drill'"
           v-model="form.entity_id"
           filterable
           @change="draft = null"
         >
           <el-option v-for="item in entityOptions" :key="item.id" :value="item.id" :label="item.label" />
         </el-select>
-        <el-input v-else v-model.trim="form.entity_id" placeholder="输入演练记录编号" />
       </el-form-item>
       <div class="draft-actions">
         <el-button :loading="draftLoading" @click="autofillDraft">自动汇总过程与指标</el-button>

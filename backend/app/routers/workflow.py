@@ -663,6 +663,7 @@ def review_draft(
     event_ids: list[str] = []
     entity_label = entity_id
     analysis_task_ids: list[str] = []
+    drill_run: ScenarioRunRecord | None = None
     with ctx.session() as s:
         if entity_type == "event":
             event = s.get(Event, entity_id)
@@ -685,6 +686,12 @@ def review_draft(
             ).all()
             event_ids = list(dict.fromkeys(eid for run in runs for eid in (run.event_ids or [])))
             analysis_task_ids = [run.analysis_task_id for run in runs if run.analysis_task_id]
+        elif entity_type == "drill":
+            drill_run = s.get(ScenarioRunRecord, entity_id)
+            if drill_run is None or drill_run.payload.get("run_kind") != "drill":
+                raise not_found(f"演练运行 {entity_id} 不存在")
+            entity_label = drill_run.payload.get("title", entity_id)
+            runs = []
         else:
             runs = []
         assessments = s.scalars(
@@ -709,6 +716,46 @@ def review_draft(
         tasks = s.scalars(
             select(Task).where(Task.id.in_(analysis_task_ids))
         ).all() if analysis_task_ids else []
+
+    if drill_run is not None:
+        payload = drill_run.payload or {}
+        metrics = dict(payload.get("metrics") or {})
+        metrics.update(
+            {
+                "frame_count": len(payload.get("frames") or []),
+                "timeline_count": len(payload.get("timeline") or []),
+                "data_classification": drill_run.data_classification,
+            }
+        )
+        timeline = [
+            {
+                "at": drill_run.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "kind": "演练",
+                "operator": payload.get("operator", "应急演练人员"),
+                "text": item.get("text", ""),
+                "ref": f"{drill_run.id}:{index}",
+            }
+            for index, item in enumerate(payload.get("timeline") or [], 1)
+        ]
+        findings = [
+            "演练参数、版本、运行结果和过程时间线已关联保存",
+            "演练结果为模拟数据，不代表专业疏散或灾害模型结论",
+        ]
+        if metrics.get("peak_waiting"):
+            findings.append(f"峰值排队 {metrics['peak_waiting']} 人，需要检查出口组织")
+        return {
+            "entity_type": "drill",
+            "entity_id": entity_id,
+            "summary": payload.get("summary")
+            or f"演练「{entity_label}」共记录 {len(timeline)} 个过程节点。",
+            "metrics": metrics,
+            "findings": findings,
+            "recommendations": [
+                "将有效处置动作回写到同类任务模板和演练预案",
+                "接入真实步行网络和出口容量数据后重新标定演练参数",
+            ],
+            "timeline": timeline,
+        }
 
     sla = [(order, work_order_sla(order)) for order in orders]
     verified = [item for item in sla if item[0].status == "verified"]

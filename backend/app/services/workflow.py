@@ -738,6 +738,10 @@ def create_review(
         raise HTTPException(404, f"事件 {body.entity_id} 不存在")
     if body.entity_type == "monitoring_task" and session.get(MonitoringTask, body.entity_id) is None:
         raise HTTPException(404, f"监测任务 {body.entity_id} 不存在")
+    if body.entity_type == "drill":
+        drill = session.get(ScenarioRunRecord, body.entity_id)
+        if drill is None or drill.payload.get("run_kind") != "drill":
+            raise HTTPException(404, f"演练运行 {body.entity_id} 不存在")
     ts = now or timeutil.now()
     with ctx.id_lock:
         row = ReviewRecord(

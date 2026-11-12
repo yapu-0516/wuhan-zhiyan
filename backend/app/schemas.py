@@ -24,6 +24,7 @@ ReviewEntityType = Literal["event", "monitoring_task", "drill"]
 ReviewStatus = Literal["draft", "confirmed"]
 DataAnalysisStatus = Literal["ready", "pending", "unavailable", "unknown"]
 DataValidationDecision = Literal["pass", "needs_repair", "reject"]
+ScenarioDataClass = Literal["real", "professional_analysis", "simulated", "llm_inference", "unknown"]
 OperatorRole = Literal["duty", "analyst", "dispatcher", "field", "data_admin", "admin"]
 NotificationLevel = Literal["info", "success", "warning", "critical"]
 Metric = float | int | str
@@ -258,6 +259,49 @@ class ScenarioTemplateRevisionOut(BaseModel):
     parameters: dict[str, Any]
     operator: str
     created_at: str
+
+
+class DrillRunCreate(BaseModel):
+    drill_key: str = Field(min_length=1, max_length=64)
+    title: str = Field(min_length=1, max_length=128)
+    event_type: EventType
+    source_event_id: str | None = Field(default=None, max_length=32)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    timeline: list[dict[str, Any]] = Field(default_factory=list)
+    status: Literal["running", "completed"] = "running"
+    summary: str = Field(default="", max_length=4000)
+    operator: str = Field(default="应急演练人员", max_length=64)
+
+
+class DrillRunPatch(BaseModel):
+    parameters: dict[str, Any] | None = None
+    metrics: dict[str, Any] | None = None
+    timeline: list[dict[str, Any]] | None = None
+    frame: dict[str, Any] | None = None
+    status: Literal["running", "completed"] | None = None
+    summary: str | None = Field(default=None, max_length=4000)
+
+
+class DrillRunOut(BaseModel):
+    id: str
+    scenario_session_id: str
+    version_id: str
+    drill_key: str
+    title: str
+    event_type: EventType
+    source_event_id: str | None
+    status: Literal["running", "completed"]
+    provider: str
+    data_classification: ScenarioDataClass
+    parameters: dict[str, Any]
+    metrics: dict[str, Any]
+    timeline: list[dict[str, Any]]
+    frames: list[dict[str, Any]]
+    summary: str
+    limitations: list[str]
+    created_at: str
+    updated_at: str
 
 
 class ScenarioResourceSelection(BaseModel):

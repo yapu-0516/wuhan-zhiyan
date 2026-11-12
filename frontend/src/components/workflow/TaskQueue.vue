@@ -13,7 +13,9 @@ import {
   patchMonitoringTask
 } from '@/api/workflow'
 import { getDataList } from '@/api/data'
+import TaskParsePanel from '@/components/pages/TaskParsePanel.vue'
 import type { DataItem } from '@/types/api'
+import type { ParsedTask } from '@/types/llm'
 import { RUN_STATUS_META, SCHEDULE_META, TASK_STATUS_META, TASK_TRANSITIONS } from '@/types/workflow'
 import type {
   MonitoringRun,
@@ -112,6 +114,45 @@ function applyTemplate(templateId: string) {
   periodicMinutes.value = Number(template.rule_config.interval_minutes) || 60
   nextRunAt.value =
     template.schedule_type === 'periodic' ? localDateTime(periodicMinutes.value) : ''
+}
+
+function parsedDateTime(value: string | null): string {
+  if (!value) return ''
+  const relative = value.match(/(今天|明天|后天).*?(\d{1,2})[:：点时](\d{1,2})?/)
+  if (relative) {
+    const [, dayLabel, hour, minute = '00'] = relative
+    const date = new Date()
+    date.setDate(date.getDate() + (dayLabel === '明天' ? 1 : dayLabel === '后天' ? 2 : 0))
+    const pad = (part: number) => String(part).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${hour.padStart(2, '0')}:${minute}:00`
+  }
+  const match = value.match(/(\d{4})[-年/](\d{1,2})[-月/](\d{1,2})日?\s*(\d{1,2})[:：](\d{2})?/)
+  if (!match) return ''
+  const [, year, month, day, hour, minute = '00'] = match
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute}:00`
+}
+
+function applyParsedTask(payload: { task: ParsedTask; text: string }) {
+  const task = payload.task
+  if (task.event_type === 'unknown') {
+    ElMessage.warning('解析未确定风险类型，请补充事件类型后重试')
+    return
+  }
+  selectedTemplate.value = ''
+  createForm.event_type = task.event_type
+  createForm.area_name = task.location?.trim() || '武汉中心城区'
+  createForm.name =
+    `${EVENT_TYPE_META[task.event_type].label} · ${createForm.area_name}专项监测`
+  createForm.rule_config = {
+    natural_language: payload.text.trim(),
+    analysis_targets: task.analysis_targets,
+    extracted_facts: task.extracted_facts,
+    missing_information: task.missing_information
+  }
+  algorithmParamsText.value = '{}'
+  startAt.value = parsedDateTime(task.event_time)
+  triggerThreshold.value = null
+  ElMessage.success('解析结果已填入任务表单，请核对后创建')
 }
 
 function openSaveTemplate() {
@@ -427,6 +468,7 @@ onMounted(() => {
   </div>
 
   <el-dialog v-model="createVisible" title="新建监测任务" width="min(560px, 94vw)" append-to-body>
+    <TaskParsePanel compact applyable @apply="applyParsedTask" />
     <el-form label-position="top">
       <el-form-item label="从模板创建（可选）">
         <el-select

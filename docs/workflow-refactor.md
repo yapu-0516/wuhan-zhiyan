@@ -43,6 +43,8 @@
 | GET/PATCH | `/api/work-orders/{id}` | 工单详情和执行流转 |
 | POST | `/api/work-orders/{id}/feedback` | 提交现场文字、定位和最多 10 个多媒体/文档附件 |
 | GET/POST | `/api/reviews` | 查询、创建复盘记录 |
+| GET/POST/PATCH | `/api/drills/runs` · `/api/drills/runs/{id}` | 演练运行、回放帧和情景版本关联 |
+| POST | `/api/drills/runs/{id}/review` | 生成或获取演练复盘草稿 |
 
 周期任务使用 `rule_config.interval_minutes` 保存频率，`next_run_at` 保存下次执行时间。
 后端调度器只执行 `schedule_type=periodic`、`status=scheduled` 且已到期、尚未超过 `end_at` 的任务。
@@ -51,6 +53,7 @@
 `monitoring_task_templates` 保存可复用任务模板，前端可从模板带入区域、风险类型、数据资源、
 周期、责任人和通知对象，也可将现有任务另存为模板。模板不是运行中的 AI 任务。
 任务模板可在页面编辑、删除并查看规则修订历史；规则变更写入 `task_template_revisions`。
+新建任务表单支持自然语言解析，风险类型、区域、时间、关注目标和事实会回填到可编辑表单。
 任务表单同时支持开始/结束时间、按场景设置触发阈值和通知对象；配置写入任务记录，
 运行记录继续保存覆盖范围和算法质量。
 规则 JSON 还支持 `conditions` 多指标条件、`min_consecutive` 连续命中次数和
@@ -93,6 +96,8 @@ pending/accepted/in_progress → cancelled
 情景模板保存场景类型与完整参数，可从模板建立会话并直接运行，不需要重新输入整段假设。
 情景模板支持编辑、删除与参数修订历史；每次编辑都生成不可变版本，已运行结果继续引用原版本。
 情景还可从应急资源库存选择具体资源形成预留，修改选择时释放旧预留并重新占用。
+应急演练复用 `ScenarioSession`、`ScenarioVersion` 和 `ScenarioRunRecord` 保存参数、运行状态与回放帧，
+运行结束后自动生成 `entity_type=drill` 的复盘草稿；演练不计入真实告警与真实处置统计。
 
 现场反馈保存为工单 `feedback` 时间线中的 `field_feedback` 记录，包含操作人、时间、定位、文字和
 图片、视频、音频、PDF、Office、文本或压缩包附件。附件记录类型、MIME 类型、大小和下载地址；

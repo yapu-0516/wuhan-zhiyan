@@ -43,8 +43,11 @@ from .models import (
     OperatorAccount,
     ReviewRecord,
     ResponsibilityGrid,
+    ScenarioRunRecord,
+    ScenarioSession,
     ScenarioTemplate,
     ScenarioTemplateRevision,
+    ScenarioVersion,
     SettlementSeries,
     Source,
     Task,
@@ -408,6 +411,99 @@ def ensure_support_data(ctx: "AppContext") -> None:
                 )
             )
         s.commit()
+
+        if s.get(ScenarioRunRecord, "DR0001") is None:
+            drill_params = {
+                "location_name": "江汉区",
+                "longitude": 114.285684,
+                "latitude": 30.579608,
+                "simulation_speed": 4,
+                "risk_radius_m": 230,
+            }
+            drill_session = ScenarioSession(
+                id="SCDRILL0001",
+                title="万达商业广场消防演练",
+                scenario_type="fire",
+                state="completed",
+                parameters=drill_params,
+                messages=[],
+                current_version_id="SVDRILL0001",
+                last_comparison=None,
+                created_at=now - timedelta(days=1),
+                updated_at=now - timedelta(days=1),
+            )
+            drill_version = ScenarioVersion(
+                id="SVDRILL0001",
+                session_id=drill_session.id,
+                version_no=1,
+                scenario_type="fire",
+                title=drill_session.title,
+                parameters=drill_params,
+                created_at=now - timedelta(days=1),
+            )
+            drill_run = ScenarioRunRecord(
+                id="DR0001",
+                session_id=drill_session.id,
+                version_id=drill_version.id,
+                scenario_type="fire",
+                provider="local-crowd-simulator",
+                data_classification="simulated",
+                status="success",
+                payload={
+                    "run_kind": "drill",
+                    "drill_key": "fire-wanda",
+                    "title": drill_session.title,
+                    "source_event_id": None,
+                    "parameters": drill_params,
+                    "metrics": {
+                        "initial_affected": 38,
+                        "evacuated": 38,
+                        "safe_people": 36,
+                        "peak_waiting": 9,
+                        "hazard_radius_m": 230,
+                        "replans": 3,
+                        "active_exits": 4,
+                        "closed_roads": 2,
+                        "elapsed_sec": 96,
+                        "responders": 24,
+                        "bottleneck_exit": "东南出口",
+                    },
+                    "timeline": [
+                        {"time": 0, "text": "识别建筑火情"},
+                        {"time": 8, "text": "启动人员疏散"},
+                        {"time": 20, "text": "消防与救援力量进入现场"},
+                        {"time": 96, "text": "疏散完成"},
+                    ],
+                    "frames": [{"offset_sec": 96, "risk_radius_m": 230, "safe_people": 36}],
+                    "summary": "万达商业广场消防演练完成，38 名模拟人员纳入疏散，峰值排队 9 人。",
+                    "drill_status": "completed",
+                    "operator": "演练组织员",
+                    "limitations": ["轻量演示模拟，不代表专业疏散模型结果"],
+                    "updated_at": timeutil.fmt(now - timedelta(days=1)),
+                },
+                created_at=now - timedelta(days=1),
+            )
+            s.add(drill_session)
+            s.flush()
+            s.add(drill_version)
+            s.flush()
+            s.add(drill_run)
+            if s.get(ReviewRecord, "RV0002") is None:
+                s.add(
+                    ReviewRecord(
+                        id="RV0002",
+                        entity_type="drill",
+                        entity_id="DR0001",
+                        status="draft",
+                        summary=drill_run.payload["summary"],
+                        metrics=drill_run.payload["metrics"],
+                        findings=["演练记录与情景版本已关联", "峰值排队暴露出口组织问题"],
+                        recommendations=["复核东南出口组织", "接入真实步行网络后重新标定"],
+                        created_at=now - timedelta(days=1),
+                        updated_at=now - timedelta(days=1),
+                    )
+                )
+            s.commit()
 
 
 def _seed_workflow(ctx: "AppContext", s: Session, now: datetime) -> None:

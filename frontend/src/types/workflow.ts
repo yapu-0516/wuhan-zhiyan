@@ -196,6 +196,49 @@ export interface ScenarioDispatchCreate {
   actions?: ScenarioActionCreate[]
 }
 
+export interface DrillRun {
+  id: string
+  scenario_session_id: string
+  version_id: string
+  drill_key: string
+  title: string
+  event_type: import('./event').EventType
+  source_event_id: string | null
+  status: 'running' | 'completed'
+  provider: string
+  data_classification: 'simulated'
+  parameters: Record<string, unknown>
+  metrics: Record<string, unknown>
+  timeline: Array<{ time: number; text: string }>
+  frames: Array<Record<string, unknown>>
+  summary: string
+  limitations: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface DrillRunCreate {
+  drill_key: string
+  title: string
+  event_type: import('./event').EventType
+  source_event_id?: string | null
+  parameters?: Record<string, unknown>
+  metrics?: Record<string, unknown>
+  timeline?: Array<{ time: number; text: string }>
+  status?: 'running' | 'completed'
+  summary?: string
+  operator?: string
+}
+
+export interface DrillRunUpdate {
+  parameters?: Record<string, unknown>
+  metrics?: Record<string, unknown>
+  timeline?: Array<{ time: number; text: string }>
+  frame?: Record<string, unknown>
+  status?: 'running' | 'completed'
+  summary?: string
+}
+
 export interface ReviewRecord {
   id: string
   entity_type: ReviewEntityType

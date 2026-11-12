@@ -38,6 +38,10 @@ export function createScenarioSession(eventId?: string, templateId?: string): Pr
   })
 }
 
+export function getScenarioSession(sessionId: string): Promise<ScenarioSessionView> {
+  return request(`/scenario/sessions/${encodeURIComponent(sessionId)}`)
+}
+
 export function getScenarioTemplates(): Promise<ScenarioTemplate[]> {
   return request(
     '/scenario/templates',

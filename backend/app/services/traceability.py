@@ -201,6 +201,12 @@ def build_traceability_graph(
                 nodes, "drill", row.entity_id, f"演练 {row.entity_id}", row.status, row.updated_at,
                 "演练记录", {"entity_type": row.entity_type},
             )
+            _add_edge(
+                edges,
+                _node_id("scenario_run", row.entity_id),
+                _node_id("drill", row.entity_id),
+                "形成演练",
+            )
         _add_edge(edges, _node_id(source_type, row.entity_id), _node_id("review", row.id), "形成复盘")
 
     selected_ids: set[str] | None = None

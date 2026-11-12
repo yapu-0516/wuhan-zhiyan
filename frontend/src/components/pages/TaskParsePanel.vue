@@ -11,8 +11,11 @@ import type { EventType } from '@/types/event'
 import { EVENT_TYPE_META } from '@/types/event'
 import { ANALYSIS_TARGET_LABEL, type ParsedTask } from '@/types/llm'
 
-const props = defineProps<{ compact?: boolean }>()
-const emit = defineEmits<{ (e: 'goto', type: EventType): void }>()
+const props = defineProps<{ compact?: boolean; applyable?: boolean }>()
+const emit = defineEmits<{
+  (e: 'goto', type: EventType): void
+  (e: 'apply', payload: { task: ParsedTask; text: string }): void
+}>()
 
 const text = ref('')
 const busy = ref(false)
@@ -75,6 +78,14 @@ async function run() {
             </span>
             <el-button size="small" type="primary" plain @click="emit('goto', knownType!)">
               前往{{ EVENT_TYPE_META[knownType].label }}场景
+            </el-button>
+            <el-button
+              v-if="props.applyable"
+              size="small"
+              type="primary"
+              @click="emit('apply', { task: result, text })"
+            >
+              填入任务表单
             </el-button>
           </template>
           <span v-else class="tp__unknown">未识别（需要补充事件类型）</span>

@@ -245,6 +245,14 @@ function exportResult() {
   if (run.value) window.open(scenarioExportUrl(run.value.run_id), '_blank', 'noopener')
 }
 
+function openDrill() {
+  if (!session.value) return
+  void router.push({
+    path: '/drill',
+    query: { scenarioSessionId: session.value.session_id }
+  })
+}
+
 async function openResources() {
   try {
     resources.value = await getEmergencyResources()
@@ -654,6 +662,7 @@ onBeforeUnmount(() => {
           <el-button size="small" :icon="Document" :loading="busy" @click="makeReport">生成报告</el-button>
           <el-button size="small" :icon="Setting" @click="openResources">资源约束</el-button>
           <el-button size="small" :icon="Download" @click="exportResult">导出结果</el-button>
+          <el-button size="small" :icon="VideoPlay" @click="openDrill">进入演练</el-button>
           <el-button size="small" type="primary" :icon="Tickets" @click="openDispatch">转为处置工单</el-button>
           <el-button size="small" @click="openSaveTemplate">保存模板</el-button>
           <el-button size="small" @click="openTemplateManage">模板管理</el-button>

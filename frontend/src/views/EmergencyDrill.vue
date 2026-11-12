@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
 import * as Cesium from 'cesium'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Aim, FirstAidKit, RefreshLeft, SwitchButton, Van, VideoPlay } from '@element-plus/icons-vue'
 import CesiumViewer from '@/components/CesiumViewer.vue'
 import { DRILL_SEEDS, type DrillSeed } from '@/data/drillSeeds'
+import { getEvents } from '@/api/event'
+import { getScenarioSession } from '@/api/scenario'
 import type { CrowdLayer } from '@/components/scene/crowd/crowdLayer'
 import type { CrowdStats, VehicleStats } from '@/components/scene/crowd/types'
 import { hazardProfile, requiresPedestrianEvacuation } from '@/components/scene/crowd/hazard'
 import type { LayerVisibility } from '@/components/scene/types'
+import { createDrillReview, createDrillRun, getDrillRun, updateDrillRun } from '@/api/drills'
+import type { CityEvent } from '@/types/event'
+import { EVENT_TYPE_META, SEVERITY_META } from '@/types/event'
+import type { DrillRun } from '@/types/workflow'
+import { SCENARIO_LABEL } from '@/types/scenario'
 
 type DrillPhase = 'calm' | 'detected' | 'evacuating' | 'responding'
 
@@ -16,9 +23,12 @@ defineOptions({ name: 'EmergencyDrill' })
 
 const viewerRef = ref<InstanceType<typeof CesiumViewer> | null>(null)
 const route = useRoute()
+const router = useRouter()
 const phase = ref<DrillPhase>('calm')
 const seed = ref<DrillSeed | null>(null)
 const selectedSeedKey = ref(DRILL_SEEDS[0].key)
+const eventSeeds = ref<DrillSeed[]>([])
+const selectedEventSeedKey = ref('')
 const simulationSpeed = ref(4)
 const initialAffected = ref(0)
 const currentInRisk = ref(0)
@@ -39,6 +49,9 @@ const closedRoads = ref(0)
 const completed = ref(false)
 const timelineEvents = ref<Array<{ time: number; text: string }>>([])
 const responders = ref(0)
+const drillRunId = ref('')
+const drillReviewId = ref('')
+const persistState = ref<'idle' | 'syncing' | 'saved' | 'offline'>('idle')
 const actionText = ref('城市处于日常运行状态，可以随时开始一次异常事件演练。')
 const crowdStats = ref<CrowdStats>({
   total: 0,
@@ -70,6 +83,7 @@ let lastReplanCount = 0
 let lastQuietRadius = 0
 let queueEventShown = false
 let autoStarted = false
+let syncChain: Promise<void> = Promise.resolve()
 
 const active = computed(() => phase.value !== 'calm' && !!seed.value)
 const canEvacuate = computed(() => !!seed.value && requiresPedestrianEvacuation(seed.value.eventType))
@@ -93,9 +107,29 @@ const accent = computed(() => seed.value?.color ?? '#72c39a')
 const evacuationProgress = computed(() =>
   evacuated.value ? Math.max(0, Math.min(100, (safePeople.value / evacuated.value) * 100)) : 0
 )
-const selectedSeed = computed(() => DRILL_SEEDS.find((item) => item.key === selectedSeedKey.value) ?? DRILL_SEEDS[0])
+const drillOptions = computed(() => {
+  const unique = new Map(DRILL_SEEDS.map((item) => [item.key, item]))
+  for (const item of eventSeeds.value) unique.set(item.key, item)
+  return [...unique.values()]
+})
+const scenarioPickerOptions = computed(() => [
+  ...DRILL_SEEDS,
+  ...eventSeeds.value.filter((item) => item.scenarioSessionId)
+])
+const selectedSeed = computed(
+  () => drillOptions.value.find((item) => item.key === selectedSeedKey.value) ?? DRILL_SEEDS[0]
+)
 const visibleTimeline = computed(() => timelineEvents.value.slice(-2))
 const speedOptions = [1, 4, 8]
+const persistLabel = computed(
+  () =>
+    ({
+      idle: '尚未记录',
+      syncing: '同步中',
+      saved: drillReviewId.value ? `已复盘 ${drillReviewId.value}` : '运行已保存',
+      offline: '离线演示，仅本地运行'
+    })[persistState.value]
+)
 
 function formatElapsed(seconds: number): string {
   return `${Math.max(0, Math.round(seconds))}s`
@@ -103,6 +137,64 @@ function formatElapsed(seconds: number): string {
 
 function crowd(): CrowdLayer | null {
   return viewerRef.value?.getCrowd() ?? null
+}
+
+function radiusForType(eventType: DrillSeed['eventType']): number {
+  return { fire: 230, traffic: 190, flood: 260, building: 170 }[eventType]
+}
+
+function eventToDrillSeed(event: CityEvent): DrillSeed {
+  const base = DRILL_SEEDS.find((item) => item.eventType === event.event_type) ?? DRILL_SEEDS[0]
+  const metrics = Object.entries(event.metrics ?? {})
+    .slice(0, 3)
+    .map(([label, value]) => ({ label, value: typeof value === 'number' ? String(value) : String(value ?? '—') }))
+  return {
+    ...base,
+    key: `event-${event.id}`,
+    sourceEventId: event.id,
+    eventType: event.event_type,
+    typeLabel: EVENT_TYPE_META[event.event_type].label,
+    name: event.name,
+    severity: event.severity,
+    severityLabel: SEVERITY_META[event.severity].label,
+    district: event.district,
+    address: event.address || event.district,
+    longitude: event.longitude,
+    latitude: event.latitude,
+    confidence: event.confidence,
+    description: event.description || base.description,
+    riskRadiusM: radiusForType(event.event_type),
+    metrics: metrics.length ? metrics : base.metrics
+  }
+}
+
+async function scenarioToDrillSeed(sessionId: string): Promise<DrillSeed | null> {
+  const session = await getScenarioSession(sessionId)
+  if (!session.scenario_type) return null
+  const base = DRILL_SEEDS.find((item) => item.eventType === session.scenario_type) ?? DRILL_SEEDS[0]
+  const parameters = session.parameters ?? {}
+  const frame = session.latest_run?.frames?.[0]
+  const location = String(parameters.location_name || base.address)
+  const metrics = Object.entries(parameters)
+    .filter(([, value]) => typeof value === 'number' || typeof value === 'string')
+    .slice(0, 3)
+    .map(([label, value]) => ({ label, value: String(value) }))
+  return {
+    ...base,
+    key: `scenario-${session.session_id}`,
+    sourceEventId: String(parameters.source_event_id || base.sourceEventId),
+    eventType: session.scenario_type,
+    typeLabel: `${SCENARIO_LABEL[session.scenario_type]}演练`,
+    name: session.title,
+    district: location,
+    address: location,
+    longitude: Number(parameters.longitude ?? frame?.zones[0]?.longitude ?? base.longitude),
+    latitude: Number(parameters.latitude ?? frame?.zones[0]?.latitude ?? base.latitude),
+    riskRadiusM: Number(parameters.danger_radius_m ?? frame?.zones[0]?.radius_m ?? base.riskRadiusM),
+    metrics: metrics.length ? metrics : base.metrics,
+    scenarioSessionId: session.session_id,
+    scenarioParameters: { ...parameters } as Record<string, unknown>
+  }
 }
 
 function pushTimeline(text: string, time = elapsedSec.value) {
@@ -114,6 +206,100 @@ function pushTimeline(text: string, time = elapsedSec.value) {
 function setSimulationSpeed(speed: number) {
   simulationSpeed.value = speed
   crowd()?.setSimulationSpeed(speed)
+}
+
+function chooseEventSeed(key: string) {
+  if (key) selectedSeedKey.value = key
+}
+
+function drillMetrics(): Record<string, number | string | boolean> {
+  return {
+    initial_affected: initialAffected.value,
+    current_in_risk: currentInRisk.value,
+    evacuated: evacuated.value,
+    safe_people: safePeople.value,
+    responding_people: reactingPeople.value,
+    moving_people: movingPeople.value,
+    waiting_people: waitingPeople.value,
+    peak_waiting: peakWaiting.value,
+    hazard_radius_m: hazardRadiusM.value,
+    replans: replans.value,
+    active_exits: activeExits.value,
+    closed_roads: closedRoads.value,
+    elapsed_sec: elapsedSec.value,
+    responders: responders.value,
+    bottleneck_exit: bottleneckExit.value,
+    traffic_controlled: trafficControlled.value
+  }
+}
+
+function drillSummary(completedRun: boolean): string {
+  const item = seed.value
+  if (!item) return ''
+  return completedRun
+    ? `演练「${item.name}」结束：${Math.round(elapsedSec.value)} 秒，共疏散 ${safePeople.value} 名模拟人员，峰值排队 ${peakWaiting.value} 人。`
+    : `演练「${item.name}」正在进行，已纳入 ${evacuated.value} 名模拟人员。`
+}
+
+async function syncDrillRun(completedRun = false): Promise<void> {
+  const item = seed.value
+  if (!item) return
+  persistState.value = 'syncing'
+  try {
+    const payload = {
+      parameters: {
+        simulation_speed: simulationSpeed.value,
+        risk_radius_m: item.riskRadiusM,
+        response_mix: item.responseMix,
+        source_event_id: item.sourceEventId,
+        scenario_session_id: item.scenarioSessionId ?? null,
+        scenario_parameters: item.scenarioParameters ?? {}
+      },
+      metrics: drillMetrics(),
+      timeline: timelineEvents.value,
+      status: (completedRun ? 'completed' : 'running') as 'completed' | 'running',
+      summary: drillSummary(completedRun)
+    }
+    if (!drillRunId.value) {
+      const run = await createDrillRun({
+        drill_key: item.key,
+        title: item.name,
+        event_type: item.eventType,
+        source_event_id:
+          /^E\d{4}$/.test(item.sourceEventId) && !item.sourceEventId.startsWith('E9')
+            ? item.sourceEventId
+            : null,
+        ...payload,
+        operator: '应急演练人员'
+      })
+      drillRunId.value = run.id
+    } else {
+      await updateDrillRun(drillRunId.value, {
+        ...payload,
+        frame: {
+          offset_sec: Math.round(elapsedSec.value),
+          hazard_radius_m: hazardRadiusM.value,
+          safe_people: safePeople.value,
+          waiting_people: waitingPeople.value,
+          phase: phase.value
+        }
+      })
+    }
+    if (completedRun && !drillReviewId.value) {
+      const review = await createDrillReview(drillRunId.value)
+      drillReviewId.value = review.id
+    }
+    persistState.value = 'saved'
+  } catch {
+    persistState.value = 'offline'
+  }
+}
+
+function queueDrillSync(completedRun = false): Promise<void> {
+  syncChain = syncChain
+    .then(() => syncDrillRun(completedRun))
+    .catch(() => undefined)
+  return syncChain
 }
 
 function refreshStats() {
@@ -159,6 +345,7 @@ function refreshStats() {
     if (progress.completed && !completed.value) {
       completed.value = true
       pushTimeline(`人员疏散完成，用时 ${Math.max(1, Math.round(progress.elapsedSec))} 秒`)
+      void queueDrillSync(true)
     }
   }
 }
@@ -280,6 +467,8 @@ async function triggerIncident() {
   lastQuietRadius = item.riskRadiusM
   queueEventShown = false
   timelineEvents.value = []
+  drillRunId.value = ''
+  drillReviewId.value = ''
   actionText.value = `已加载固定演示场景 ${item.sourceEventId}。`
   pushTimeline(`识别${item.typeLabel}：${item.name}`, 0)
   initialAffected.value = layer.countWithinRadius(item.longitude, item.latitude, item.riskRadiusM)
@@ -292,6 +481,7 @@ async function triggerIncident() {
   layer.setVehicleIncident(item.longitude, item.latitude, item.riskRadiusM, item.eventType !== 'traffic')
   refreshStats()
   renderIncident(item)
+  void queueDrillSync()
   await nextTick()
   void viewerRef.value?.flyTo(item.longitude, item.latitude, {
     range: Math.max(560, item.riskRadiusM * 3.1),
@@ -311,6 +501,7 @@ function startEvacuation() {
   actionText.value = `${moved} 名模拟人员已进入疏散队列，将按个体反应时间分批起步。`
   pushTimeline('启动人员疏散与安全出口选择')
   refreshStats()
+  void queueDrillSync()
 }
 
 function startTrafficControl() {
@@ -323,6 +514,7 @@ function startTrafficControl() {
   actionText.value = `已启动拥堵分流，${rerouted} 辆受影响车辆选择绕行路径。`
   pushTimeline(`启动交通疏导，${rerouted} 辆车开始分流`)
   refreshStats()
+  void queueDrillSync()
 }
 
 function dispatchResponse() {
@@ -339,9 +531,11 @@ function dispatchResponse() {
   actionText.value = `${item.responseLabel}力量已抵达，共新增 ${added} 名模拟救援人员。`
   pushTimeline(`${item.responseLabel}力量进入现场`)
   refreshStats()
+  void queueDrillSync()
 }
 
 async function resetDrill() {
+  if (drillRunId.value && !drillReviewId.value) await queueDrillSync(true)
   removeIncidentGraphic()
   seed.value = null
   phase.value = 'calm'
@@ -364,6 +558,9 @@ async function resetDrill() {
   timelineEvents.value = []
   responders.value = 0
   trafficControlled.value = false
+  drillRunId.value = ''
+  drillReviewId.value = ''
+  persistState.value = 'idle'
   actionText.value = '演练已复位，城市恢复平静运行。'
   layers.pois = false
   const layer = crowd()
@@ -373,6 +570,54 @@ async function resetDrill() {
   await resetView()
 }
 
+function numberMetric(value: unknown): number {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+async function restoreDrillRun(run: DrillRun): Promise<void> {
+  const item =
+    drillOptions.value.find((entry) => entry.key === run.drill_key) ??
+    DRILL_SEEDS.find((entry) => entry.eventType === run.event_type)
+  if (!item) return
+  selectedSeedKey.value = item.key
+  seed.value = item
+  drillRunId.value = run.id
+  phase.value = run.status === 'completed' ? 'responding' : 'detected'
+  initialAffected.value = numberMetric(run.metrics.initial_affected)
+  currentInRisk.value = numberMetric(run.metrics.current_in_risk)
+  evacuated.value = numberMetric(run.metrics.evacuated)
+  safePeople.value = numberMetric(run.metrics.safe_people)
+  reactingPeople.value = numberMetric(run.metrics.responding_people)
+  movingPeople.value = numberMetric(run.metrics.moving_people)
+  waitingPeople.value = numberMetric(run.metrics.waiting_people)
+  peakWaiting.value = numberMetric(run.metrics.peak_waiting)
+  hazardRadiusM.value = numberMetric(run.metrics.hazard_radius_m) || item.riskRadiusM
+  replans.value = numberMetric(run.metrics.replans)
+  activeExits.value = numberMetric(run.metrics.active_exits)
+  closedRoads.value = numberMetric(run.metrics.closed_roads)
+  elapsedSec.value = numberMetric(run.metrics.elapsed_sec)
+  responders.value = numberMetric(run.metrics.responders)
+  bottleneckExit.value = String(run.metrics.bottleneck_exit ?? '')
+  trafficControlled.value = Boolean(run.metrics.traffic_controlled)
+  completed.value = run.status === 'completed'
+  timelineEvents.value = [...run.timeline]
+  actionText.value = run.summary || `已载入演练运行 ${run.id}`
+  persistState.value = 'saved'
+  await nextTick()
+  renderIncident(item)
+  void viewerRef.value?.flyTo(item.longitude, item.latitude, {
+    range: Math.max(560, item.riskRadiusM * 3.1),
+    pitch: -42,
+    heading: 18,
+    duration: 1.5
+  })
+  if (run.status === 'completed') {
+    const review = await createDrillReview(run.id)
+    drillReviewId.value = review.id
+  }
+}
+
 async function onReady() {
   ready = true
   scene = viewerRef.value?.getViewer() ?? null
@@ -380,8 +625,48 @@ async function onReady() {
   await resetView()
   if (autoStarted) return
   autoStarted = true
+  try {
+    const events = await getEvents({ limit: 120 })
+    eventSeeds.value = events.slice(0, 60).map(eventToDrillSeed)
+  } catch {
+    eventSeeds.value = []
+  }
+  const runId = Array.isArray(route.query.runId) ? route.query.runId[0] : route.query.runId
+  if (runId) {
+    try {
+      await restoreDrillRun(await getDrillRun(runId))
+      return
+    } catch {
+      // 记录不存在时继续按普通演练入口处理。
+    }
+  }
+  const scenarioSessionId = Array.isArray(route.query.scenarioSessionId)
+    ? route.query.scenarioSessionId[0]
+    : route.query.scenarioSessionId
+  if (scenarioSessionId) {
+    try {
+      const scenarioSeed = await scenarioToDrillSeed(scenarioSessionId)
+      if (scenarioSeed) {
+        eventSeeds.value = [scenarioSeed, ...eventSeeds.value]
+        selectedSeedKey.value = scenarioSeed.key
+        await triggerIncident()
+        if (requiresPedestrianEvacuation(scenarioSeed.eventType)) startEvacuation()
+        return
+      }
+    } catch {
+      // 情景不可用时保留普通演示入口。
+    }
+  }
+  const eventId = Array.isArray(route.query.eventId) ? route.query.eventId[0] : route.query.eventId
+  const eventSeed = eventId ? eventSeeds.value.find((item) => item.sourceEventId === eventId) : undefined
+  if (eventSeed) {
+    selectedSeedKey.value = eventSeed.key
+    await triggerIncident()
+    if (requiresPedestrianEvacuation(eventSeed.eventType)) startEvacuation()
+    return
+  }
   const requested = Array.isArray(route.query.demo) ? route.query.demo[0] : route.query.demo
-  const requestedSeed = DRILL_SEEDS.find((item) => item.key === requested || item.eventType === requested)
+  const requestedSeed = drillOptions.value.find((item) => item.key === requested || item.eventType === requested)
   if (!requestedSeed || route.query.autoplay !== '1') return
   selectedSeedKey.value = requestedSeed.key
   const requestedSpeed = Number(Array.isArray(route.query.speed) ? route.query.speed[0] : route.query.speed)
@@ -421,6 +706,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <span class="drill-status__state"><i />{{ phaseText }}</span>
+      <span class="drill-persist" :class="persistState">{{ persistLabel }}</span>
       <div class="drill-status__counts">
         <span
           >人员 <b class="ce-num">{{ crowdStats.total }}</b></span
@@ -456,9 +742,26 @@ onBeforeUnmount(() => {
       </div>
       <strong>{{ phaseText }}</strong>
       <p>{{ actionText }}</p>
+      <div v-if="eventSeeds.length" class="event-seed-picker">
+        <span>从现有事件带入</span>
+        <el-select
+          v-model="selectedEventSeedKey"
+          clearable
+          filterable
+          placeholder="选择近期事件"
+          @change="chooseEventSeed"
+        >
+          <el-option
+            v-for="item in eventSeeds.slice(0, 30)"
+            :key="item.key"
+            :value="item.key"
+            :label="`${item.sourceEventId} ${item.name}`"
+          />
+        </el-select>
+      </div>
       <div class="scenario-picker" role="group" aria-label="选择演示场景">
         <button
-          v-for="item in DRILL_SEEDS"
+          v-for="item in scenarioPickerOptions"
           :key="item.key"
           :class="{ active: selectedSeedKey === item.key }"
           :aria-pressed="selectedSeedKey === item.key"
@@ -639,6 +942,18 @@ onBeforeUnmount(() => {
             <b>疏散完成</b>
             <span>用时 {{ formatElapsed(elapsedSec) }} · 峰值排队 {{ peakWaiting }} 人</span>
             <small>{{ bottleneckExit ? `瓶颈出口 ${bottleneckExit}` : '未形成明显出口瓶颈' }}</small>
+            <button
+              v-if="drillReviewId"
+              type="button"
+              @click="
+                router.push({
+                  path: '/workflow/reviews',
+                  query: { reviewId: drillReviewId || undefined }
+                })
+              "
+            >
+              查看复盘 {{ drillReviewId }}
+            </button>
           </div>
           <div class="incident-actions">
             <button
@@ -766,6 +1081,32 @@ onBeforeUnmount(() => {
   border-color: color-mix(in srgb, var(--seed-color) 55%, var(--ce-panel-border));
   color: var(--seed-color);
 }
+.drill-persist {
+  flex: none;
+  padding: 3px 7px;
+  border: 1px solid var(--ce-divider);
+  color: var(--ce-text-faint);
+  font-size: 10.5px;
+}
+.drill-persist.saved {
+  color: var(--ce-success);
+  border-color: rgba(114, 195, 154, 0.42);
+}
+.drill-persist.offline {
+  color: var(--ce-warning);
+  border-color: rgba(240, 192, 80, 0.42);
+}
+.completion-summary button {
+  width: fit-content;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ce-accent);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
 .drill-status__counts {
   display: flex;
   align-items: center;
@@ -892,6 +1233,16 @@ onBeforeUnmount(() => {
   font-size: 13px;
   line-height: 1.65;
   color: var(--ce-text-dim);
+}
+.event-seed-picker {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+  color: var(--ce-text-faint);
+  font-size: 11px;
+}
+.event-seed-picker :deep(.el-select) {
+  width: 100%;
 }
 .scenario-picker {
   display: grid;
